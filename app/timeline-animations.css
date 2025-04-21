@@ -1,0 +1,243 @@
+/* Timeline animations */
+@keyframes sectionContentFade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes buttonGrow {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes buttonShrink {
+  0% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes textFadeout {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Add styles for the scrollbar animation */
+@keyframes fadeInScrollbar {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  animation: fadeInScrollbar 0.5s ease-in-out;
+}
+
+.animate-sectionContentFade {
+  animation: sectionContentFade 300ms ease-in-out;
+}
+
+.animate-button-grow {
+  animation: buttonGrow 300ms ease-in-out;
+}
+
+.animate-button-shrink {
+  animation: buttonShrink 200ms ease-in-out;
+  transform-origin: left;
+}
+
+.animate-text-fadeout {
+  animation: textFadeout 150ms ease-in-out forwards;
+}
+
+.section-transition {
+  transition: all 200ms ease-in-out;
+}
+
+/* Update cursor styles for better scrolling UX */
+.timeline-container {
+  cursor: default;
+}
+
+.timeline-container:hover {
+  cursor: grab;
+}
+
+.timeline-container:active {
+  cursor: grabbing;
+}
+
+/* When resizing or dragging, maintain those cursors */
+.resizing-cursor {
+  cursor: ew-resize !important;
+}
+
+.resizing-cursor *,
+.timeline-container.resizing-cursor:hover {
+  cursor: ew-resize !important;
+}
+
+.dragging-cursor *,
+.timeline-container.dragging-cursor:hover {
+  cursor: grabbing !important;
+}
+
+.dragging-cursor * {
+  cursor: grabbing !important;
+}
+
+.resizing-cursor * {
+  cursor: ew-resize !important;
+}
+
+.timeline-section-dragging {
+  z-index: 50;
+  opacity: 0.5;
+}
+
+/* Resize handle styles */
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize !important;
+  z-index: 30;
+}
+
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #f0e6c8;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.resize-handle:hover::after {
+  opacity: 0.7;
+}
+
+/* Add styles for the ResizableHandle */
+[data-panel-resize-handle-state="hover"],
+[data-panel-resize-handle-state="drag"] {
+  background-color: #f0e6c8 !important;
+  opacity: 0.5;
+}
+
+/* Make the resize handle more visible */
+[data-panel-resize-handle] {
+  width: 4px !important;
+  background-color: rgba(240, 230, 200, 0.2);
+  transition: background-color 0.2s ease;
+}
+
+[data-panel-resize-handle]:hover {
+  background-color: rgba(240, 230, 200, 0.4);
+}
+
+[data-panel-resize-handle]:active {
+  background-color: rgba(240, 230, 200, 0.6);
+}
+
+/* Toolbar styles */
+.timeline-toolbar {
+  position: relative;
+  z-index: 50;
+  background-color: #1a1015;
+}
+
+/* Make sure borders are visible */
+.timeline-container .border-b {
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+
+/* Remove the gradient that might be covering borders */
+.timeline-header::after {
+  content: none;
+}
+
+/* Add dashed ring style */
+.ring-dashed {
+  border-style: dashed;
+  border-width: 2px;
+  border-color: inherit;
+}
+
+/* Toolbar icon styling - Enhanced glow effect */
+.toolbar-icon {
+  transition: all 0.2s ease-out;
+  position: relative;
+}
+
+.toolbar-icon:focus-visible {
+  outline: 2px solid #f0e6c8;
+  outline-offset: 1px;
+}
+
+.toolbar-icon--active:hover {
+  filter: drop-shadow(0 0 3px rgba(240, 230, 200, 0.9)) brightness(1.5);
+  background-color: transparent;
+  color: #f0e6c8;
+}
+
+.toolbar-icon--active:hover svg {
+  color: #f0e6c8;
+  stroke-width: 2.5px;
+}
+
+.toolbar-icon--active:active {
+  filter: drop-shadow(0 0 5px rgba(240, 230, 200, 1)) brightness(1.8);
+}
+
+/* Ensure disabled icons have no hover effect */
+.toolbar-icon:disabled {
+  filter: none;
+}
+
+/* Timeline tooltip styles */
+.timeline-tooltip {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(26, 16, 21, 0.95);
+  border: 1px solid #3a2a30;
+  color: #f0e6c8;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  z-index: 100;
+}
+
+.toolbar-icon:hover .timeline-tooltip {
+  opacity: 1;
+}

@@ -1,0 +1,9 @@
+.export-mode {
+  animation: none !important;
+  transition: none !important;
+}
+
+.export-mode * {
+  animation: none !important;
+  transition: none !important;
+}
