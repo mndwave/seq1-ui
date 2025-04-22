@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import Slider from "@/components/synth-controls/slider"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Slider } from "@/components/ui/slider"
 
 export default function LogoGenerator() {
   const [isOutline, setIsOutline] = useState(true)
@@ -221,23 +221,22 @@ export default function LogoGenerator() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <Label htmlFor="glow-slider" className="text-sm w-24">
-                  Glow
-                </Label>
-                <div className="flex-1">
-                  <Slider
-                    name="Glow"
-                    value={glowAmount}
-                    min={0}
-                    max={100}
-                    orientation="horizontal"
-                    size="sm"
-                    readOnly={false}
-                    onChange={setGlowAmount}
-                  />
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="glow-slider" className="text-sm">
+                    Glow
+                  </Label>
+                  <span className="text-xs text-gray-400">{glowAmount}%</span>
                 </div>
-                <span className="text-xs text-gray-400 w-8 text-right">{glowAmount}%</span>
+                <Slider
+                  id="glow-slider"
+                  value={[glowAmount]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="py-4"
+                  onValueChange={(value) => setGlowAmount(value[0])}
+                />
               </div>
             </div>
 
@@ -245,7 +244,7 @@ export default function LogoGenerator() {
             <div>
               <h3 className="text-sm font-medium mb-4">Subheading</h3>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="subheading" className="text-sm">
                     Text
@@ -258,62 +257,58 @@ export default function LogoGenerator() {
                   />
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="letter-spacing-slider" className="text-sm w-24">
-                    Letter Spacing
-                  </Label>
-                  <div className="flex-1">
-                    <Slider
-                      name="Letter Spacing"
-                      value={letterSpacing}
-                      min={0}
-                      max={30}
-                      orientation="horizontal"
-                      size="sm"
-                      readOnly={false}
-                      onChange={setLetterSpacing}
-                    />
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label htmlFor="letter-spacing-slider" className="text-sm">
+                      Letter Spacing
+                    </Label>
+                    <span className="text-xs text-gray-400">{letterSpacing * 0.01}em</span>
                   </div>
-                  <span className="text-xs text-gray-400 w-12 text-right">{letterSpacing * 0.01}em</span>
+                  <Slider
+                    id="letter-spacing-slider"
+                    value={[letterSpacing]}
+                    min={0}
+                    max={30}
+                    step={1}
+                    className="py-4"
+                    onValueChange={(value) => setLetterSpacing(value[0])}
+                  />
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="font-weight-slider" className="text-sm w-24">
-                    Weight
-                  </Label>
-                  <div className="flex-1">
-                    <Slider
-                      name="Font Weight"
-                      value={fontWeight}
-                      min={100}
-                      max={600}
-                      step={100}
-                      orientation="horizontal"
-                      size="sm"
-                      readOnly={false}
-                      onChange={setFontWeight}
-                    />
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label htmlFor="font-weight-slider" className="text-sm">
+                      Weight
+                    </Label>
+                    <span className="text-xs text-gray-400">{fontWeight}</span>
                   </div>
-                  <span className="text-xs text-gray-400 w-12 text-right">{fontWeight}</span>
+                  <Slider
+                    id="font-weight-slider"
+                    value={[fontWeight]}
+                    min={100}
+                    max={600}
+                    step={100}
+                    className="py-4"
+                    onValueChange={(value) => setFontWeight(value[0])}
+                  />
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="top-spacing-slider" className="text-sm w-24">
-                    Top Spacing
-                  </Label>
-                  <div className="flex-1">
-                    <Slider
-                      name="Top Spacing"
-                      value={topSpacing}
-                      min={0}
-                      max={10}
-                      orientation="horizontal"
-                      size="sm"
-                      readOnly={false}
-                      onChange={setTopSpacing}
-                    />
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label htmlFor="top-spacing-slider" className="text-sm">
+                      Top Spacing
+                    </Label>
+                    <span className="text-xs text-gray-400">{topSpacing * 4}px</span>
                   </div>
-                  <span className="text-xs text-gray-400 w-12 text-right">{topSpacing * 4}px</span>
+                  <Slider
+                    id="top-spacing-slider"
+                    value={[topSpacing]}
+                    min={0}
+                    max={10}
+                    step={1}
+                    className="py-4"
+                    onValueChange={(value) => setTopSpacing(value[0])}
+                  />
                 </div>
               </div>
             </div>
