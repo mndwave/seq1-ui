@@ -34,7 +34,20 @@ export default function LogoGenerator() {
 
   // Function to export the logo as SVG
   const exportSVG = () => {
-    // Create a clean SVG document
+    // Create SVG paths for the SEQ1 logo
+    // These are vector paths that represent the SEQ1 text
+    const seq1Paths = [
+      // S path
+      "M45.5,36.8c-3.8,2.2-8.2,3.3-13.2,3.3c-7.5,0-13.5-2-18-6.1c-4.5-4-6.8-9.5-6.8-16.3c0-6.9,2.3-12.4,6.9-16.5 C18.9,0.7,24.9-1,32.3-1c4.9,0,9.3,1,13.2,3v10.6c-3.9-3-8.2-4.5-12.9-4.5c-4.2,0-7.6,1.3-10.1,3.9c-2.5,2.6-3.8,6.1-3.8,10.4 c0,4.3,1.2,7.7,3.7,10.2c2.5,2.5,5.8,3.8,10,3.8c4.8,0,9.1-1.5,13.1-4.5V36.8z",
+      // E path
+      "M83.5,39.3H54.8V-0.2h28.7v8.9H65.9v6.2h16.4v8.9H65.9v6.6h17.6V39.3z",
+      // Q path
+      "M123.2,39.3h-11.1l-3.8-9.8H93.1l-3.8,9.8H78.2L94.7-0.2h11.9L123.2,39.3z M105.4,20.6l-5.1-13.7l-5.1,13.7H105.4z M107.1,31.4 c2.9,0,5.3-1,7.2-2.9c1.9-1.9,2.9-4.3,2.9-7.2c0-2.8-1-5.2-2.9-7.1c-1.9-1.9-4.3-2.9-7.2-2.9c-2.8,0-5.2,1-7.1,2.9 c-1.9,1.9-2.9,4.3-2.9,7.1c0,2.9,1,5.3,2.9,7.2C101.9,30.4,104.3,31.4,107.1,31.4z",
+      // 1 path
+      "M150.2,39.3h-11.1V8.7h-10.4V-0.2h31.9v8.9h-10.4V39.3z",
+    ]
+
+    // Create a new SVG document
     const svgNamespace = "http://www.w3.org/2000/svg"
     const svgDoc = document.implementation.createDocument(svgNamespace, "svg", null)
     const svg = svgDoc.documentElement
@@ -45,7 +58,40 @@ export default function LogoGenerator() {
     svg.setAttribute("viewBox", "0 0 300 200")
     svg.setAttribute("xmlns", svgNamespace)
 
-    // Create defs for filters if needed
+    // Create a group for the logo
+    const logoGroup = document.createElementNS(svgNamespace, "g")
+    logoGroup.setAttribute("transform", "translate(75, 80) scale(0.8)")
+
+    // Create paths for each letter
+    seq1Paths.forEach((pathData) => {
+      const path = document.createElementNS(svgNamespace, "path")
+      path.setAttribute("d", pathData)
+
+      if (isOutline) {
+        path.setAttribute("fill", "none")
+        path.setAttribute("stroke", "#f0e6c8")
+        path.setAttribute("stroke-width", "2")
+      } else {
+        path.setAttribute("fill", "#f0e6c8")
+      }
+
+      logoGroup.appendChild(path)
+    })
+
+    // Create the subheading text
+    const subheadingElement = document.createElementNS(svgNamespace, "text")
+    subheadingElement.setAttribute("x", "150")
+    subheadingElement.setAttribute("y", `${120 + topSpacing * 4}`)
+    subheadingElement.setAttribute("text-anchor", "middle")
+    subheadingElement.setAttribute("font-family", "Arial, sans-serif") // Using standard font
+    subheadingElement.setAttribute("font-size", "16")
+    subheadingElement.setAttribute("font-weight", fontWeight.toString())
+    subheadingElement.setAttribute("font-style", "italic")
+    subheadingElement.setAttribute("letter-spacing", `${letterSpacing * 0.01}em`)
+    subheadingElement.setAttribute("fill", "#f0e6c8")
+    subheadingElement.textContent = subheadingText
+
+    // Add glow filter if needed
     if (glowAmount > 0) {
       const defs = document.createElementNS(svgNamespace, "defs")
       const filter = document.createElementNS(svgNamespace, "filter")
@@ -86,89 +132,17 @@ export default function LogoGenerator() {
 
       defs.appendChild(filter)
       svg.appendChild(defs)
+
+      logoGroup.setAttribute("filter", "url(#glow)")
     }
 
-    // Create a group for the logo and subheading
-    const group = document.createElementNS(svgNamespace, "g")
-    if (glowAmount > 0) {
-      group.setAttribute("filter", "url(#glow)")
-    }
-
-    // Create the logo text
-    const logoText = document.createElementNS(svgNamespace, "text")
-    logoText.setAttribute("x", "150")
-    logoText.setAttribute("y", "90")
-    logoText.setAttribute("text-anchor", "middle")
-    logoText.setAttribute("dominant-baseline", "middle")
-    logoText.setAttribute("font-family", "Poppins, sans-serif")
-    logoText.setAttribute("font-size", "60")
-    logoText.setAttribute("font-weight", "600")
-    logoText.setAttribute("font-style", "italic")
-    logoText.setAttribute("letter-spacing", "0.05em")
-
-    if (isOutline) {
-      logoText.setAttribute("fill", "none")
-      logoText.setAttribute("stroke", "#f0e6c8")
-      logoText.setAttribute("stroke-width", "1")
-    } else {
-      logoText.setAttribute("fill", "#f0e6c8")
-      logoText.setAttribute("stroke", "#f0e6c8")
-      logoText.setAttribute("stroke-width", "0.5")
-    }
-
-    logoText.textContent = "SEQ1"
-    group.appendChild(logoText)
-
-    // Create the subheading text
-    const subheadingElement = document.createElementNS(svgNamespace, "text")
-    subheadingElement.setAttribute("x", "150")
-    subheadingElement.setAttribute("y", `${110 + topSpacing * 4}`)
-    subheadingElement.setAttribute("text-anchor", "middle")
-    subheadingElement.setAttribute("font-family", "Poppins, sans-serif")
-    subheadingElement.setAttribute("font-size", "20")
-    subheadingElement.setAttribute("font-weight", fontWeight.toString())
-    subheadingElement.setAttribute("font-style", "italic")
-    subheadingElement.setAttribute("letter-spacing", `${letterSpacing * 0.01}em`)
-    subheadingElement.setAttribute("fill", "#f0e6c8")
-    subheadingElement.textContent = subheadingText
-    group.appendChild(subheadingElement)
-
-    // Add the group to the SVG
-    svg.appendChild(group)
+    // Add elements to SVG
+    svg.appendChild(logoGroup)
+    svg.appendChild(subheadingElement)
 
     // Convert SVG to string
     const serializer = new XMLSerializer()
-    let svgString = serializer.serializeToString(svg)
-
-    // Add font reference
-    svgString = svgString.replace(
-      "<svg",
-      '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' +
-        '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
-        "<svg",
-    )
-
-    // Add CSS for fonts
-    svgString = svgString.replace(
-      "<defs>",
-      "<defs>\n" +
-        '  <style type="text/css">\n' +
-        '    @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;1,100;1,200;1,300;1,400;1,500;1,600&amp;display=swap");\n' +
-        "  </style>",
-    )
-
-    // If no defs exist, add them
-    if (!svgString.includes("<defs>")) {
-      svgString = svgString.replace(
-        "<svg",
-        "<svg>\n" +
-          "  <defs>\n" +
-          '    <style type="text/css">\n' +
-          '      @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;1,100;1,200;1,300;1,400;1,500;1,600&amp;display=swap");\n' +
-          "    </style>\n" +
-          "  </defs>",
-      )
-    }
+    const svgString = serializer.serializeToString(svg)
 
     // Create a blob and download
     const blob = new Blob([svgString], { type: "image/svg+xml" })
