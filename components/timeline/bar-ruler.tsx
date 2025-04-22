@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useRef, useState, useCallback, useEffect } from "react"
+import { useTransport } from "@/hooks/use-transport"
 
 interface LoopRegion {
   startBar: number
@@ -14,13 +14,13 @@ interface BarRulerProps {
   totalWidth: number
   barWidth: number
   timelineRef: React.RefObject<HTMLDivElement>
-  setPlayheadPosition: (position: number) => void
-  isPlaying: boolean
+  setPlayheadPosition?: (position: number) => void
+  isPlaying?: boolean
   onHoverBarChange?: (barPosition: number | null) => void
-  loopRegion: LoopRegion | null
+  loopRegion?: LoopRegion | null
   isDraggingLoop?: boolean
-  dragStartBar: number | null
-  currentDragBar: number | null
+  dragStartBar?: number | null
+  currentDragBar?: number | null
   onLoopDragStart?: (barPosition: number) => void
   onLoopDrag?: (barPosition: number) => void
   onLoopDragEnd?: (shouldCreateLoop?: boolean, startBar?: number, endBar?: number) => void
@@ -31,10 +31,10 @@ export default function BarRuler({
   totalWidth,
   barWidth,
   timelineRef,
-  setPlayheadPosition = () => console.warn("setPlayheadPosition not provided to BarRuler"),
-  isPlaying = false,
+  setPlayheadPosition,
+  isPlaying: isPlayingProp,
   onHoverBarChange,
-  loopRegion,
+  loopRegion: loopRegionProp,
   isDraggingLoop = false,
   dragStartBar,
   currentDragBar,
@@ -42,6 +42,13 @@ export default function BarRuler({
   onLoopDrag,
   onLoopDragEnd,
 }: BarRulerProps) {
+  // Use the transport hook to get and update transport state
+  const { transportState, seekPlayhead, setLoopRegion: setApiLoopRegion } = useTransport()
+
+  // Use API values if props are not provided
+  const isPlaying = isPlayingProp !== undefined ? isPlayingProp : transportState.isPlaying
+  const loopRegion = loopRegionProp !== undefined ? loopRegionProp : transportState.loopRegion
+
   const rulerRef = useRef<HTMLDivElement>(null)
   const [hoverBar, setHoverBar] = useState<number | null>(null)
   const [pendingBar, setPendingBar] = useState<number | null>(null)
@@ -80,24 +87,23 @@ export default function BarRuler({
 
       const targetPosition = targetBar * barWidth
 
-      if (typeof setPlayheadPosition !== "function") {
-        console.warn("setPlayheadPosition is not a function in BarRuler")
-        return
+      // Update local UI immediately for responsiveness
+      if (setPlayheadPosition) {
+        setPlayheadPosition(targetPosition)
       }
+
+      // Update API playhead position
+      seekPlayhead(targetBar)
 
       if (isPlaying) {
         // Schedule a jump to the next bar
         setPendingBar(targetBar)
         setTimeout(() => {
-          setPlayheadPosition(targetPosition)
           setPendingBar(null)
         }, 100) // Short delay to simulate scheduling
-      } else {
-        // Seek immediately
-        setPlayheadPosition(targetPosition)
       }
     },
-    [barWidth, isPlaying, setPlayheadPosition, totalBars, isDraggingLoop, isInternalDragging],
+    [barWidth, isPlaying, setPlayheadPosition, totalBars, isDraggingLoop, isInternalDragging, seekPlayhead],
   )
 
   // Handle mouse movement to update hover bar
@@ -137,7 +143,6 @@ export default function BarRuler({
 
           // Also call the parent's onLoopDrag if provided
           if (onLoopDrag) {
-            console.log("Dragging loop to bar:", nearestBar)
             onLoopDrag(nearestBar)
           }
         }
@@ -168,7 +173,6 @@ export default function BarRuler({
   // Handle mouse down for loop selection
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      console.log("Mouse down on bar ruler")
       const rect = rulerRef.current?.getBoundingClientRect()
       if (!rect) return
 
@@ -191,7 +195,6 @@ export default function BarRuler({
 
       // Start potential loop region drag
       if (onLoopDragStart) {
-        console.log("Starting loop drag at bar:", nearestBar)
         onLoopDragStart(nearestBar)
       }
     },
@@ -201,7 +204,6 @@ export default function BarRuler({
   // Handle mouse up for loop selection
   const handleMouseUp = useCallback(() => {
     if (isMouseDown) {
-      console.log("Mouse up, ending loop drag")
       setIsMouseDown(false)
 
       // If we've exceeded the threshold, create a completed loop region
@@ -212,9 +214,11 @@ export default function BarRuler({
         // Store the completed loop region
         setCompletedLoopRegion({ startBar, endBar })
 
+        // Update the API loop region
+        setApiLoopRegion({ startBar, endBar })
+
         // End loop region drag with flag indicating whether to create a loop
         if (onLoopDragEnd) {
-          console.log("Ending loop drag with region:", startBar, endBar)
           onLoopDragEnd(true, startBar, endBar)
         }
       } else {
@@ -241,7 +245,7 @@ export default function BarRuler({
       setCurrentMouseX(null)
       setHasExceededThreshold(false)
     }
-  }, [isMouseDown, onLoopDragEnd, hasExceededThreshold, internalDragStartBar, internalCurrentDragBar])
+  }, [isMouseDown, onLoopDragEnd, hasExceededThreshold, internalDragStartBar, internalCurrentDragBar, setApiLoopRegion])
 
   // Add global mouse up handler to handle cases where mouse is released outside the ruler
   useEffect(() => {
@@ -257,9 +261,11 @@ export default function BarRuler({
           // Store the completed loop region
           setCompletedLoopRegion({ startBar, endBar })
 
+          // Update the API loop region
+          setApiLoopRegion({ startBar, endBar })
+
           // End loop region drag with flag indicating whether to create a loop
           if (onLoopDragEnd) {
-            console.log("Ending loop drag with region:", startBar, endBar)
             onLoopDragEnd(true, startBar, endBar)
           }
         } else {
@@ -292,7 +298,7 @@ export default function BarRuler({
     return () => {
       window.removeEventListener("mouseup", handleGlobalMouseUp)
     }
-  }, [isMouseDown, onLoopDragEnd, hasExceededThreshold, internalDragStartBar, internalCurrentDragBar])
+  }, [isMouseDown, onLoopDragEnd, hasExceededThreshold, internalDragStartBar, internalCurrentDragBar, setApiLoopRegion])
 
   // Update completedLoopRegion when loopRegion prop changes
   useEffect(() => {
@@ -310,7 +316,6 @@ export default function BarRuler({
       internalDragStartBar !== null &&
       internalCurrentDragBar !== null
     ) {
-      console.log("Using internal drag display:", internalDragStartBar, internalCurrentDragBar)
       const startBar = Math.min(internalDragStartBar, internalCurrentDragBar)
       const endBar = Math.max(internalDragStartBar, internalCurrentDragBar) + 1 // +1 to include the end bar
 
@@ -322,7 +327,6 @@ export default function BarRuler({
 
     // Next, check if we have a completed internal loop region
     else if (completedLoopRegion) {
-      console.log("Using completed loop region:", completedLoopRegion.startBar, completedLoopRegion.endBar)
       return {
         left: completedLoopRegion.startBar * barWidth,
         width: (completedLoopRegion.endBar - completedLoopRegion.startBar) * barWidth,
@@ -331,7 +335,6 @@ export default function BarRuler({
 
     // Then check for active dragging from props
     else if (isDraggingLoop && dragStartBar !== null && currentDragBar !== null) {
-      console.log("Displaying active drag loop region:", dragStartBar, currentDragBar)
       // During drag, show the current selection
       const startBar = Math.min(dragStartBar, currentDragBar)
       const endBar = Math.max(dragStartBar, currentDragBar) + 1 // +1 to include the end bar
@@ -344,7 +347,6 @@ export default function BarRuler({
 
     // Finally, check for an existing loop region from props
     else if (loopRegion) {
-      console.log("Displaying existing loop region:", loopRegion.startBar, loopRegion.endBar)
       // Show the set loop region
       return {
         left: loopRegion.startBar * barWidth,

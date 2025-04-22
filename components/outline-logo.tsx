@@ -1,3 +1,5 @@
+"use client"
+
 export default function OutlineLogo() {
   return (
     <div className="flex items-center justify-center p-8 bg-[#1a1015]">

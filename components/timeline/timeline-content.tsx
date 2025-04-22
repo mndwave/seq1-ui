@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/core"
 import { SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable"
 import { SortableTimelineSection, TimelineDragPreview } from "./timeline-section"
+import { updateTimelineClip, reorderTimelineClips } from "@/lib/api/timeline-api"
 
 interface TimelineContentProps {
   sections: TimelineClip[]
@@ -81,13 +82,22 @@ export default function TimelineContent({
   )
 
   // Handle section resize
-  const handleSectionResize = (sectionId: string, newLengthInBars: number) => {
-    // Update the section length (in beats)
+  const handleSectionResize = async (sectionId: string, newLengthInBars: number) => {
+    // Calculate the new length in beats
+    const newLengthInBeats = newLengthInBars * BEATS_PER_BAR
+
+    // Update the local state immediately for a responsive UI
     setSections(
-      sections.map((section) =>
-        section.id === sectionId ? { ...section, length: newLengthInBars * BEATS_PER_BAR } : section,
-      ),
+      sections.map((section) => (section.id === sectionId ? { ...section, length: newLengthInBeats } : section)),
     )
+
+    try {
+      // Call the API to persist the change
+      await updateTimelineClip(sectionId, { length: newLengthInBeats })
+    } catch (error) {
+      console.error(`Failed to update clip ${sectionId} length:`, error)
+      // Optionally revert the local state if the API call fails
+    }
   }
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -97,7 +107,7 @@ export default function TimelineContent({
     setDraggedSection(section || null)
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
     setIsDragging(false)
@@ -114,9 +124,22 @@ export default function TimelineContent({
         return // Or handle the error as appropriate for your application
       }
 
+      // Create a new array with the updated order
       const newItems = [...sections]
       newItems.splice(newIndex, 0, newItems.splice(oldIndex, 1)[0])
+
+      // Update the local state immediately for a responsive UI
       setSections(newItems)
+
+      try {
+        // Call the API to persist the new order
+        const orderedIds = newItems.map((item) => item.id)
+        await reorderTimelineClips(orderedIds)
+      } catch (error) {
+        console.error("Failed to update clip order:", error)
+        // Optionally revert the local state if the API call fails
+        setSections(sections)
+      }
     }
   }
 

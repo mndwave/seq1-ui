@@ -15,40 +15,9 @@ import AnimatedLogo from "./animated-logo"
 import DirectProjectMenu from "./direct-project-menu"
 import type { ProjectAction } from "@/lib/types"
 import { useLogoAnimation } from "@/lib/logo-animation-context"
+import { useTransport } from "@/hooks/use-transport"
 // Import the MndwaveButton component
 import MndwaveButton from "@/components/mndwave-button"
-
-/**
- * Transport state interface to consolidate related state
- */
-interface TransportState {
-  isPlaying: boolean
-  isLooping: boolean
-  bpm: number
-  timeSignature: string
-}
-
-/**
- * Modal state interface to consolidate related state
- */
-interface ModalState {
-  save: boolean
-  saveAs: boolean
-  open: boolean
-  export: boolean
-  bpm: boolean
-  timeSignature: boolean
-  newProject: boolean
-  closeProject: boolean
-}
-
-/**
- * History state interface to track undo/redo availability
- */
-interface HistoryState {
-  canUndo: boolean
-  canRedo: boolean
-}
 
 // Update the GlobalTransport component to accept the hardware connection state
 interface GlobalTransportProps {
@@ -72,16 +41,14 @@ export default function GlobalTransport({
   isHardwareConnected = false,
   onLoopChange,
 }: GlobalTransportProps) {
-  // Consolidated transport state
-  const [transport, setTransport] = useState<TransportState>({
-    isPlaying: false,
-    isLooping: false,
-    bpm: 110,
-    timeSignature: "4/4",
-  })
+  // Use the transport hook to get and update transport state
+  const { transportState, togglePlayback, toggleLooping, setBpm, setTimeSignature } = useTransport()
+
+  // Destructure transport state
+  const { isPlaying, isLooping, bpm, timeSignature } = transportState
 
   // Consolidated modal state
-  const [modals, setModals] = useState<ModalState>({
+  const [modals, setModals] = useState({
     save: false,
     saveAs: false,
     open: false,
@@ -93,7 +60,7 @@ export default function GlobalTransport({
   })
 
   // History state for undo/redo
-  const [history, setHistory] = useState<HistoryState>({
+  const [history, setHistory] = useState({
     canUndo: false,
     canRedo: false,
   })
@@ -154,51 +121,31 @@ export default function GlobalTransport({
   }
 
   /**
-   * Toggles play state
+   * Handle loop toggle and notify parent component
    */
-  const togglePlay = () => {
-    setTransport((prev) => ({
-      ...prev,
-      isPlaying: !prev.isPlaying,
-    }))
-  }
+  const handleLoopToggle = async () => {
+    // Toggle loop state via API
+    await toggleLooping()
 
-  /**
-   * Toggles loop state
-   */
-  const toggleLoop = () => {
-    const newLoopState = !transport.isLooping
-
-    setTransport((prev) => ({
-      ...prev,
-      isLooping: newLoopState,
-    }))
-
-    // Notify parent component about loop state change
+    // Notify parent component about loop state change if needed
     if (onLoopChange) {
-      onLoopChange(newLoopState)
+      onLoopChange(!isLooping)
     }
   }
 
   /**
    * Updates BPM value
    */
-  const handleBpmSave = (newBpm: number) => {
-    setTransport((prev) => ({
-      ...prev,
-      bpm: newBpm,
-    }))
+  const handleBpmSave = async (newBpm: number) => {
+    await setBpm(newBpm)
     closeAllModals()
   }
 
   /**
    * Updates time signature value
    */
-  const handleTimeSignatureSave = (newTimeSignature: string) => {
-    setTransport((prev) => ({
-      ...prev,
-      timeSignature: newTimeSignature,
-    }))
+  const handleTimeSignatureSave = async (newTimeSignature: string) => {
+    await setTimeSignature(newTimeSignature)
     closeAllModals()
   }
 
@@ -221,7 +168,7 @@ export default function GlobalTransport({
   /**
    * Opens a specific modal
    */
-  const openModal = (modalName: keyof ModalState) => {
+  const openModal = (modalName: keyof typeof modals) => {
     console.log(`Opening modal: ${modalName}`)
 
     // First close all modals
@@ -355,17 +302,6 @@ export default function GlobalTransport({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [onToggleEmptyDeviceRack])
 
-  // Update transport.isLooping when onLoopChange is called from elsewhere
-  useEffect(() => {
-    // Set initial loop state to true for demo purposes
-    setTransport((prev) => ({
-      ...prev,
-      isLooping: true,
-    }))
-  }, [])
-
-  const { isPlaying, isLooping, bpm, timeSignature } = transport
-
   const [bpmModalOpen, setBpmModalOpen] = useState(false)
   const [timeSignatureModalOpen, setTimeSignatureModalOpen] = useState(false)
 
@@ -384,7 +320,7 @@ export default function GlobalTransport({
           <div className="flex space-x-3">
             {/* Play button - more tactile version */}
             <button
-              onClick={togglePlay}
+              onClick={togglePlayback}
               className={cn(
                 "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none button-tactile",
                 isPlaying
@@ -428,7 +364,7 @@ export default function GlobalTransport({
 
             {/* Loop button - more tactile version */}
             <button
-              onClick={toggleLoop}
+              onClick={handleLoopToggle}
               className={cn(
                 "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none button-tactile",
                 "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]",

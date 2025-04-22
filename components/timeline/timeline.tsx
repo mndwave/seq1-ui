@@ -11,7 +11,7 @@ import BarRuler from "./bar-ruler"
 import TimelineContent from "./timeline-content"
 import { useSensors, useSensor, PointerSensor } from "@dnd-kit/core"
 import { generateDistinctColor, getBalancedVibrantColors } from "@/lib/color-utils"
-import { createClip } from "./timeline/timeline-utils"
+import { getTimelineClips, createTimelineClip, updateTimelineClip, deleteTimelineClip } from "@/lib/api/timeline-api"
 
 interface TimelineProps {
   onSectionSelect?: (sectionId: string) => void
@@ -46,7 +46,9 @@ export default function Timeline({
   contentAPI,
 }: TimelineProps) {
   // State for sections - initialize with initialSections if provided
-  const [sections, setSections] = useState<TimelineClip[]>(initialSections)
+  const [sections, setSections] = useState<TimelineClip[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [playheadPosition, setPlayheadPosition] = useState(0)
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [zoomLevel, setZoomLevel] = useState(0.518) // Start at 22% zoom as requested by user
@@ -110,39 +112,37 @@ export default function Timeline({
 
   // Update sections when initialSections changes
   useEffect(() => {
-    if (initialSections.length > 0) {
-      // Get a balanced set of vibrant colors for all sections
-      const vibrantColors = getBalancedVibrantColors(initialSections.length)
-
-      // Assign vibrant colors to sections if they don't already have colors
-      const sectionsWithColors = initialSections.map((section, index) => {
-        return {
-          ...section,
-          color: section.color || vibrantColors[index % vibrantColors.length],
-        }
-      })
-
-      // Track colors used by initial sections
-      const initialColorMap: Record<string, number> = {}
-      sectionsWithColors.forEach((section) => {
-        if (section.color) {
-          initialColorMap[section.color] = (initialColorMap[section.color] || 0) + 1
-        }
-      })
-
-      setUsedColorMap(initialColorMap)
-      setSections(sectionsWithColors)
+    const fetchClips = async () => {
+      try {
+        setIsLoading(true)
+        const clips = await getTimelineClips()
+        setSections(clips)
+        setError(null)
+      } catch (err) {
+        console.error("Failed to fetch timeline clips:", err)
+        setError("Failed to load timeline data")
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [initialSections])
+
+    fetchClips()
+  }, [])
 
   // Handle name change for a section
   const handleSectionNameChange = async (sectionId: string, newName: string) => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    console.log(`API: Updated section ${sectionId} name to ${newName}`)
+    try {
+      // Update local state immediately for a responsive UI
+      setSections(sections.map((section) => (section.id === sectionId ? { ...section, name: newName } : section)))
 
-    // Update local state
-    setSections(sections.map((section) => (section.id === sectionId ? { ...section, name: newName } : section)))
+      // Call the API to persist the change
+      await updateTimelineClip(sectionId, { name: newName })
+
+      console.log(`Updated section ${sectionId} name to ${newName}`)
+    } catch (error) {
+      console.error(`Failed to update section ${sectionId} name:`, error)
+      // Optionally revert the local state if the API call fails
+    }
   }
 
   // Get a unique color for a new section
@@ -154,7 +154,7 @@ export default function Timeline({
     return generateDistinctColor(existingColors)
   }
 
-  const insertClipAfterSelectedOrAppend = () => {
+  const insertClipAfterSelectedOrAppend = async () => {
     // If contentAPI is available, use it to add a clip
     if (contentAPI) {
       // Determine where to add the clip
@@ -184,73 +184,84 @@ export default function Timeline({
       return
     }
 
-    // Fallback to the original implementation if contentAPI is not available
     // Prevent multiple rapid clicks
     if (isAddingSection) return
     setIsAddingSection(true)
 
-    // Start the add button animation - use a special key for the add button
+    // Start the add button animation
     setAnimatingButtons({
       ...animatingButtons,
       "add-button": { action: "add", state: "grow" },
     })
 
-    // Short delay to allow the button animation to play - matching the copy button timing
-    setTimeout(() => {
-      // Get a unique color for this section
-      const newColor = getUniqueColor()
+    // Short delay to allow the button animation to play
+    setTimeout(async () => {
+      try {
+        // Get a unique color for this section
+        const newColor = getUniqueColor()
 
-      const newSection: TimelineClip = {
-        id: `section-${Date.now()}`,
-        name: `Section ${(sections.length + 1).toString().padStart(2, "0")}`,
-        start: 0,
-        length: DEFAULT_SECTION_LENGTH * BEATS_PER_BAR, // Default length is 4 bars (16 beats)
-        color: newColor,
-      }
-
-      // If a section is selected, insert after it; otherwise, append to the end
-      if (selectedSection) {
-        const selectedIndex = sections.findIndex((section) => section.id === selectedSection)
-        if (selectedIndex !== -1) {
-          const newSections = [...sections]
-          newSections.splice(selectedIndex + 1, 0, newSection)
-          setSections(newSections)
-
-          // Select the newly inserted section
-          setSelectedSection(newSection.id)
-        } else {
-          // Fallback to append if selected section not found
-          setSections([...sections, newSection])
+        // Calculate the start position for the new section
+        let startPosition = 0
+        if (selectedSection) {
+          const selectedSectionData = sections.find((s) => s.id === selectedSection)
+          if (selectedSectionData) {
+            startPosition = selectedSectionData.start + selectedSectionData.length
+          }
+        } else if (sections.length > 0) {
+          const lastSection = sections[sections.length - 1]
+          startPosition = lastSection.start + lastSection.length
         }
-      } else {
-        // No selection, append to the end
+
+        // Create the new section data
+        const newSectionData = {
+          name: `Section ${(sections.length + 1).toString().padStart(2, "0")}`,
+          start: startPosition,
+          length: DEFAULT_SECTION_LENGTH * BEATS_PER_BAR,
+          color: newColor,
+        }
+
+        // Call the API to create the new section
+        const newSection = await createTimelineClip(newSectionData)
+
+        // Add the new section to the local state
         setSections([...sections, newSection])
-      }
 
-      // Reset the button animation
-      setAnimatingButtons({
-        ...animatingButtons,
-        "add-button": undefined,
-      })
+        // Select the newly created section
+        setSelectedSection(newSection.id)
 
-      // Scroll to the new section
-      setTimeout(() => {
-        if (timelineRef.current) {
-          const totalWidth =
-            sections.reduce((total, section) => total + (section.length / BEATS_PER_BAR) * barWidth, 0) +
-            DEFAULT_SECTION_LENGTH * barWidth
-          timelineRef.current.scrollLeft = totalWidth - timelineRef.current.clientWidth + 50
-        }
+        // Reset the button animation
+        setAnimatingButtons({
+          ...animatingButtons,
+          "add-button": undefined,
+        })
 
-        // Reset the adding state after animation completes - use a shorter time
+        // Scroll to the new section
         setTimeout(() => {
-          setIsAddingSection(false)
-        }, 200) // Match animation duration plus a small buffer
-      }, 10)
-    }, 300) // Delay to match the copy button animation timing
+          if (timelineRef.current) {
+            const totalWidth =
+              sections.reduce((total, section) => total + (section.length / BEATS_PER_BAR) * barWidth, 0) +
+              DEFAULT_SECTION_LENGTH * barWidth
+            timelineRef.current.scrollLeft = totalWidth - timelineRef.current.clientWidth + 50
+          }
+
+          // Reset the adding state after animation completes
+          setTimeout(() => {
+            setIsAddingSection(false)
+          }, 200)
+        }, 10)
+      } catch (error) {
+        console.error("Failed to create new section:", error)
+        // Reset the button animation and adding state
+        setAnimatingButtons({
+          ...animatingButtons,
+          "add-button": undefined,
+        })
+        setIsAddingSection(false)
+      }
+    }, 300)
   }
 
-  const duplicateSection = (sectionId: string) => {
+  const duplicateSection = async (sectionId: string) => {
     if (!sectionId) return
 
     const sectionToDuplicate = sections.find((section) => section.id === sectionId)
@@ -263,42 +274,48 @@ export default function Timeline({
     })
 
     // Short delay to allow the button animation to play
-    setTimeout(() => {
-      // Create a new section with the same properties but a new ID and a new color
-      const newSection = createClip({
-        ...sectionToDuplicate,
-        id: `section-${Date.now()}`,
-        name: `${sectionToDuplicate.name} (copy)`, // Append "(copy)" to the name
-        length: sectionToDuplicate.length,
-        color: sectionToDuplicate.color, // Keep the same color
-      })
+    setTimeout(async () => {
+      try {
+        // Create a new section with the same properties but without an ID
+        const newSectionData = {
+          name: `${sectionToDuplicate.name} (copy)`,
+          start: sectionToDuplicate.start + sectionToDuplicate.length, // Position after the original
+          length: sectionToDuplicate.length,
+          color: sectionToDuplicate.color,
+        }
 
-      // Add the new section after the original
-      const index = sections.findIndex((section) => section.id === sectionId)
-      const newSections = [...sections]
-      if (index !== -1) {
-        newSections.splice(index + 1, 0, newSection)
-        setSections(newSections)
+        // Call the API to create the new section
+        const newSection = await createTimelineClip(newSectionData)
+
+        // Add the new section to the local state
+        setSections([...sections, newSection])
+
+        // Reset the button animation
+        setAnimatingButtons({
+          ...animatingButtons,
+          [sectionId]: undefined,
+        })
+
+        // Select the new section
+        setSelectedSection(newSection.id)
+
+        // Update the color map
+        setUsedColorMap((prev) => ({
+          ...prev,
+          [newSection.color]: (prev[newSection.color] || 0) + 1,
+        }))
+      } catch (error) {
+        console.error("Failed to duplicate section:", error)
+        // Reset the button animation
+        setAnimatingButtons({
+          ...animatingButtons,
+          [sectionId]: undefined,
+        })
       }
-
-      // Reset the button animation
-      setAnimatingButtons({
-        ...animatingButtons,
-        [sectionId]: undefined,
-      })
-
-      // Select the new section
-      setSelectedSection(newSection.id)
-
-      // Update the color map
-      setUsedColorMap((prev) => ({
-        ...prev,
-        [newSection.color]: (prev[newSection.color] || 0) + 1,
-      }))
-    }, 300) // Delay to match the button animation
+    }, 300)
   }
 
-  const deleteSection = (sectionId: string) => {
+  const deleteSection = async (sectionId: string) => {
     if (!sectionId) return
 
     // Start the delete button animation
@@ -311,30 +328,42 @@ export default function Timeline({
     const sectionToDelete = sections.find((section) => section.id === sectionId)
 
     // Short delay to allow the button animation to play
-    setTimeout(() => {
-      // Remove the section
-      const newSections = sections.filter((section) => section.id !== sectionId)
-      setSections(newSections)
+    setTimeout(async () => {
+      try {
+        // Call the API to delete the section
+        await deleteTimelineClip(sectionId)
 
-      // If the deleted section was selected, clear selection
-      if (selectedSection === sectionId) {
-        setSelectedSection(null)
+        // Remove the section from local state
+        const newSections = sections.filter((section) => section.id !== sectionId)
+        setSections(newSections)
+
+        // If the deleted section was selected, clear selection
+        if (selectedSection === sectionId) {
+          setSelectedSection(null)
+        }
+
+        // Reset the button animation
+        setAnimatingButtons({
+          ...animatingButtons,
+          [sectionId]: undefined,
+        })
+
+        // Decrement the usage count for this color
+        if (sectionToDelete?.color) {
+          setUsedColorMap((prev) => ({
+            ...prev,
+            [sectionToDelete.color!]: Math.max(0, (prev[sectionToDelete.color!] || 0) - 1),
+          }))
+        }
+      } catch (error) {
+        console.error("Failed to delete section:", error)
+        // Reset the button animation
+        setAnimatingButtons({
+          ...animatingButtons,
+          [sectionId]: undefined,
+        })
       }
-
-      // Reset the button animation
-      setAnimatingButtons({
-        ...animatingButtons,
-        [sectionId]: undefined,
-      })
-
-      // Decrement the usage count for this color
-      if (sectionToDelete?.color) {
-        setUsedColorMap((prev) => ({
-          ...prev,
-          [sectionToDelete.color!]: Math.max(0, (prev[sectionToDelete.color!] || 0) - 1),
-        }))
-      }
-    }, 300) // Delay to match the button animation
+    }, 300)
   }
 
   // Randomize all section colors with vibrant neon colors
