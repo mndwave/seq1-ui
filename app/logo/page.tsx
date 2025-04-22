@@ -6,12 +6,14 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
+import Script from "next/script"
 
 export default function LogoGenerator() {
   const [isOutline, setIsOutline] = useState(true)
   const [glowAmount, setGlowAmount] = useState(0)
   const [subheadingText, setSubheadingText] = useState("www.seq1.net")
   const [logoWidth, setLogoWidth] = useState(0)
+  const [isExporting, setIsExporting] = useState(false)
 
   // New state variables for subheading customization
   const [letterSpacing, setLetterSpacing] = useState(2) // 0-30 range (0.00em to 0.30em)
@@ -20,6 +22,7 @@ export default function LogoGenerator() {
 
   const logoRef = useRef<HTMLHeadingElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const exportRef = useRef<HTMLDivElement>(null)
 
   // Get logo width after render and when outline changes
   useEffect(() => {
@@ -32,132 +35,76 @@ export default function LogoGenerator() {
     }
   }, [isOutline]) // Re-measure when outline changes which affects width
 
-  // Function to export the logo as SVG
-  const exportSVG = () => {
-    // Create SVG paths for the SEQ1 logo
-    // These are vector paths that represent the SEQ1 text
-    const seq1Paths = [
-      // S path
-      "M45.5,36.8c-3.8,2.2-8.2,3.3-13.2,3.3c-7.5,0-13.5-2-18-6.1c-4.5-4-6.8-9.5-6.8-16.3c0-6.9,2.3-12.4,6.9-16.5 C18.9,0.7,24.9-1,32.3-1c4.9,0,9.3,1,13.2,3v10.6c-3.9-3-8.2-4.5-12.9-4.5c-4.2,0-7.6,1.3-10.1,3.9c-2.5,2.6-3.8,6.1-3.8,10.4 c0,4.3,1.2,7.7,3.7,10.2c2.5,2.5,5.8,3.8,10,3.8c4.8,0,9.1-1.5,13.1-4.5V36.8z",
-      // E path
-      "M83.5,39.3H54.8V-0.2h28.7v8.9H65.9v6.2h16.4v8.9H65.9v6.6h17.6V39.3z",
-      // Q path
-      "M123.2,39.3h-11.1l-3.8-9.8H93.1l-3.8,9.8H78.2L94.7-0.2h11.9L123.2,39.3z M105.4,20.6l-5.1-13.7l-5.1,13.7H105.4z M107.1,31.4 c2.9,0,5.3-1,7.2-2.9c1.9-1.9,2.9-4.3,2.9-7.2c0-2.8-1-5.2-2.9-7.1c-1.9-1.9-4.3-2.9-7.2-2.9c-2.8,0-5.2,1-7.1,2.9 c-1.9,1.9-2.9,4.3-2.9,7.1c0,2.9,1,5.3,2.9,7.2C101.9,30.4,104.3,31.4,107.1,31.4z",
-      // 1 path
-      "M150.2,39.3h-11.1V8.7h-10.4V-0.2h31.9v8.9h-10.4V39.3z",
-    ]
-
-    // Create a new SVG document
-    const svgNamespace = "http://www.w3.org/2000/svg"
-    const svgDoc = document.implementation.createDocument(svgNamespace, "svg", null)
-    const svg = svgDoc.documentElement
-
-    // Set SVG attributes
-    svg.setAttribute("width", "300")
-    svg.setAttribute("height", "200")
-    svg.setAttribute("viewBox", "0 0 300 200")
-    svg.setAttribute("xmlns", svgNamespace)
-
-    // Create a group for the logo
-    const logoGroup = document.createElementNS(svgNamespace, "g")
-    logoGroup.setAttribute("transform", "translate(75, 80) scale(0.8)")
-
-    // Create paths for each letter
-    seq1Paths.forEach((pathData) => {
-      const path = document.createElementNS(svgNamespace, "path")
-      path.setAttribute("d", pathData)
-
-      if (isOutline) {
-        path.setAttribute("fill", "none")
-        path.setAttribute("stroke", "#f0e6c8")
-        path.setAttribute("stroke-width", "2")
-      } else {
-        path.setAttribute("fill", "#f0e6c8")
-      }
-
-      logoGroup.appendChild(path)
-    })
-
-    // Create the subheading text
-    const subheadingElement = document.createElementNS(svgNamespace, "text")
-    subheadingElement.setAttribute("x", "150")
-    subheadingElement.setAttribute("y", `${120 + topSpacing * 4}`)
-    subheadingElement.setAttribute("text-anchor", "middle")
-    subheadingElement.setAttribute("font-family", "Arial, sans-serif") // Using standard font
-    subheadingElement.setAttribute("font-size", "16")
-    subheadingElement.setAttribute("font-weight", fontWeight.toString())
-    subheadingElement.setAttribute("font-style", "italic")
-    subheadingElement.setAttribute("letter-spacing", `${letterSpacing * 0.01}em`)
-    subheadingElement.setAttribute("fill", "#f0e6c8")
-    subheadingElement.textContent = subheadingText
-
-    // Add glow filter if needed
-    if (glowAmount > 0) {
-      const defs = document.createElementNS(svgNamespace, "defs")
-      const filter = document.createElementNS(svgNamespace, "filter")
-      filter.setAttribute("id", "glow")
-      filter.setAttribute("x", "-50%")
-      filter.setAttribute("y", "-50%")
-      filter.setAttribute("width", "200%")
-      filter.setAttribute("height", "200%")
-
-      const feGaussianBlur = document.createElementNS(svgNamespace, "feGaussianBlur")
-      feGaussianBlur.setAttribute("stdDeviation", `${glowAmount / 10}`)
-      feGaussianBlur.setAttribute("result", "blur")
-
-      const feFlood = document.createElementNS(svgNamespace, "feFlood")
-      feFlood.setAttribute("flood-color", "#f0e6c8")
-      feFlood.setAttribute("flood-opacity", `${glowAmount / 100}`)
-      feFlood.setAttribute("result", "color")
-
-      const feComposite = document.createElementNS(svgNamespace, "feComposite")
-      feComposite.setAttribute("in", "color")
-      feComposite.setAttribute("in2", "blur")
-      feComposite.setAttribute("operator", "in")
-      feComposite.setAttribute("result", "glow")
-
-      const feMerge = document.createElementNS(svgNamespace, "feMerge")
-      const feMergeNode1 = document.createElementNS(svgNamespace, "feMergeNode")
-      feMergeNode1.setAttribute("in", "glow")
-      const feMergeNode2 = document.createElementNS(svgNamespace, "feMergeNode")
-      feMergeNode2.setAttribute("in", "SourceGraphic")
-
-      feMerge.appendChild(feMergeNode1)
-      feMerge.appendChild(feMergeNode2)
-
-      filter.appendChild(feGaussianBlur)
-      filter.appendChild(feFlood)
-      filter.appendChild(feComposite)
-      filter.appendChild(feMerge)
-
-      defs.appendChild(filter)
-      svg.appendChild(defs)
-
-      logoGroup.setAttribute("filter", "url(#glow)")
+  // Function to export the logo as PNG
+  const exportPNG = async () => {
+    if (!exportRef.current) {
+      console.error("Export reference not found")
+      return
     }
 
-    // Add elements to SVG
-    svg.appendChild(logoGroup)
-    svg.appendChild(subheadingElement)
+    setIsExporting(true)
 
-    // Convert SVG to string
-    const serializer = new XMLSerializer()
-    const svgString = serializer.serializeToString(svg)
+    try {
+      // Dynamically import html2canvas
+      const html2canvas = (await import("html2canvas")).default
 
-    // Create a blob and download
-    const blob = new Blob([svgString], { type: "image/svg+xml" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "seq1-logo.svg"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+      // Set a scale for high resolution
+      const scale = 4 // Increase for higher resolution
+
+      // Options for html2canvas
+      const options = {
+        scale: scale, // Set the scale option
+        useCORS: true, // Enable CORS to load images from different origins
+        backgroundColor: null, // Make background transparent
+        logging: false, // Disable logging
+      }
+
+      // Render the container to a canvas
+      const canvas = await html2canvas(exportRef.current, options)
+
+      // Convert canvas to a data URL
+      const dataURL = canvas.toDataURL("image/png")
+
+      // Create a download link
+      const link = document.createElement("a")
+      link.href = dataURL
+      link.download = "seq1-logo.png" // Filename for the downloaded image
+
+      // Append the link to the document, trigger the download, and remove the link
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      const url = window.URL.createObjectURL(new Blob()) // Declare url here
+      URL.revokeObjectURL(url)
+
+      console.log("PNG export completed")
+    } catch (error) {
+      console.error("PNG export failed:", error)
+      alert("PNG export failed. Please try again.")
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   return (
     <div className="min-h-screen bg-[#1a1015] text-white flex flex-col items-center py-12 px-4">
+      {/* Load Poppins font */}
+      <Script
+        id="load-poppins"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+           if (!document.getElementById('poppins-font')) {
+             const link = document.createElement('link');
+             link.id = 'poppins-font';
+             link.rel = 'stylesheet';
+             link.href = 'https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;1,100;1,200;1,300;1,400;1,500;1,600&display=swap';
+             document.head.appendChild(link);
+           }
+         `,
+        }}
+      />
+
       <div className="w-full max-w-5xl flex flex-col md:flex-row gap-8">
         {/* Logo Preview - Left Column */}
         <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-8 bg-[#15090f] rounded-lg">
@@ -174,10 +121,10 @@ export default function LogoGenerator() {
             <div className="flex items-center justify-center">
               <h1
                 ref={logoRef}
-                className="text-7xl font-semibold italic font-poppins tracking-wide"
+                className="text-9xl font-semibold italic font-poppins tracking-wide"
                 style={{
                   color: isOutline ? "transparent" : "#f0e6c8",
-                  WebkitTextStroke: isOutline ? "1px #f0e6c8" : "0.5px #f0e6c8",
+                  WebkitTextStroke: isOutline ? "1.5px #f0e6c8" : "0.5px #f0e6c8",
                   textShadow: "none",
                   letterSpacing: "0.05em",
                 }}
@@ -186,13 +133,13 @@ export default function LogoGenerator() {
               </h1>
             </div>
             <div
-              className="text-center font-poppins italic text-lg"
+              className="text-center font-poppins italic text-3xl"
               style={{
                 color: "#f0e6c8",
                 width: `${logoWidth}px`,
                 margin: "0 auto",
-                marginTop: `${topSpacing * 4}px`,
-                letterSpacing: `${letterSpacing * 0.01}em`,
+                marginTop: `${topSpacing * 12}px`,
+                letterSpacing: `${letterSpacing * 0.02}em`,
                 fontWeight: fontWeight,
               }}
             >
@@ -312,9 +259,60 @@ export default function LogoGenerator() {
             </div>
 
             {/* Export Button */}
-            <Button onClick={exportSVG} className="w-full mt-6 bg-white text-black hover:bg-gray-200">
-              Export SVG
+            <Button
+              onClick={exportPNG}
+              className="w-full mt-6 bg-white text-black hover:bg-gray-200"
+              disabled={isExporting}
+            >
+              {isExporting ? "Exporting..." : "Export High-Res PNG"}
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Hidden export container */}
+      <div className="fixed left-[-9999px] top-[-9999px]">
+        <div
+          ref={exportRef}
+          className="flex flex-col items-center justify-center p-8"
+          style={{ background: "transparent", minWidth: "2000px", minHeight: "1125px" }}
+        >
+          <div
+            style={{
+              filter:
+                glowAmount > 0
+                  ? `drop-shadow(0 0 ${glowAmount / 10}px rgba(240, 230, 200, ${glowAmount / 100}))`
+                  : "none",
+            }}
+          >
+            <div className="flex items-center justify-center">
+              <h1
+                className="font-semibold italic font-poppins tracking-wide"
+                style={{
+                  color: isOutline ? "transparent" : "#f0e6c8",
+                  WebkitTextStroke: isOutline ? "1.5px #f0e6c8" : "0.5px #f0e6c8",
+                  textShadow: "none",
+                  letterSpacing: "0.05em",
+                  fontSize: `${100 + glowAmount * 0.5}px`, // Exponential scaling for logo size
+                }}
+              >
+                SEQ1
+              </h1>
+            </div>
+            <div
+              className="text-center font-poppins italic"
+              style={{
+                color: "#f0e6c8",
+                width: `${logoWidth}px`,
+                margin: "0 auto",
+                marginTop: `${topSpacing * 12}px`,
+                letterSpacing: `${letterSpacing * 0.02}em`,
+                fontWeight: fontWeight,
+                fontSize: `${24 + glowAmount * 0.2}px`, // Exponential scaling for subheading size
+              }}
+            >
+              {subheadingText}
+            </div>
           </div>
         </div>
       </div>

@@ -63,7 +63,9 @@
     "nostr-tools": "latest",
     "@dnd-kit/sortable": "latest",
     "@dnd-kit/utilities": "latest",
-    "use-immer": "latest"
+    "use-immer": "latest",
+    "dom-to-svg": "latest",
+    "html2canvas": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
