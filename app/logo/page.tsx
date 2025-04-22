@@ -18,8 +18,8 @@ export default function LogoGenerator() {
   const [fontWeight, setFontWeight] = useState(300) // 100-600 range
   const [topSpacing, setTopSpacing] = useState(3) // 0-10 range (0px to 40px)
 
-  const svgRef = useRef<SVGSVGElement>(null)
   const logoRef = useRef<HTMLHeadingElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Get logo width after render and when outline changes
   useEffect(() => {
@@ -34,53 +34,115 @@ export default function LogoGenerator() {
 
   // Function to export the logo as SVG
   const exportSVG = () => {
-    if (!svgRef.current) return
+    if (!containerRef.current) return
 
-    // Clone the SVG element
-    const svgElement = svgRef.current.cloneNode(true) as SVGElement
-
-    // Set viewBox and dimensions
+    // Create a new SVG element
+    const svgElement = document.createElementNS("http://www.w3.org/2000/svg", "svg")
     svgElement.setAttribute("width", "500")
     svgElement.setAttribute("height", "300")
     svgElement.setAttribute("viewBox", "0 0 500 300")
+    svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg")
 
-    // Create a group for the logo and text
-    const group = document.createElementNS("http://www.w3.org/2000/svg", "g")
-
-    // Add the logo elements
-    while (svgElement.firstChild) {
-      group.appendChild(svgElement.firstChild)
-    }
-
-    // Add the subheading text
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text")
-    text.setAttribute("x", "250")
-    text.setAttribute("y", `${180 + topSpacing * 4}`) // Adjust y position based on top spacing
-    text.setAttribute("text-anchor", "middle")
-    text.setAttribute("font-family", "Poppins, sans-serif")
-    text.setAttribute("font-size", "24")
-    text.setAttribute("font-weight", fontWeight.toString())
-    text.setAttribute("font-style", "italic")
-    text.setAttribute("letter-spacing", `${letterSpacing * 0.01}em`)
-    text.setAttribute("fill", "#f0e6c8")
-    text.textContent = subheadingText
-
-    group.appendChild(text)
-    svgElement.appendChild(group)
-
-    // Convert SVG to string
-    const serializer = new XMLSerializer()
-    let svgString = serializer.serializeToString(svgElement)
-
-    // Add namespace
-    svgString = svgString.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"')
-
-    // Add CSS
+    // Add style for fonts
     const style = document.createElementNS("http://www.w3.org/2000/svg", "style")
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;1,100;1,200;1,300;1,400;1,500;1,600&display=swap');
     `
-    svgElement.insertBefore(style, svgElement.firstChild)
+    svgElement.appendChild(style)
+
+    // Create a group for centering
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g")
+    group.setAttribute("transform", "translate(250, 150)")
+
+    // Create the logo text
+    const logoText = document.createElementNS("http://www.w3.org/2000/svg", "text")
+    logoText.setAttribute("x", "0")
+    logoText.setAttribute("y", "0")
+    logoText.setAttribute("text-anchor", "middle")
+    logoText.setAttribute("font-family", "Poppins, sans-serif")
+    logoText.setAttribute("font-size", "70")
+    logoText.setAttribute("font-weight", "600")
+    logoText.setAttribute("font-style", "italic")
+    logoText.setAttribute("letter-spacing", "0.05em")
+
+    if (isOutline) {
+      logoText.setAttribute("fill", "transparent")
+      logoText.setAttribute("stroke", "#f0e6c8")
+      logoText.setAttribute("stroke-width", "1")
+    } else {
+      logoText.setAttribute("fill", "#f0e6c8")
+      logoText.setAttribute("stroke", "#f0e6c8")
+      logoText.setAttribute("stroke-width", "0.5")
+    }
+
+    logoText.textContent = "SEQ1"
+
+    // Create the subheading text
+    const subheadingElement = document.createElementNS("http://www.w3.org/2000/svg", "text")
+    subheadingElement.setAttribute("x", "0")
+    subheadingElement.setAttribute("y", `${topSpacing * 4 + 40}`)
+    subheadingElement.setAttribute("text-anchor", "middle")
+    subheadingElement.setAttribute("font-family", "Poppins, sans-serif")
+    subheadingElement.setAttribute("font-size", "24")
+    subheadingElement.setAttribute("font-weight", fontWeight.toString())
+    subheadingElement.setAttribute("font-style", "italic")
+    subheadingElement.setAttribute("letter-spacing", `${letterSpacing * 0.01}em`)
+    subheadingElement.setAttribute("fill", "#f0e6c8")
+    subheadingElement.textContent = subheadingText
+
+    // Add glow filter if needed
+    if (glowAmount > 0) {
+      const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs")
+      const filter = document.createElementNS("http://www.w3.org/2000/svg", "filter")
+      filter.setAttribute("id", "glow")
+      filter.setAttribute("x", "-50%")
+      filter.setAttribute("y", "-50%")
+      filter.setAttribute("width", "200%")
+      filter.setAttribute("height", "200%")
+
+      const feGaussianBlur = document.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur")
+      feGaussianBlur.setAttribute("stdDeviation", `${glowAmount / 10}`)
+      feGaussianBlur.setAttribute("result", "blur")
+
+      const feFlood = document.createElementNS("http://www.w3.org/2000/svg", "feFlood")
+      feFlood.setAttribute("flood-color", "#f0e6c8")
+      feFlood.setAttribute("flood-opacity", `${glowAmount / 100}`)
+      feFlood.setAttribute("result", "color")
+
+      const feComposite = document.createElementNS("http://www.w3.org/2000/svg", "feComposite")
+      feComposite.setAttribute("in", "color")
+      feComposite.setAttribute("in2", "blur")
+      feComposite.setAttribute("operator", "in")
+      feComposite.setAttribute("result", "glow")
+
+      const feMerge = document.createElementNS("http://www.w3.org/2000/svg", "feMerge")
+      const feMergeNode1 = document.createElementNS("http://www.w3.org/2000/svg", "feMergeNode")
+      feMergeNode1.setAttribute("in", "glow")
+      const feMergeNode2 = document.createElementNS("http://www.w3.org/2000/svg", "feMergeNode")
+      feMergeNode2.setAttribute("in", "SourceGraphic")
+
+      feMerge.appendChild(feMergeNode1)
+      feMerge.appendChild(feMergeNode2)
+
+      filter.appendChild(feGaussianBlur)
+      filter.appendChild(feFlood)
+      filter.appendChild(feComposite)
+      filter.appendChild(feMerge)
+
+      defs.appendChild(filter)
+      svgElement.appendChild(defs)
+
+      group.setAttribute("filter", "url(#glow)")
+    }
+
+    // Assemble the SVG
+    group.appendChild(logoText)
+    group.appendChild(subheadingElement)
+    svgElement.appendChild(group)
+
+    // Convert SVG to string
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svgElement)
 
     // Convert to data URL
     const svgBlob = new Blob([svgString], { type: "image/svg+xml" })
@@ -102,6 +164,7 @@ export default function LogoGenerator() {
         {/* Logo Preview - Left Column */}
         <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-8 bg-[#15090f] rounded-lg">
           <div
+            ref={containerRef}
             className={`relative ${glowAmount > 0 ? "filter" : ""}`}
             style={{
               filter:
