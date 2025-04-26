@@ -293,7 +293,7 @@ export default function LogoGenerator() {
                   WebkitTextStroke: isOutline ? "1.5px #f0e6c8" : "0.5px #f0e6c8",
                   textShadow: "none",
                   letterSpacing: "0.05em",
-                  fontSize: `${100 + glowAmount * 0.5}px`, // Exponential scaling for logo size
+                  fontSize: `${100 + glowAmount}px`, // Linear scaling for logo size
                 }}
               >
                 SEQ1
@@ -308,7 +308,7 @@ export default function LogoGenerator() {
                 marginTop: `${topSpacing * 12}px`,
                 letterSpacing: `${letterSpacing * 0.02}em`,
                 fontWeight: fontWeight,
-                fontSize: `${24 + glowAmount * 0.2}px`, // Exponential scaling for subheading size
+                fontSize: `${24 + glowAmount * 0.5}px`, // Linear scaling for subheading size
               }}
             >
               {subheadingText}

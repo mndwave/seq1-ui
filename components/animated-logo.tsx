@@ -21,19 +21,20 @@ interface AnimatedLogoProps {
  * Displays the SEQ1 logo with a smooth valve-like warm-up animation:
  * 1. Outline - Initial state with just the outline visible (light off)
  * 2. Warming - Slow valve warm-up effect where the glow gradually intensifies
+ * 3. Hot - Final state with subtle pulsing glow
  */
 export default function AnimatedLogo({
   onAnimationComplete,
   className = "",
   skipAnimation = false,
 }: AnimatedLogoProps) {
-  const [animationState, setAnimationState] = useState<LogoAnimationState>(skipAnimation ? "warming" : "outline")
+  const [animationState, setAnimationState] = useState<LogoAnimationState>(skipAnimation ? "hot" : "outline")
   const [hasInitialized, setHasInitialized] = useState(false)
 
   useEffect(() => {
     if (skipAnimation) {
-      // If skipping the initial animation, go straight to warming state
-      setAnimationState("warming")
+      // If skipping the initial animation, go straight to hot state
+      setAnimationState("hot")
       setHasInitialized(true)
 
       // Still need to call the completion callback
@@ -51,15 +52,20 @@ export default function AnimatedLogo({
       // After a short delay, start warming up
       const warmingTimer = setTimeout(() => {
         setAnimationState("warming")
-        setHasInitialized(true)
-        if (onAnimationComplete) {
-          onAnimationComplete()
-        }
+
+        // After warming phase, transition to hot state
+        const hotTimer = setTimeout(() => {
+          setAnimationState("hot")
+          setHasInitialized(true)
+          if (onAnimationComplete) {
+            onAnimationComplete()
+          }
+        }, 2000) // 2 second warming phase
+
+        return () => clearTimeout(hotTimer)
       }, 1000) // 1 second delay before starting warm-up
 
-      return () => {
-        clearTimeout(warmingTimer)
-      }
+      return () => clearTimeout(warmingTimer)
     }
   }, [onAnimationComplete, skipAnimation, hasInitialized])
 
@@ -67,11 +73,12 @@ export default function AnimatedLogo({
     <h1
       className={`text-2xl font-semibold italic font-poppins transition-all duration-700 ${className} ${
         animationState === "warming" ? "animate-logo-warming" : ""
-      }`}
+      } ${animationState === "hot" ? "animate-logo-hot" : ""}`}
       style={{
         color: animationState === "outline" ? "transparent" : undefined,
         WebkitTextStroke: animationState === "outline" ? "1px #f0e6c8" : undefined,
         opacity: animationState === "outline" ? 0.7 : 1,
+        textShadow: animationState === "hot" ? "0 0 10px rgba(240, 230, 200, 0.6)" : undefined,
       }}
     >
       SEQ1

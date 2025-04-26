@@ -46,7 +46,7 @@ export interface Message {
 /**
  * Animation states for the SEQ1 logo
  */
-export type LogoAnimationState = "outline" | "pulsing" | "warming"
+export type LogoAnimationState = "outline" | "warming" | "hot"
 
 /**
  * Project menu actions
