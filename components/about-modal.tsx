@@ -14,7 +14,7 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
       isOpen={isOpen}
       onClose={onClose}
       title="ABOUT SEQ1"
-      icon={<Info size={16} className="text-[#f5a623]" />}
+      icon={<Info size={16} className="info-icon-pulse" />}
       width="w-96"
     >
       <div className="space-y-3">

@@ -217,7 +217,7 @@ export default function ChatWindow({ isHardwareConnected = false }: ChatWindowPr
             {/* Message bubble with vintage hardware-style border */}
             <div
               className={cn(
-                "max-w3xl p-4 relative transition-all duration-300",
+                "max-w3xl px-4 py-2.5 relative transition-all duration-300",
                 message.sender === "user" ? "bg-[#2a1a20] ml-auto" : "bg-[#1a1015]",
                 message.sender === "assistant" ? "crt-flicker" : "",
               )}

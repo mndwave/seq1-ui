@@ -14,6 +14,20 @@ export const devices = [
     },
   },
   {
+    id: "6", // Add this new device
+    name: "Sequential Circuits Prophet 5",
+    type: "Vintage Analog Polysynth",
+    port: "MIDI 5",
+    isConnected: true,
+    hasPatches: true,
+    patchCount: 120,
+    isManuallyAdded: true,
+    midiActivity: {
+      in: false,
+      out: false,
+    },
+  },
+  {
     id: "3",
     name: "Analog Rytm MKII",
     type: "Drum Machine",

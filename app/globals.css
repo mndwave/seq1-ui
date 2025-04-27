@@ -810,3 +810,27 @@ body.dragging * {
 .animate-pulse {
   animation: pulse 1s infinite;
 }
+
+/* Updated animation for the info icon - soft warm pulsing like a distant boat at sea */
+@keyframes info-icon-pulse {
+  0% {
+    color: rgba(255, 140, 60, 0.7);
+    text-shadow: 0 0 8px rgba(255, 140, 60, 0.2);
+    filter: brightness(0.9);
+  }
+  50% {
+    color: rgba(255, 160, 80, 0.9);
+    text-shadow: 0 0 15px rgba(255, 140, 60, 0.4);
+    filter: brightness(1.1);
+  }
+  100% {
+    color: rgba(255, 140, 60, 0.7);
+    text-shadow: 0 0 8px rgba(255, 140, 60, 0.2);
+    filter: brightness(0.9);
+  }
+}
+
+.info-icon-pulse {
+  color: #ff8c3c;
+  animation: info-icon-pulse 6s ease-in-out infinite;
+}
