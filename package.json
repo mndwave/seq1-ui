@@ -65,7 +65,9 @@
     "@dnd-kit/utilities": "latest",
     "use-immer": "latest",
     "dom-to-svg": "latest",
-    "html2canvas": "latest"
+    "html2canvas": "latest",
+    "fs": "latest",
+    "path": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

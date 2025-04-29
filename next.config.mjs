@@ -10,6 +10,14 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/.well-known/nostr.json',
+        destination: '/api/well-known/nostr'
+      }
+    ]
+  },
   async headers() {
     return [
       {
