@@ -15,12 +15,11 @@ export default function SynthPresetCard({ deviceName, presetName, sections, clas
       {/* Sender label */}
       <div className="text-xs mb-1 tracking-wide text-[#7a9e9f]">SEQ1</div>
 
-      {/* Message bubble with vintage hardware-style border */}
+      {/* Message bubble with only the left accent border */}
       <div
         className="max-w-full p-4 relative transition-all duration-300 bg-black border-l-2 border-[#f5a623]"
         style={{
-          boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+          boxShadow: "none", // Remove the box-shadow that was creating the border effect
         }}
       >
         <div className="mb-3">

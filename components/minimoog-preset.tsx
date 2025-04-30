@@ -50,8 +50,7 @@ export default function MiniMoogPreset({ presetName, className = "" }: MiniMoogP
       <div
         className="max-w-full p-4 relative transition-all duration-300 bg-[#1a1015] border-l-2 border-[#f5a623] animate-preset-container"
         style={{
-          boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+          boxShadow: "none",
         }}
       >
         {/* Patch sheet header with delayed animation */}
