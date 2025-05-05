@@ -17,5 +17,18 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/.well-known/nostr.json",
+      "has": [
+        {
+          "type": "host",
+          "value": "seq1.net"
+        }
+      ],
+      "destination": "https://www.seq1.net/.well-known/nostr.json",
+      "permanent": true
+    }
   ]
 }
