@@ -10,24 +10,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Keep the rewrites for the API route
-  async rewrites() {
-    return [
-      {
-        source: '/.well-known/nostr.json',
-        destination: '/api/nostr'
-      }
-    ]
-  },
-  // Keep the headers for direct file access as fallback
+  // Remove all rewrites
+  // Simply ensure CORS headers are set for the .well-known directory
   async headers() {
     return [
       {
-        source: "/.well-known/:path*",
+        source: "/.well-known/nostr.json",
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
-          { key: "Content-Type", value: "application/json; charset=utf-8" }
+          { key: "Content-Type", value: "application/json" }
         ]
       }
     ]
