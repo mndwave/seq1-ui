@@ -90,7 +90,7 @@ export default function ProfileTab({ accountInfo, onUpdate }: ProfileTabProps) {
   }
 
   return (
-    <div className="space-y-3 text-sm">
+    <div className="space-y-3 text-sm min-h-[400px]">
       <div className="flex items-start gap-4">
         {/* Added mt-4 to move the avatar down and center it vertically */}
         <div className="relative flex-shrink-0 mt-4">
