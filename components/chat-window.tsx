@@ -23,13 +23,19 @@ interface Message {
   presetData?: any // Store the preset data in the message
 }
 
-// Add a prop to indicate if hardware is connected
+// Update the ChatWindowProps interface to include device and clip context
 interface ChatWindowProps {
   isHardwareConnected?: boolean
+  selectedDeviceId?: string | null
+  selectedClipId?: string | null
 }
 
-// Update the component signature to accept the prop
-export default function ChatWindow({ isHardwareConnected = false }: ChatWindowProps) {
+// Update the component signature to accept the new props
+export default function ChatWindow({
+  isHardwareConnected = false,
+  selectedDeviceId = null,
+  selectedClipId = null,
+}: ChatWindowProps) {
   // Update the welcome message to be more CRT-like
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -75,6 +81,19 @@ export default function ChatWindow({ isHardwareConnected = false }: ChatWindowPr
     e.preventDefault()
     if (!input.trim()) return
 
+    // Check if both device and clip are selected
+    if (!selectedDeviceId || !selectedClipId) {
+      // Show a temporary error message in the chat
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: "Please select both a device and a clip to compose.",
+        sender: "assistant",
+        type: "config",
+      }
+      setMessages([...messages, errorMessage])
+      return
+    }
+
     const newMessage: Message = {
       id: Date.now().toString(),
       content: input,
@@ -109,13 +128,13 @@ export default function ChatWindow({ isHardwareConnected = false }: ChatWindowPr
     }
 
     try {
-      // Send the message to the API
-      const { response, midiClip, responseData } = await sendChatMessage(input)
+      // Send the message to the API with device and clip context
+      const { response, midiClip, responseData } = await sendChatMessage(input, selectedDeviceId, selectedClipId)
 
       // Process the MIDI if hardware is connected
       if (isHardwareConnected && midiClip) {
         try {
-          await playMidiClip(midiClip)
+          await playMidiClip(midiClip, selectedDeviceId)
         } catch (midiError) {
           console.error("Error playing MIDI clip:", midiError)
         }
@@ -135,7 +154,7 @@ export default function ChatWindow({ isHardwareConnected = false }: ChatWindowPr
       // Inside your handleSubmit function or wherever you process API responses
 
       // When receiving a synth preset from the API
-      if (responseData.type === "synth-preset" && responseData.preset) {
+      if (responseData?.type === "synth-preset" && responseData.preset) {
         // The preset data comes from the API as a SynthPresetSchema object
         const presetMessage: Message = {
           id: Date.now().toString(),

@@ -113,18 +113,12 @@ export default function BasicProjectMenu({ onAction }: BasicProjectMenuProps) {
             <div className="w-full text-left px-4 py-2 text-xs flex items-center rounded-sm relative group">
               <Upload size={14} className="mr-3 text-[#a09080] opacity-50" />
               <span className="text-[#a09080]">EXPORT ALS</span>
-              <span className="ml-2 px-1.5 py-0.5 text-[8px] bg-[#3a2a30] text-[#f0e6c8] rounded-sm tracking-wider">
-                COMING SOON
-              </span>
             </div>
 
             {/* IMPORT ALS - disabled */}
             <div className="w-full text-left px-4 py-2 text-xs flex items-center rounded-sm relative group">
               <Download size={14} className="mr-3 text-[#a09080] opacity-50" />
               <span className="text-[#a09080]">IMPORT ALS</span>
-              <span className="ml-2 px-1.5 py-0.5 text-[8px] bg-[#3a2a30] text-[#f0e6c8] rounded-sm tracking-wider">
-                COMING SOON
-              </span>
             </div>
           </div>
         </div>

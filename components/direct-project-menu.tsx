@@ -4,10 +4,23 @@ import React from "react"
 
 import { useRef, useState, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { Menu, FilePlus, FolderOpen, Save, FileText, Upload, Download, UserPlus, LogOut, Info } from "lucide-react"
+import {
+  Menu,
+  FilePlus,
+  FolderOpen,
+  Save,
+  FileText,
+  Upload,
+  Download,
+  UserPlus,
+  LogOut,
+  Info,
+  User,
+} from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import AuthManager from "./auth/auth-manager"
 import AboutModal from "./about-modal"
+import AccountModal from "./account-modal"
 
 interface MenuItem {
   id: string
@@ -29,6 +42,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showAccountModal, setShowAccountModal] = useState(false)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -45,8 +59,8 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         console.log("New action triggered")
         handleMenuAction("new")
       },
-      disabled: true,
-      comingSoon: true,
+      disabled: false,
+      comingSoon: false,
     },
     {
       id: "open",
@@ -56,8 +70,8 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         console.log("Open action triggered")
         handleMenuAction("open")
       },
-      disabled: true,
-      comingSoon: true,
+      disabled: false,
+      comingSoon: false,
       dividerAfter: true,
     },
     {
@@ -68,8 +82,8 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         console.log("Save action triggered")
         handleMenuAction("save")
       },
-      disabled: true,
-      comingSoon: true,
+      disabled: false,
+      comingSoon: false,
     },
     {
       id: "saveAs",
@@ -79,8 +93,8 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         console.log("Save As action triggered")
         handleMenuAction("saveAs")
       },
-      disabled: true,
-      comingSoon: true,
+      disabled: false,
+      comingSoon: false,
       dividerAfter: true,
     },
     {
@@ -110,6 +124,18 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       label: "ABOUT SEQ1",
       icon: <Info size={14} />,
       action: () => handleMenuAction("about"),
+      disabled: false,
+      comingSoon: false,
+      dividerBefore: true,
+    },
+    {
+      id: "account",
+      label: "ACCOUNT",
+      icon: <User size={14} />,
+      action: () => {
+        console.log("Account action triggered")
+        setShowAccountModal(true)
+      },
       disabled: false,
       comingSoon: false,
       dividerBefore: true,
@@ -160,6 +186,12 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     if (menuItem) {
       if (menuItem.id === "about") {
         setShowAboutModal(true)
+        setIsOpen(false)
+        return
+      }
+
+      if (menuItem.id === "account") {
+        setShowAccountModal(true)
         setIsOpen(false)
         return
       }
@@ -252,31 +284,51 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         }}
       >
         <div className="p-2">
-          {menuItems.map((item, index) => (
-            <React.Fragment key={item.id}>
-              {item.dividerBefore && <div className="border-t border-[#3a2a30] my-2"></div>}
-              <button
-                className={`w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm relative ${
-                  item.disabled ? "cursor-not-allowed" : "cursor-pointer"
-                }`}
-                onClick={() => handleMenuAction(item.id)}
-                disabled={item.disabled}
-                role="menuitem"
-              >
-                {item.icon && <span className="mr-3 text-[#a09080]">{item.icon}</span>}
-                <span className={item.disabled ? "text-[#a09080]" : ""}>{item.label}</span>
-                {item.comingSoon && (
-                  <span className="ml-2 px-1.5 py-0.5 text-[8px] bg-[#3a2a30] text-[#f0e6c8] rounded-sm tracking-wider">
-                    COMING SOON
-                  </span>
-                )}
-              </button>
-              {item.dividerAfter && <div className="border-t border-[#3a2a30] my-2"></div>}
-            </React.Fragment>
-          ))}
+          {menuItems.map((item, index) => {
+            // Skip rendering the account option here, we'll render it separately
+            if (item.id === "account") return null
 
-          {/* Single divider before auth options */}
+            return (
+              <React.Fragment key={item.id}>
+                {item.dividerBefore && <div className="border-t border-[#3a2a30] my-2"></div>}
+                <button
+                  className={`w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm relative ${
+                    item.disabled ? "cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                  onClick={() => handleMenuAction(item.id)}
+                  disabled={item.disabled}
+                  role="menuitem"
+                >
+                  {item.icon && <span className="mr-3 text-[#a09080]">{item.icon}</span>}
+                  <span className={item.disabled ? "text-[#a09080]" : ""}>{item.label}</span>
+                  {item.comingSoon && (
+                    <span className="ml-2 px-1.5 py-0.5 text-[8px] bg-[#3a2a30] text-[#f0e6c8] rounded-sm tracking-wider">
+                      COMING SOON
+                    </span>
+                  )}
+                </button>
+                {item.dividerAfter && <div className="border-t border-[#3a2a30] my-2"></div>}
+              </React.Fragment>
+            )
+          })}
+
+          {/* Single divider before account options */}
           <div className="border-t border-[#3a2a30] my-2"></div>
+
+          {/* Account option with green color */}
+          <button
+            className="w-full text-left px-4 py-2 text-xs text-[#4ade80] hover:bg-[#3a2a30] flex items-center rounded-sm"
+            onClick={() => {
+              closeMenu()
+              setShowAccountModal(true)
+            }}
+            role="menuitem"
+          >
+            <User size={14} className="mr-3 text-[#4ade80]" />
+            <span>ACCOUNT</span>
+          </button>
+
+          {/* Auth option (login/signup or sign out) */}
           {renderAuthOption()}
         </div>
       </div>,
@@ -308,6 +360,11 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
 
       {/* Auth Modal */}
       <AuthManager isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} onAuthComplete={handleAuthComplete} />
+
+      {/* Account Modal */}
+      <AccountModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} />
+
+      {/* About Modal */}
       {showAboutModal && <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />}
     </div>
   )

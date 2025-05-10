@@ -5,16 +5,27 @@
 /**
  * Send a chat message to the SEQ1 orchestration engine
  * @param prompt The user's message or prompt
+ * @param deviceId The ID of the selected device
+ * @param clipId The ID of the selected clip
  * @returns The response and MIDI clip (base64 encoded)
  */
-export async function sendChatMessage(prompt: string) {
+export async function sendChatMessage(prompt: string, deviceId?: string | null, clipId?: string | null) {
   try {
+    // Validate context
+    if (!deviceId || !clipId) {
+      throw new Error("Missing context: Both device and clip must be selected")
+    }
+
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({
+        prompt,
+        device_id: deviceId,
+        clip_id: clipId,
+      }),
     })
 
     if (!response.ok) {

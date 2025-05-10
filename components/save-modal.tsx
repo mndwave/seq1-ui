@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { Save, Check, Wand2 } from "lucide-react"
 import DraggableModal from "./draggable-modal"
 import { generateProjectName } from "@/lib/name-generator"
+import { SocialTuningPrompt } from "./social-tuning-prompt"
 
 interface SaveModalProps {
   isOpen: boolean
@@ -91,6 +92,9 @@ export default function SaveModal({
               className="w-full bg-[#1a1015] border border-[#3a2a30] rounded-sm px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#4287f5] text-[#f0e6c8] tracking-wide"
             />
           </div>
+
+          {/* Social Tuning Prompt */}
+          <SocialTuningPrompt className="mt-4 mb-2" />
 
           {/* Action buttons */}
           <div className="flex justify-end space-x-2 pt-2">

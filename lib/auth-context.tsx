@@ -212,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
-        loginWithExtension, // Add this new function
+        loginWithExtension,
         signup,
         logout,
         saveUserProfile,

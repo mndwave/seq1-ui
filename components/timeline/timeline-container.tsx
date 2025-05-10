@@ -10,6 +10,7 @@ interface TimelineContainerProps {
   className?: string
   selectedDeviceId?: string | null
   onLoopChange?: (isLooping: boolean) => void
+  onClipSelect?: (clipId: string) => void
 }
 
 // Create a content API to manage timeline content
@@ -76,7 +77,12 @@ const createContentAPI = (
   }
 }
 
-export default function TimelineContainer({ className = "", selectedDeviceId, onLoopChange }: TimelineContainerProps) {
+export default function TimelineContainer({
+  className = "",
+  selectedDeviceId,
+  onLoopChange,
+  onClipSelect,
+}: TimelineContainerProps) {
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [initialSections, setInitialSections] = useState<TimelineClip[]>([])
   const [loopRegion, setLoopRegion] = useState<LoopRegion | null>(null)
@@ -153,6 +159,11 @@ export default function TimelineContainer({ className = "", selectedDeviceId, on
   const handleSectionSelect = (sectionId: string) => {
     setSelectedSection(sectionId)
     console.log(`Selected section ${sectionId} for device ${selectedDeviceId || "none"}`)
+
+    // Notify parent component about clip selection
+    if (onClipSelect) {
+      onClipSelect(sectionId)
+    }
   }
 
   return (

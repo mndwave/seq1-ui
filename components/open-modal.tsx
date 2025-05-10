@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { FolderOpen, Search } from "lucide-react"
 import DraggableModal from "./draggable-modal"
+import { SocialTuningPrompt } from "./social-tuning-prompt"
 
 interface OpenModalProps {
   isOpen: boolean
@@ -114,6 +115,9 @@ export default function OpenModal({ isOpen, onClose }: OpenModalProps) {
             {filteredProjects.length} {filteredProjects.length === 1 ? "project" : "projects"} found
           </div>
         </div>
+
+        {/* Social Tuning Prompt - compact variant */}
+        <SocialTuningPrompt variant="compact" className="mt-3" />
 
         {/* Action buttons */}
         <div className="flex justify-end space-x-2 pt-2">

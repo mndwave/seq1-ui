@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { UserPlus, Copy, Download, Check, AlertCircle, ChevronRight, ChevronLeft, Key } from "lucide-react"
+import { UserPlus, Copy, Download, Check, AlertCircle, ChevronRight, ChevronLeft, Key, Eye, EyeOff } from "lucide-react"
 import DraggableModal from "@/components/draggable-modal"
 import { nip19 } from "nostr-tools"
 
@@ -16,13 +16,14 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
   const { signup, saveUserProfile } = useAuth()
   const [step, setStep] = useState(1)
   const [keys, setKeys] = useState<{ privateKey: string; publicKey: string; nsec: string; npub: string } | null>(null)
-  const [username, setUsername] = useState("")
-  // Remove this line
   const [keyCopied, setKeyCopied] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState(false)
   const [keyDownloaded, setKeyDownloaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showPrivateKey, setShowPrivateKey] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(30)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Generate keys when modal opens
   useEffect(() => {
@@ -36,13 +37,62 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
     if (!isOpen) {
       setStep(1)
       setKeys(null)
-      setUsername("")
       setKeyCopied(false)
       setCopyFeedback(false)
       setKeyDownloaded(false)
       setError(null)
+      setShowPrivateKey(false)
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
     }
   }, [isOpen])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+    }
+  }, [])
+
+  // Handle timer for auto-hiding
+  useEffect(() => {
+    if (showPrivateKey) {
+      setTimeLeft(30)
+
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            setShowPrivateKey(false)
+            if (timerRef.current) {
+              clearInterval(timerRef.current)
+              timerRef.current = null
+            }
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+    }
+  }, [showPrivateKey])
 
   const generateKeys = async () => {
     try {
@@ -62,8 +112,17 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
     }
   }
 
+  const togglePrivateKeyVisibility = () => {
+    setShowPrivateKey(!showPrivateKey)
+  }
+
   const copyPrivateKey = () => {
     if (!keys) return
+
+    // Show the key if it's currently hidden
+    if (!showPrivateKey) {
+      setShowPrivateKey(true)
+    }
 
     navigator.clipboard.writeText(keys.nsec)
     setKeyCopied(true) // This stays true permanently for the checkbox
@@ -96,33 +155,29 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
     element.click()
     document.body.removeChild(element)
 
-    // Set keyDownloaded to true without affecting keyCopied state
     setKeyDownloaded(true)
-
-    // Remove the setTimeout that was resetting keyCopied
-    // The original code might have had this, but we're making sure it's not there
   }
 
-  const handleCreateProfile = async () => {
-    if (!username.trim()) {
-      setError("Username is required")
-      return
-    }
+  const handleCreateAccount = async () => {
+    if (!keys) return
 
-    setError(null)
     setIsLoading(true)
+    setError(null)
 
     try {
+      // Generate a default username based on the public key
+      const defaultUsername = `user${keys.publicKey.slice(0, 5)}`
+
+      // Save profile with default values
       const success = await saveUserProfile({
-        username,
-        // Use username as the display name too
-        displayName: username,
+        username: defaultUsername,
+        displayName: "SEQ1 User",
       })
 
       if (success) {
         onClose()
       } else {
-        setError("Failed to create profile. Please try again.")
+        setError("Failed to create account. Please try again.")
       }
     } catch (err) {
       setError("An error occurred. Please try again.")
@@ -136,44 +191,23 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
     switch (step) {
       case 1:
         return (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium text-[#f0e6c8]">Welcome to SEQ1</h3>
-              <p className="text-sm text-[#a09080]">
-                SEQ1 uses Nostr for authentication, a decentralized protocol that gives you complete control over your
-                identity.
-              </p>
-            </div>
+          <div className="space-y-4">
+            <p className="text-sm text-[#a09080]">
+              SEQ1 uses Nostr for authentication, a decentralized protocol that gives you complete control over your
+              identity.
+            </p>
 
-            {/* Extension signup option */}
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-3 rounded-sm">
-              <p className="text-xs text-[#f5a623] font-medium">NEW TO NOSTR?</p>
-              <p className="text-xs text-[#f0e6c8] mt-1">
-                We'll help you create a new Nostr identity that you can use with SEQ1 and other Nostr applications.
-              </p>
-              <p className="text-xs text-[#a09080] mt-1">
-                If you already have a Nostr account through Alby or NOS2X, you can go back and use the "Login" option
-                instead.
-              </p>
-            </div>
-
-            <div className="relative flex items-center justify-center">
-              <div className="flex-grow h-px bg-[#3a2a30]"></div>
-              <span className="px-4 text-xs text-[#a09080]">OR</span>
-              <div className="flex-grow h-px bg-[#3a2a30]"></div>
-            </div>
-
-            <div className="inset-panel p-4 space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 rounded-full bg-[#4287f5] flex items-center justify-center flex-shrink-0">
-                  <Key size={16} className="text-[#1a1015]" />
+            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
+              <div className="flex items-start space-x-2.5">
+                <div className="w-7 h-7 rounded-full bg-[#4287f5] flex items-center justify-center flex-shrink-0">
+                  <Key size={14} className="text-[#1a1015]" />
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-[#f0e6c8]">How Nostr Authentication Works</h4>
-                  <p className="text-xs text-[#a09080] mt-1">
+                  <p className="text-xs text-[#a09080] mt-0.5">
                     Instead of a username and password, you'll use a cryptographic key pair:
                   </p>
-                  <ul className="text-xs text-[#a09080] mt-2 space-y-1 list-disc pl-4">
+                  <ul className="text-xs text-[#a09080] mt-1 space-y-0.5 list-disc pl-4">
                     <li>
                       Your <span className="text-[#4287f5]">public key</span> is your identity (like a username)
                     </li>
@@ -185,18 +219,18 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
               </div>
             </div>
 
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-3 rounded-sm">
+            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
               <p className="text-xs text-[#f5a623] font-medium">IMPORTANT</p>
-              <p className="text-xs text-[#f0e6c8] mt-1">
+              <p className="text-xs text-[#f0e6c8] mt-0.5">
                 In the next step, we'll generate your private key. You{" "}
                 <span className="underline">must save this key</span> somewhere secure.
               </p>
-              <p className="text-xs text-[#a09080] mt-1">
+              <p className="text-xs text-[#a09080] mt-0.5">
                 If you lose your private key, you'll lose access to your SEQ1 account permanently.
               </p>
             </div>
 
-            <div className="flex justify-between pt-2">
+            <div className="flex justify-between pt-1">
               <button className="channel-button flex items-center px-3 py-1.5" onClick={onLoginClick}>
                 <span className="text-xs tracking-wide">I ALREADY HAVE A KEY</span>
               </button>
@@ -211,19 +245,26 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
 
       case 2:
         return (
-          <div className="space-y-6">
-            <div className="space-y-2">
+          <div className="space-y-4">
+            <div>
               <h3 className="text-lg font-medium text-[#f0e6c8]">Save Your Private Key</h3>
               <p className="text-sm text-[#a09080]">
                 This is your private key. Save it securely - it's the only way to access your account.
               </p>
             </div>
 
-            {/* Private key display */}
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-3 rounded-sm">
-              <div className="flex justify-between items-center mb-2">
+            {/* Private key display with blur/reveal functionality */}
+            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
+              <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-[#a09080]">PRIVATE KEY (SECRET)</span>
                 <div className="flex space-x-2">
+                  <button
+                    onClick={togglePrivateKeyVisibility}
+                    className="text-[#f5a623] hover:text-[#f7b84a] transition-colors"
+                    title={showPrivateKey ? "Hide private key" : "Show private key"}
+                  >
+                    {showPrivateKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
                   <button
                     onClick={copyPrivateKey}
                     className="text-[#4287f5] hover:text-[#50a0ff] transition-colors"
@@ -240,17 +281,31 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
                   </button>
                 </div>
               </div>
-              <div className="bg-[#0f0a0c] p-2 rounded-sm overflow-x-auto">
-                <code className="text-xs text-[#f5a623] font-mono break-all">{keys?.nsec || "Generating..."}</code>
+              {/* Fixed height container to match public key container */}
+              <div
+                className="bg-[#0f0a0c] rounded-sm overflow-hidden relative flex items-center"
+                style={{ height: "60px" }}
+              >
+                {!showPrivateKey ? (
+                  <div className="absolute inset-0 flex items-center justify-center z-10">
+                    <p className="text-xs text-[#a09080]">
+                      Click the <Eye size={12} className="inline mx-1" /> icon to reveal
+                    </p>
+                  </div>
+                ) : (
+                  <code className="text-xs text-[#f5a623] font-mono break-all p-2 w-full">
+                    {keys?.nsec || "Generating..."}
+                  </code>
+                )}
               </div>
-              <p className="text-[10px] text-[#a09080] mt-2">
+              <p className="text-[10px] text-[#a09080] mt-1">
                 This key is like a master password. Never share it with anyone.
               </p>
             </div>
 
             {/* Public key display */}
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-3 rounded-sm">
-              <div className="flex justify-between items-center mb-2">
+            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
+              <div className="flex justify-between items-center mb-1">
                 <span className="text-xs text-[#a09080]">PUBLIC KEY (SHAREABLE)</span>
                 <button
                   onClick={() => {
@@ -262,31 +317,25 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
                   <Copy size={14} />
                 </button>
               </div>
-              <div className="bg-[#0f0a0c] p-2 rounded-sm overflow-x-auto">
-                <code className="text-xs text-[#4287f5] font-mono break-all">{keys?.npub || "Generating..."}</code>
+              <div className="bg-[#0f0a0c] rounded-sm overflow-hidden flex items-center" style={{ height: "60px" }}>
+                <code className="text-xs text-[#4287f5] font-mono break-all p-2 w-full">
+                  {keys?.npub || "Generating..."}
+                </code>
               </div>
-              <p className="text-[10px] text-[#a09080] mt-2">
+              <p className="text-[10px] text-[#a09080] mt-1">
                 This is your public identifier on Nostr. It's safe to share.
               </p>
             </div>
 
-            {/* Confirmation checkboxes */}
-            <div className="bg-[#1a1015] border border-[#f5a623] p-3 rounded-sm">
-              <p className="text-xs text-[#f5a623] font-medium mb-2">CONFIRMATION REQUIRED</p>
+            {/* Confirmation checkboxes - order swapped */}
+            <div className="bg-[#1a1015] border border-[#f5a623] p-2.5 rounded-sm">
+              <p className="text-xs text-[#f5a623] font-medium mb-1">CONFIRMATION REQUIRED</p>
               <p className="text-xs text-[#f0e6c8]">
                 Before continuing, please confirm you've saved your private key. Without it, you'll permanently lose
                 access to your account.
               </p>
 
-              <div className="flex items-center mt-3">
-                <div
-                  className={`w-4 h-4 border ${keyDownloaded ? "bg-[#4287f5] border-[#4287f5]" : "border-[#3a2a30]"} flex items-center justify-center`}
-                >
-                  {keyDownloaded && <Check size={12} className="text-[#1a1015]" />}
-                </div>
-                <span className="text-xs text-[#f0e6c8] ml-2">I've downloaded my private key</span>
-              </div>
-
+              {/* Copied checkbox - now first */}
               <div className="flex items-center mt-2">
                 <div
                   className={`w-4 h-4 border ${keyCopied ? "bg-[#4287f5] border-[#4287f5]" : "border-[#3a2a30]"} flex items-center justify-center`}
@@ -295,45 +344,16 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
                 </div>
                 <span className="text-xs text-[#f0e6c8] ml-2">I've copied my private key to a secure location</span>
               </div>
-            </div>
 
-            <div className="flex justify-between pt-2">
-              <button className="channel-button flex items-center px-3 py-1.5" onClick={() => setStep(1)}>
-                <ChevronLeft size={14} className="mr-1" />
-                <span className="text-xs tracking-wide">BACK</span>
-              </button>
-
-              <button
-                className={`channel-button ${keyCopied || keyDownloaded ? "active" : ""} flex items-center px-3 py-1.5`}
-                onClick={() => setStep(3)}
-                disabled={!keyCopied && !keyDownloaded}
-              >
-                <span className="text-xs tracking-wide">CONTINUE</span>
-                <ChevronRight size={14} className="ml-1" />
-              </button>
-            </div>
-          </div>
-        )
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium text-[#f0e6c8]">Create Your Profile</h3>
-              <p className="text-sm text-[#a09080]">Choose a username for your SEQ1 account.</p>
-            </div>
-
-            {/* Username input */}
-            <div className="space-y-1">
-              <label className="text-xs text-[#a09080] tracking-wide">USERNAME</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter a username"
-                className="w-full bg-[#1a1015] border border-[#3a2a30] rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4287f5] text-[#f0e6c8] tracking-wide"
-              />
-              <p className="text-[10px] text-[#a09080] mt-1">This will be your identifier in SEQ1</p>
+              {/* Downloaded checkbox - now second */}
+              <div className="flex items-center mt-1.5">
+                <div
+                  className={`w-4 h-4 border ${keyDownloaded ? "bg-[#4287f5] border-[#4287f5]" : "border-[#3a2a30]"} flex items-center justify-center`}
+                >
+                  {keyDownloaded && <Check size={12} className="text-[#1a1015]" />}
+                </div>
+                <span className="text-xs text-[#f0e6c8] ml-2">I've downloaded my private key</span>
+              </div>
             </div>
 
             {/* Error message */}
@@ -344,16 +364,16 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
               </div>
             )}
 
-            <div className="flex justify-between pt-2">
-              <button className="channel-button flex items-center px-3 py-1.5" onClick={() => setStep(2)}>
+            <div className="flex justify-between pt-1">
+              <button className="channel-button flex items-center px-3 py-1.5" onClick={() => setStep(1)}>
                 <ChevronLeft size={14} className="mr-1" />
                 <span className="text-xs tracking-wide">BACK</span>
               </button>
 
               <button
-                className="channel-button active flex items-center px-3 py-1.5"
-                onClick={handleCreateProfile}
-                disabled={isLoading}
+                className={`channel-button ${keyCopied || keyDownloaded ? "active" : ""} flex items-center px-3 py-1.5`}
+                onClick={handleCreateAccount}
+                disabled={(!keyCopied && !keyDownloaded) || isLoading}
               >
                 <span className="text-xs tracking-wide">{isLoading ? "CREATING..." : "CREATE ACCOUNT"}</span>
               </button>
@@ -372,32 +392,8 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
       onClose={onClose}
       title="CREATE SEQ1 ACCOUNT"
       icon={<UserPlus size={16} className="text-[#a09080]" />}
-      width="w-[500px]"
+      width="w-[450px]"
     >
-      {/* Progress indicator with muted colors */}
-      <div className="flex items-center justify-center mb-6">
-        {[1, 2, 3].map((s) => (
-          <div key={s} className="flex items-center">
-            <div
-              className={`w-3 h-3 rounded-full ${
-                s === step
-                  ? "bg-[#a09080]" // Current step - muted gold/tan
-                  : s < step
-                    ? "bg-[#3a2a30]" // Completed step - deep muted purple
-                    : "bg-[#2a1a20]" // Future step - darker background
-              } border ${s <= step ? "border-[#f0e6c8]" : "border-[#3a2a30]"}`}
-            />
-            {s < 3 && (
-              <div
-                className={`w-12 h-0.5 ${
-                  s < step ? "bg-[#3a2a30]" : "bg-[#2a1a20]"
-                } ${s < step ? "border-b border-[#f0e6c8]/20" : ""}`}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
       {renderStepContent()}
     </DraggableModal>
   )

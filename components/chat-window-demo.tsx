@@ -14,11 +14,13 @@ interface Message {
   type?: "midi" | "patch" | "config"
 }
 
-// Update the interface to include the onMessageSent callback
+// Update the interface to include context parameters
 interface ChatWindowDemoProps {
   isThinking: boolean
   showCRTEffect: boolean
   messageType: "normal" | "midi" | "patch" | "config"
+  selectedDeviceId?: string | null
+  selectedClipId?: string | null
   onThinkingComplete?: () => void
   onMessageSent?: () => void
 }
@@ -27,6 +29,8 @@ export default function ChatWindowDemo({
   isThinking,
   showCRTEffect,
   messageType,
+  selectedDeviceId = null,
+  selectedClipId = null,
   onThinkingComplete,
   onMessageSent,
 }: ChatWindowDemoProps) {
@@ -69,29 +73,34 @@ export default function ChatWindowDemo({
     }
   }, [isThinking])
 
-  // Generate a response based on the message type
-  const generateResponse = (userMessage: string, type: "normal" | "midi" | "patch" | "config") => {
+  // Update the generateResponse function to include context
+  const generateResponse = (
+    userMessage: string,
+    type: "normal" | "midi" | "patch" | "config",
+    deviceId?: string | null,
+    clipId?: string | null,
+  ) => {
     let responseContent = ""
     let responseType = undefined
 
+    // Create a context string for the response
+    const contextStr = deviceId && clipId ? ` for ${deviceId} in clip ${clipId}` : ""
+
     switch (type) {
       case "midi":
-        responseContent =
-          "I've detected MIDI activity on your Prophet 5. It looks like you're sending notes on channel 1. Would you like me to analyze the pattern?"
+        responseContent = `I've detected MIDI activity on your Prophet 5${contextStr}. It looks like you're sending notes on channel 1. Would you like me to analyze the pattern?`
         responseType = "midi"
         break
       case "patch":
-        responseContent =
-          "I've created a new patch for your Analog Four MKII based on your description. It has a deep bass with subtle modulation and a touch of resonance. You can find it in the SEQ1 library."
+        responseContent = `I've created a new patch for your Analog Four MKII${contextStr} based on your description. It has a deep bass with subtle modulation and a touch of resonance. You can find it in the SEQ1 library.`
         responseType = "patch"
         break
       case "config":
-        responseContent =
-          "I've updated your device configuration. The Minimoog Model D is now set to receive on MIDI channel 3 and the Prophet 5 is set to channel 1."
+        responseContent = `I've updated your device configuration${contextStr}. The Minimoog Model D is now set to receive on MIDI channel 3 and the Prophet 5 is set to channel 1.`
         responseType = "config"
         break
       default:
-        responseContent = `I understand you're asking about "${userMessage}". Let me help you with that. SEQ1 can assist with your hardware setup, patch creation, and musical ideas.`
+        responseContent = `I understand you're asking about "${userMessage}"${contextStr}. Let me help you with that. SEQ1 can assist with your hardware setup, patch creation, and musical ideas.`
     }
 
     return {
@@ -106,6 +115,19 @@ export default function ChatWindowDemo({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
+
+    // Check if both device and clip are selected for context routing
+    if (!selectedDeviceId || !selectedClipId) {
+      // Add a message indicating the need for context selection
+      const contextMessage: Message = {
+        id: Date.now().toString(),
+        content: "Please select both a device and a clip to compose.",
+        sender: "assistant",
+        type: "config",
+      }
+      setMessages([...messages, contextMessage])
+      return
+    }
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -127,7 +149,8 @@ export default function ChatWindowDemo({
         onThinkingComplete()
       }
 
-      const responseMessage = generateResponse(input, messageType)
+      // Generate a response that includes the context information
+      const responseMessage = generateResponse(input, messageType, selectedDeviceId, selectedClipId)
       setMessages((prev) => [...prev, responseMessage])
     }, 2500) // Increased delay to show thinking animation longer
   }

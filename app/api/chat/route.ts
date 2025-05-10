@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 
 // This would be replaced with your actual SEQ1 orchestration engine
-const processWithSeq1Engine = async (prompt: string) => {
+const processWithSeq1Engine = async (prompt: string, deviceId: string, clipId: string) => {
   // Simulate processing delay
   await new Promise((resolve) => setTimeout(resolve, 1000))
 
-  // Mock response generation
-  const response = `I've processed your request: "${prompt}". Here's a suggested pattern for your synth.`
+  // Mock response generation with context
+  const response = `I've processed your request: "${prompt}" for device ${deviceId} in clip ${clipId}. Here's a suggested pattern for your synth.`
 
   // Generate a mock MIDI clip (in a real implementation, this would come from your engine)
   // This is a simple C major scale as a demonstration
@@ -112,7 +112,7 @@ const processWithSeq1Engine = async (prompt: string) => {
 
 export async function POST(request: Request) {
   try {
-    const { prompt } = await request.json()
+    const { prompt, device_id, clip_id } = await request.json()
 
     if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
@@ -121,8 +121,16 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validate context parameters
+    if (!device_id || !clip_id) {
+      return NextResponse.json(
+        { error: 'Invalid request. Both "device_id" and "clip_id" are required for context routing.' },
+        { status: 400 },
+      )
+    }
+
     // Process the prompt with the SEQ1 orchestration engine
-    const { response, midiClip } = await processWithSeq1Engine(prompt)
+    const { response, midiClip } = await processWithSeq1Engine(prompt, device_id, clip_id)
 
     // Return the response and MIDI clip
     return NextResponse.json({ response, midiClip })
