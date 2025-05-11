@@ -462,15 +462,45 @@ export default function Timeline({
   const [isDraggingTimeline, setIsDraggingTimeline] = useState(false)
 
   // Define handleWheel and handleZoom functions
-  const handleZoomFn = (amount: number) => {
-    const newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel + amount))
+  const handleZoomFn = (direction: "in" | "out") => {
+    // Calculate the new zoom level based on direction
+    let newZoomLevel: number
+
+    if (direction === "in") {
+      newZoomLevel = zoomLevel + ZOOM_STEP
+    } else {
+      newZoomLevel = zoomLevel - ZOOM_STEP
+    }
+
+    // Ensure the new zoom level is within bounds and is a valid number
+    newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoomLevel))
+
+    // Additional validation to prevent NaN
+    if (!Number.isFinite(newZoomLevel)) {
+      newZoomLevel = direction === "in" ? MIN_ZOOM + ZOOM_STEP : MAX_ZOOM - ZOOM_STEP
+    }
+
+    // Update the zoom level
     setZoomLevel(newZoomLevel)
   }
 
   const handleWheelFn = (e: React.WheelEvent<HTMLDivElement>) => {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -1 : 1 // Invert the delta for more natural zoom
-    handleZoomFn(delta * ZOOM_STEP)
+
+    // Calculate the new zoom level
+    let newZoomLevel = zoomLevel + delta * ZOOM_STEP
+
+    // Ensure the new zoom level is within bounds and is a valid number
+    newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoomLevel))
+
+    // Additional validation to prevent NaN
+    if (!Number.isFinite(newZoomLevel)) {
+      newZoomLevel = MIN_ZOOM
+    }
+
+    // Update the zoom level
+    setZoomLevel(newZoomLevel)
   }
 
   return (

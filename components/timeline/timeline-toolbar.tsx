@@ -28,6 +28,26 @@ const TimelineToolbar = ({
   const MIN_ZOOM = 0.1 // Minimum zoom level (most zoomed out)
   const MAX_ZOOM = 2 // Maximum zoom level (most zoomed in)
 
+  // Fix for NaN% issue - ensure we have valid numbers and handle edge cases
+  const calculateZoomPercentage = () => {
+    // Ensure all values are valid numbers
+    const min = Number.isFinite(MIN_ZOOM) ? MIN_ZOOM : 0.1
+    const max = Number.isFinite(MAX_ZOOM) ? MAX_ZOOM : 2
+    const current = Number.isFinite(zoomLevel) ? zoomLevel : min
+
+    // Prevent division by zero or negative ranges
+    if (max <= min) return 0
+
+    // Calculate percentage and ensure it's between 0-100
+    const percentage = Math.round(((current - min) / (max - min)) * 100)
+
+    // Ensure the result is a valid number between 0-100
+    return Number.isFinite(percentage) ? Math.max(0, Math.min(100, percentage)) : 0
+  }
+
+  // Get the zoom percentage with validation
+  const zoomPercentage = calculateZoomPercentage()
+
   return (
     <TooltipProvider delayDuration={300}>
       <div
@@ -128,7 +148,7 @@ const TimelineToolbar = ({
         </Tooltip>
 
         <span className="text-[9px] text-[#a09080] w-8 text-center relative z-20 flex items-center justify-center h-full">
-          {Math.round(((zoomLevel - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100)}%
+          {zoomPercentage}%
         </span>
 
         <Tooltip>
