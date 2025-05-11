@@ -10,6 +10,18 @@ const WS_BASE_URL = "wss://api.seq1.net"
 // API authentication
 const API_KEY = "5lXQzdP_uqPgEq-cT-lu6I4r81lxRzZhI2SMS7sYeqU"
 
+// Debug mode
+const DEBUG = true
+
+/**
+ * Log debug information if debug mode is enabled
+ */
+function debugLog(...args: any[]) {
+  if (DEBUG) {
+    console.log("[SEQ1 API]", ...args)
+  }
+}
+
 /**
  * Check if the API key is valid
  * This is a simple function to replace the JWT-based isAuthenticated
@@ -19,11 +31,87 @@ export function isAuthenticated(): boolean {
 }
 
 /**
+ * Test API connectivity
+ * This function attempts to make a simple request to the API to check if it's reachable
+ */
+export async function testApiConnectivity(): Promise<{
+  success: boolean
+  message: string
+  details?: any
+}> {
+  try {
+    debugLog("Testing API connectivity...")
+
+    // Try to fetch the API health endpoint
+    const response = await fetch(`${API_BASE_URL}/api/health`, {
+      method: "GET",
+      headers: {
+        "X-API-Key": API_KEY,
+      },
+      // Add a timeout to prevent long waits
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (response.ok) {
+      debugLog("API connectivity test successful")
+      return {
+        success: true,
+        message: "API is reachable",
+      }
+    } else {
+      const errorData = await response.json().catch(() => ({}))
+      debugLog("API connectivity test failed with status:", response.status, errorData)
+      return {
+        success: false,
+        message: `API returned error status: ${response.status}`,
+        details: errorData,
+      }
+    }
+  } catch (error: any) {
+    debugLog("API connectivity test failed with error:", error)
+
+    // Provide more specific error messages based on the error type
+    let errorMessage = "Unknown error occurred"
+
+    if (error.name === "AbortError") {
+      errorMessage = "Request timed out after 5 seconds"
+    } else if (error.name === "TypeError" && error.message === "Failed to fetch") {
+      errorMessage = "Network error: Failed to fetch. The API server may be unreachable or CORS issues may exist."
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    return {
+      success: false,
+      message: errorMessage,
+      details: error,
+    }
+  }
+}
+
+/**
  * Handle API errors
  */
 function handleApiError(error: any): never {
-  // Log the error
-  console.error("API Error:", error)
+  // Log the error with more details
+  debugLog("API Error:", error)
+
+  // If it's a TypeError with "Failed to fetch", provide more context
+  if (error instanceof TypeError && error.message === "Failed to fetch") {
+    debugLog("Network error: Failed to fetch. The API server may be unreachable or CORS issues may exist.")
+
+    // Dispatch an event for network errors
+    window.dispatchEvent(
+      new CustomEvent("seq1:api:network-error", {
+        detail: {
+          message: "Unable to connect to the SEQ1 API. Please check your internet connection and try again.",
+          originalError: error,
+        },
+      }),
+    )
+
+    throw new Error("Unable to connect to the SEQ1 API. Please check your internet connection and try again.")
+  }
 
   // If the error is a response object, try to parse it
   if (error.response) {
@@ -40,7 +128,7 @@ function handleApiError(error: any): never {
       }
 
       // Otherwise, throw the error message from the response
-      throw new Error(error.response.data.message || "An error occurred")
+      throw new Error(error.response.data?.message || "An error occurred")
     } catch (e) {
       throw e
     }
@@ -61,6 +149,8 @@ function handleApiError(error: any): never {
 export async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
 
+  debugLog(`Making ${options.method || "GET"} request to ${endpoint}`)
+
   // Set up headers
   const headers = new Headers(options.headers)
   headers.set("Content-Type", "application/json")
@@ -73,11 +163,22 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
       headers,
     })
 
+    debugLog(`Received response from ${endpoint} with status:`, response.status)
+
     // Parse the response
-    const data = await response.json()
+    let data
+    try {
+      data = await response.json()
+      debugLog(`Response data:`, data)
+    } catch (e) {
+      debugLog(`Error parsing JSON response:`, e)
+      throw new Error("Invalid JSON response from API")
+    }
 
     // Check if the response is an error
     if (!response.ok) {
+      debugLog(`Error response from ${endpoint}:`, response.status, data)
+
       // If we get a 401 or 403, handle authentication error
       if (response.status === 401 || response.status === 403) {
         window.dispatchEvent(
@@ -99,6 +200,7 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
 
     // If the response has an error property set to true, throw an error
     if (data.error === true) {
+      debugLog(`API returned error:`, data)
       throw {
         response: {
           status: response.status,
@@ -110,6 +212,7 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
     // Return the data
     return data
   } catch (error) {
+    debugLog(`Error in request to ${endpoint}:`, error)
     return handleApiError(error)
   }
 }
@@ -118,25 +221,33 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
  * Create a WebSocket connection
  */
 export function createWebSocket(onMessage: (event: MessageEvent) => void): WebSocket {
+  debugLog("Creating WebSocket connection")
+
   // Create the WebSocket connection
   const ws = new WebSocket(`${WS_BASE_URL}/ws/session`)
 
   // Set up event handlers
   ws.onopen = (event) => {
+    debugLog("WebSocket connection opened")
     // Send the authentication token
     ws.send(JSON.stringify({ type: "authenticate", apiKey: API_KEY }))
   }
 
-  ws.onmessage = onMessage
+  ws.onmessage = (event) => {
+    debugLog("WebSocket message received:", event.data)
+    onMessage(event)
+  }
 
   ws.onerror = (event) => {
     console.error("WebSocket error:", event)
+    debugLog("WebSocket error:", event)
   }
 
   ws.onclose = (event) => {
-    console.log("WebSocket closed:", event)
+    debugLog("WebSocket closed:", event)
     // Attempt to reconnect after a delay
     setTimeout(() => {
+      debugLog("Attempting to reconnect WebSocket")
       createWebSocket(onMessage)
     }, 5000)
   }
@@ -480,6 +591,8 @@ export async function exportProject(id: string, format: string, includeAudio: bo
 export async function importProject(file: File): Promise<any> {
   const url = `${API_BASE_URL}/api/projects/import`
 
+  debugLog("Importing project file:", file.name)
+
   // Create form data
   const formData = new FormData()
   formData.append("file", file)
@@ -496,8 +609,17 @@ export async function importProject(file: File): Promise<any> {
       body: formData,
     })
 
+    debugLog("Import project response status:", response.status)
+
     // Parse the response
-    const data = await response.json()
+    let data
+    try {
+      data = await response.json()
+      debugLog("Import project response data:", data)
+    } catch (e) {
+      debugLog("Error parsing import project response:", e)
+      throw new Error("Invalid JSON response from API")
+    }
 
     // Check if the response is an error
     if (!response.ok) {
@@ -512,6 +634,7 @@ export async function importProject(file: File): Promise<any> {
     // Return the data
     return data
   } catch (error) {
+    debugLog("Error importing project:", error)
     return handleApiError(error)
   }
 }
@@ -542,6 +665,8 @@ export async function updateAccountInfo(updates: any): Promise<any> {
 export async function updateProfilePicture(file: File): Promise<any> {
   const url = `${API_BASE_URL}/api/account/profile-picture`
 
+  debugLog("Updating profile picture:", file.name)
+
   // Create form data
   const formData = new FormData()
   formData.append("file", file)
@@ -558,8 +683,17 @@ export async function updateProfilePicture(file: File): Promise<any> {
       body: formData,
     })
 
+    debugLog("Update profile picture response status:", response.status)
+
     // Parse the response
-    const data = await response.json()
+    let data
+    try {
+      data = await response.json()
+      debugLog("Update profile picture response data:", data)
+    } catch (e) {
+      debugLog("Error parsing update profile picture response:", e)
+      throw new Error("Invalid JSON response from API")
+    }
 
     // Check if the response is an error
     if (!response.ok) {
@@ -574,6 +708,7 @@ export async function updateProfilePicture(file: File): Promise<any> {
     // Return the data
     return data
   } catch (error) {
+    debugLog("Error updating profile picture:", error)
     return handleApiError(error)
   }
 }
@@ -666,12 +801,12 @@ export async function playMidiClip(midiBase64: string, deviceId?: string) {
     }
 
     // If no device ID is provided, just log that we received the MIDI
-    console.log("MIDI data received (base64):", midiBase64.substring(0, 50) + "...")
+    debugLog("MIDI data received (base64):", midiBase64.substring(0, 50) + "...")
 
     // Mock successful playback
     return { success: true }
   } catch (error) {
-    console.error("Error playing MIDI clip:", error)
+    debugLog("Error playing MIDI clip:", error)
     throw error
   }
 }

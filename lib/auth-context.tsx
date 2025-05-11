@@ -32,11 +32,13 @@ interface AuthContextType {
   user: NostrUser | null
   isAuthenticated: boolean
   isLoading: boolean
+  apiConnected: boolean
   login: (privateKey: string) => Promise<boolean>
   loginWithExtension: () => Promise<boolean>
   signup: () => Promise<{ privateKey: string; publicKey: string }>
   logout: () => void
   saveUserProfile: (profile: { username: string; displayName?: string; avatar?: string }) => Promise<boolean>
+  testApiConnectivity: () => Promise<boolean>
 }
 
 // Create the context with default values
@@ -44,22 +46,47 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  apiConnected: false,
   login: async () => false,
   loginWithExtension: async () => false,
   signup: async () => ({ privateKey: "", publicKey: "" }),
   logout: () => {},
   saveUserProfile: async () => false,
+  testApiConnectivity: async () => false,
 })
 
 // Provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<NostrUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [apiConnected, setApiConnected] = useState(false)
+
+  // Test API connectivity
+  const testApiConnectivity = async (): Promise<boolean> => {
+    try {
+      const result = await apiClient.testApiConnectivity()
+      setApiConnected(result.success)
+      return result.success
+    } catch (error) {
+      console.error("Error testing API connectivity:", error)
+      setApiConnected(false)
+      return false
+    }
+  }
 
   // Check for existing session on mount
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
+        // First, test API connectivity
+        const isConnected = await testApiConnectivity()
+
+        if (!isConnected) {
+          console.error("API is not connected. Skipping session check.")
+          setIsLoading(false)
+          return
+        }
+
         // Check if API is authenticated
         if (apiClient.isAuthenticated()) {
           // Get account info
@@ -93,10 +120,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
     }
 
+    // Listen for network error events
+    const handleNetworkError = (event: CustomEvent) => {
+      console.error("Network error:", event.detail?.message)
+      setApiConnected(false)
+    }
+
     window.addEventListener("seq1:auth:error", handleAuthError as EventListener)
+    window.addEventListener("seq1:api:network-error", handleNetworkError as EventListener)
 
     return () => {
       window.removeEventListener("seq1:auth:error", handleAuthError as EventListener)
+      window.removeEventListener("seq1:api:network-error", handleNetworkError as EventListener)
     }
   }, [])
 
@@ -104,6 +139,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (privateKey: string): Promise<boolean> => {
     try {
       setIsLoading(true)
+
+      // First, test API connectivity
+      const isConnected = await testApiConnectivity()
+
+      if (!isConnected) {
+        console.error("API is not connected. Cannot login.")
+        return false
+      }
 
       // Validate private key format
       if (!privateKey.startsWith("nsec") && !privateKey.match(/^[0-9a-f]{64}$/)) {
@@ -171,6 +214,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!user) return false
 
+      // First, test API connectivity
+      const isConnected = await testApiConnectivity()
+
+      if (!isConnected) {
+        console.error("API is not connected. Cannot save profile.")
+        return false
+      }
+
       // Call the API to update the profile
       const response = await apiClient.updateAccountInfo(profile)
 
@@ -196,6 +247,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithExtension = async (): Promise<boolean> => {
     try {
       setIsLoading(true)
+
+      // First, test API connectivity
+      const isConnected = await testApiConnectivity()
+
+      if (!isConnected) {
+        console.error("API is not connected. Cannot login with extension.")
+        return false
+      }
 
       // Check if nostr extension is available
       if (!window.nostr) {
@@ -241,11 +300,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         isLoading,
+        apiConnected,
         login,
         loginWithExtension,
         signup,
         logout,
         saveUserProfile,
+        testApiConnectivity,
       }}
     >
       {children}
