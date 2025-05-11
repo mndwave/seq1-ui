@@ -60,8 +60,19 @@ const config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        poppins: ["var(--font-poppins)"],
-        mono: ["var(--font-mono)", "monospace"],
+        poppins: ["var(--font-poppins)", "sans-serif"],
+        mono: [
+          "var(--font-mono)",
+          "Space Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "Liberation Mono",
+          "Courier New",
+          "monospace",
+        ],
       },
       animation: {
         fadeOut: "fadeOut 2s ease-in-out forwards",

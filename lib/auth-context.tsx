@@ -16,7 +16,8 @@ declare global {
 }
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { generateSecretKey, getPublicKey, nip19 } from "nostr-tools"
+import { generateSecretKey, getPublicKey } from "nostr-tools"
+import * as apiClient from "@/lib/api-client"
 
 // Define types for our auth context
 export interface NostrUser {
@@ -59,22 +60,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
-        // Check local storage for saved key (encrypted in production)
-        const savedKey = localStorage.getItem("seq1_nostr_key")
-        if (savedKey) {
-          const success = await login(savedKey)
-          if (!success) {
-            localStorage.removeItem("seq1_nostr_key")
+        // Check if we have a token
+        if (apiClient.isAuthenticated()) {
+          // Validate the token with the server
+          const sessionData = await apiClient.checkSession()
+          if (sessionData.authenticated && sessionData.user) {
+            setUser({
+              pubkey: sessionData.user.npub,
+              npub: sessionData.user.npub,
+              username: sessionData.user.username,
+              displayName: sessionData.user.displayName,
+              avatar: sessionData.user.profilePicture,
+            })
+          } else {
+            // If the token is invalid, clear it
+            apiClient.clearAuthToken()
           }
         }
       } catch (error) {
         console.error("Error checking session:", error)
+        // If there's an error, clear the token
+        apiClient.clearAuthToken()
       } finally {
         setIsLoading(false)
       }
     }
 
     checkExistingSession()
+
+    // Listen for auth expiration events
+    const handleAuthExpired = () => {
+      setUser(null)
+    }
+
+    window.addEventListener("seq1:auth:expired", handleAuthExpired)
+
+    return () => {
+      window.removeEventListener("seq1:auth:expired", handleAuthExpired)
+    }
   }, [])
 
   // Login with private key
@@ -87,29 +110,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Invalid private key format")
       }
 
-      // Convert nsec to hex if needed
-      const hexPrivateKey = privateKey.startsWith("nsec") ? (nip19.decode(privateKey).data as string) : privateKey
+      // Call the API to login
+      const response = await apiClient.login({ privateKey })
 
-      // Get public key from private key
-      const publicKey = getPublicKey(hexPrivateKey)
-      const npub = nip19.npubEncode(publicKey)
-
-      // Fetch user profile from relays (simplified for now)
-      // In a real implementation, we would fetch profile data from relays
-      const userProfile = {
-        pubkey: publicKey,
-        npub,
-        username: "user" + publicKey.slice(0, 5),
-        displayName: "SEQ1 User",
+      if (response.success && response.user) {
+        setUser({
+          pubkey: response.user.npub,
+          npub: response.user.npub,
+          username: response.user.username,
+          displayName: response.user.displayName,
+          avatar: response.user.profilePicture,
+        })
+        return true
       }
 
-      // Save user to state
-      setUser(userProfile)
-
-      // Save key to local storage (would be encrypted in production)
-      localStorage.setItem("seq1_nostr_key", hexPrivateKey)
-
-      return true
+      return false
     } catch (error) {
       console.error("Login error:", error)
       return false
@@ -138,8 +153,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Logout user
   const logout = () => {
-    setUser(null)
-    localStorage.removeItem("seq1_nostr_key")
+    apiClient
+      .logout()
+      .then(() => {
+        setUser(null)
+      })
+      .catch((error) => {
+        console.error("Logout error:", error)
+        // Even if the API call fails, we still want to clear the local state
+        setUser(null)
+      })
   }
 
   // Save user profile
@@ -151,14 +174,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!user) return false
 
-      // In a real implementation, we would publish profile data to relays
-      // For now, just update local state
-      setUser({
-        ...user,
-        ...profile,
-      })
+      // Call the API to update the profile
+      const response = await apiClient.updateAccountInfo(profile)
 
-      return true
+      if (response.success) {
+        // Update the local state
+        setUser({
+          ...user,
+          username: profile.username,
+          displayName: profile.displayName || user.displayName,
+          avatar: profile.avatar || user.avatar,
+        })
+        return true
+      }
+
+      return false
     } catch (error) {
       console.error("Save profile error:", error)
       return false
@@ -181,22 +211,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Failed to get public key from extension.")
       }
 
-      // Encode public key to npub format
-      const npub = nip19.npubEncode(publicKey)
+      // Call the API to login with the extension
+      const response = await apiClient.login({ useExtension: true })
 
-      // Fetch user profile from relays (simplified for now)
-      // In a real implementation, we would fetch profile data from relays
-      const userProfile = {
-        pubkey: publicKey,
-        npub,
-        username: "user" + publicKey.slice(0, 5),
-        displayName: "SEQ1 User",
+      if (response.success && response.user) {
+        setUser({
+          pubkey: response.user.npub,
+          npub: response.user.npub,
+          username: response.user.username,
+          displayName: response.user.displayName,
+          avatar: response.user.profilePicture,
+        })
+        return true
       }
 
-      // Save user to state
-      setUser(userProfile)
-
-      return true
+      return false
     } catch (error) {
       console.error("Extension login error:", error)
       return false

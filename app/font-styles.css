@@ -1,0 +1,33 @@
+/* Font styles for SEQ1 */
+
+/* Default text elements use Space Mono */
+.font-mono,
+.text-mono,
+button,
+input,
+textarea,
+select,
+.button,
+.input,
+.textarea,
+.select,
+p,
+span,
+div:not(.font-poppins),
+h1:not(.font-poppins),
+h2:not(.font-poppins),
+h3:not(.font-poppins),
+h4:not(.font-poppins),
+h5:not(.font-poppins),
+h6:not(.font-poppins) {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+}
+
+/* Elements with .font-poppins class use Poppins */
+.font-poppins,
+.seq1-logo,
+.seq1-brand {
+  font-family: var(--font-poppins), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}

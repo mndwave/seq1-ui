@@ -5,24 +5,30 @@ import { MIDIProvider } from "@/components/midi-provider"
 import { MenuProvider } from "@/lib/menu-context"
 import { LogoAnimationProvider } from "@/lib/logo-animation-context"
 import { AuthProvider } from "@/lib/auth-context"
+import { WebSocketProvider } from "@/lib/websocket-context"
 import GlobalMenu from "@/components/global-menu"
 import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
 import { Poppins, Space_Mono } from "next/font/google"
+import AuthErrorHandler from "@/components/auth/auth-error-handler"
+import { FontLoader } from "@/components/font-loader"
 
+// Keep Poppins configuration exactly as it was
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-poppins",
 })
 
+// Ensure Space Mono is properly configured
 const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-mono",
+  display: "swap",
+  preload: true,
 })
 
-// Update the metadata section with a more fitting title and description
 export const metadata: Metadata = {
   title: "SEQ1 | AI-Powered Hardware Sequencer",
   description:
@@ -43,17 +49,24 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        {/* Add preconnect for Google Fonts to improve loading performance */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </head>
-      <body className={cn("min-h-screen bg-background font-mono antialiased", poppins.variable, spaceMono.variable)}>
+      <body className={cn("min-h-screen bg-background antialiased", poppins.variable, spaceMono.variable)}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
           <LogoAnimationProvider>
             <MIDIProvider>
-              <MenuProvider>
-                <AuthProvider>
-                  {children}
-                  <GlobalMenu />
-                </AuthProvider>
-              </MenuProvider>
+              <AuthProvider>
+                <WebSocketProvider>
+                  <MenuProvider>
+                    <FontLoader />
+                    <AuthErrorHandler />
+                    {children}
+                    <GlobalMenu />
+                  </MenuProvider>
+                </WebSocketProvider>
+              </AuthProvider>
             </MIDIProvider>
           </LogoAnimationProvider>
         </ThemeProvider>

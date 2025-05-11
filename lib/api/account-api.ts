@@ -1,3 +1,5 @@
+import * as apiClient from "@/lib/api-client"
+
 export interface AccountInfo {
   npub: string
   nprofile?: string
@@ -32,91 +34,42 @@ export interface ReferralResponse {
   hoursAdded?: number
 }
 
-// Mock API function to get account info
+// Get account info
 export async function getAccountInfo(): Promise<AccountInfo> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 800))
-
-  // Return mock data
-  return {
-    npub: "npub1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrst",
-    nprofile: "nprofile1qqsw3e...",
-    profilePicture: "/default.jpg",
-    displayName: "SEQ1 User",
-    username: "user",
-    website: "https://seq1.net",
-    about: "Making music with SEQ1 #SEQ1",
-    hoursRemaining: 4.5,
-    hoursFromReferrals: 3,
-    valueSaved: 1.05,
-    referralCode: "SEQ1-ABC123",
-    referralCount: 1,
+  try {
+    return await apiClient.getAccountInfo()
+  } catch (error) {
+    console.error("Error getting account info:", error)
+    throw error
   }
 }
 
-// Mock API function to top up account
+// Top up account
 export async function topUpAccount(request: TopUpRequest): Promise<TopUpResponse> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1200))
-
-  // Calculate hours added
-  const hourlyRate = 0.35 // $0.35 per hour
-  let hoursAdded = 0
-
-  if (request.currency === "usd") {
-    hoursAdded = request.amount / hourlyRate
-  } else {
-    // Convert sats to USD (approximate)
-    const usdAmount = request.amount / 100000 // Very rough approximation
-    hoursAdded = usdAmount / hourlyRate
-  }
-
-  // Generate mock payment request
-  const paymentRequest =
-    request.paymentMethod === "lightning" ? "lnbc100u1p3hkzm2pp..." : "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
-
-  // Return success response
-  return {
-    success: true,
-    hoursAdded,
-    paymentRequest,
+  try {
+    return await apiClient.topUpAccount(request.amount, request.currency, request.paymentMethod)
+  } catch (error) {
+    console.error("Error topping up account:", error)
+    throw error
   }
 }
 
-// Mock API function to claim referral code
+// Claim referral code
 export async function claimReferralCode(code: string): Promise<ReferralResponse> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  // Check if code is valid (mock validation)
-  if (code === "INVALID") {
-    return {
-      success: false,
-      error: "Invalid referral code",
-    }
-  }
-
-  if (code === "USED") {
-    return {
-      success: false,
-      error: "This referral code has already been used",
-    }
-  }
-
-  // Return success response
-  return {
-    success: true,
-    hoursAdded: 3,
+  try {
+    return await apiClient.claimReferralCode(code)
+  } catch (error) {
+    console.error("Error claiming referral code:", error)
+    throw error
   }
 }
 
-// Mock API function to delete account
+// Delete account
 export async function deleteAccount(): Promise<{ success: boolean; error?: string }> {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  // Return success response
-  return {
-    success: true,
+  try {
+    return await apiClient.deleteAccount("DELETE MY ACCOUNT")
+  } catch (error) {
+    console.error("Error deleting account:", error)
+    throw error
   }
 }

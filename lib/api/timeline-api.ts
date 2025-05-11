@@ -1,4 +1,5 @@
 import type { TimelineClip } from "@/lib/timeline-clip-schema"
+import * as apiClient from "@/lib/api-client"
 
 /**
  * Fetch all timeline clips
@@ -6,13 +7,8 @@ import type { TimelineClip } from "@/lib/timeline-clip-schema"
  */
 export async function getTimelineClips(): Promise<TimelineClip[]> {
   try {
-    const response = await fetch("/api/clips")
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clips: ${response.status}`)
-    }
-
-    return await response.json()
+    const response = await apiClient.getTimelineClips()
+    return response.clips
   } catch (error) {
     console.error("Error fetching timeline clips:", error)
     throw error
@@ -26,19 +22,7 @@ export async function getTimelineClips(): Promise<TimelineClip[]> {
  */
 export async function createTimelineClip(clip: Omit<TimelineClip, "id">): Promise<TimelineClip> {
   try {
-    const response = await fetch("/api/clips", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(clip),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to create clip: ${response.status}`)
-    }
-
-    return await response.json()
+    return await apiClient.createTimelineClip(clip)
   } catch (error) {
     console.error("Error creating timeline clip:", error)
     throw error
@@ -56,19 +40,7 @@ export async function updateTimelineClip(
   updates: Partial<Omit<TimelineClip, "id">>,
 ): Promise<TimelineClip> {
   try {
-    const response = await fetch(`/api/clips/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(updates),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to update clip: ${response.status}`)
-    }
-
-    return await response.json()
+    return await apiClient.updateTimelineClip(id, updates)
   } catch (error) {
     console.error(`Error updating timeline clip ${id}:`, error)
     throw error
@@ -82,15 +54,7 @@ export async function updateTimelineClip(
  */
 export async function deleteTimelineClip(id: string): Promise<{ success: boolean }> {
   try {
-    const response = await fetch(`/api/clips/${id}`, {
-      method: "DELETE",
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to delete clip: ${response.status}`)
-    }
-
-    return await response.json()
+    return await apiClient.deleteTimelineClip(id)
   } catch (error) {
     console.error(`Error deleting timeline clip ${id}:`, error)
     throw error
@@ -104,19 +68,8 @@ export async function deleteTimelineClip(id: string): Promise<{ success: boolean
  */
 export async function reorderTimelineClips(orderedIds: string[]): Promise<TimelineClip[]> {
   try {
-    const response = await fetch("/api/clips/reorder", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ orderedIds }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to reorder clips: ${response.status}`)
-    }
-
-    return await response.json()
+    const response = await apiClient.reorderTimelineClips(orderedIds)
+    return response.clips
   } catch (error) {
     console.error("Error reordering timeline clips:", error)
     throw error

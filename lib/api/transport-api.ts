@@ -1,6 +1,7 @@
 /**
  * Client-side utility for interacting with the SEQ1 transport API
  */
+import * as apiClient from "@/lib/api-client"
 
 export interface TransportState {
   playheadPosition: number // Position in bars
@@ -20,19 +21,7 @@ export interface TransportState {
  */
 export async function getTransportState(): Promise<TransportState> {
   try {
-    const response = await fetch("/api/transport", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to get transport state")
-    }
-
-    return await response.json()
+    return await apiClient.getTransportState()
   } catch (error) {
     console.error("Error getting transport state:", error)
     throw error
@@ -45,19 +34,7 @@ export async function getTransportState(): Promise<TransportState> {
  */
 export async function startPlayback(): Promise<TransportState> {
   try {
-    const response = await fetch("/api/transport/play", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to start playback")
-    }
-
-    return await response.json()
+    return await apiClient.startPlayback()
   } catch (error) {
     console.error("Error starting playback:", error)
     throw error
@@ -70,19 +47,7 @@ export async function startPlayback(): Promise<TransportState> {
  */
 export async function stopPlayback(): Promise<TransportState> {
   try {
-    const response = await fetch("/api/transport/stop", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to stop playback")
-    }
-
-    return await response.json()
+    return await apiClient.stopPlayback()
   } catch (error) {
     console.error("Error stopping playback:", error)
     throw error
@@ -96,20 +61,7 @@ export async function stopPlayback(): Promise<TransportState> {
  */
 export async function setPlayheadPosition(position: number): Promise<TransportState> {
   try {
-    const response = await fetch("/api/transport/playhead", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ position }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to set playhead position")
-    }
-
-    return await response.json()
+    return await apiClient.setPlayheadPosition(position)
   } catch (error) {
     console.error("Error setting playhead position:", error)
     throw error
@@ -127,20 +79,7 @@ export async function updateLoopState(
   loopRegion?: { startBar: number; endBar: number } | null,
 ): Promise<TransportState> {
   try {
-    const response = await fetch("/api/transport/loop", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ isLooping, loopRegion }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to update loop state")
-    }
-
-    return await response.json()
+    return await apiClient.updateLoopState(isLooping, loopRegion)
   } catch (error) {
     console.error("Error updating loop state:", error)
     throw error
@@ -154,20 +93,7 @@ export async function updateLoopState(
  */
 export async function updateBpm(bpm: number): Promise<TransportState> {
   try {
-    const response = await fetch("/api/transport/bpm", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ bpm }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to update BPM")
-    }
-
-    return await response.json()
+    return await apiClient.updateBpm(bpm)
   } catch (error) {
     console.error("Error updating BPM:", error)
     throw error
@@ -181,20 +107,7 @@ export async function updateBpm(bpm: number): Promise<TransportState> {
  */
 export async function updateTimeSignature(timeSignature: string): Promise<TransportState> {
   try {
-    const response = await fetch("/api/transport/time-signature", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ timeSignature }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || "Failed to update time signature")
-    }
-
-    return await response.json()
+    return await apiClient.updateTimeSignature(timeSignature)
   } catch (error) {
     console.error("Error updating time signature:", error)
     throw error
