@@ -3,9 +3,9 @@
  * Centralized client for interacting with the SEQ1 backend API
  */
 
-// API base URL
-const API_BASE_URL = "https://api.seq1.net"
-const WS_BASE_URL = "wss://api.seq1.net"
+// API base URL - Updated to use dev.seq1.net for testing CORS issues
+const API_BASE_URL = "https://dev.seq1.net"
+const WS_BASE_URL = "wss://dev.seq1.net"
 
 // API authentication
 const API_KEY = "5lXQzdP_uqPgEq-cT-lu6I4r81lxRzZhI2SMS7sYeqU"
@@ -40,7 +40,7 @@ export async function testApiConnectivity(): Promise<{
   details?: any
 }> {
   try {
-    debugLog("Testing API connectivity...")
+    debugLog("Testing API connectivity to", API_BASE_URL)
 
     // Try to fetch the API health endpoint
     const response = await fetch(`${API_BASE_URL}/api/health`, {
@@ -221,7 +221,7 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
  * Create a WebSocket connection
  */
 export function createWebSocket(onMessage: (event: MessageEvent) => void): WebSocket {
-  debugLog("Creating WebSocket connection")
+  debugLog("Creating WebSocket connection to", WS_BASE_URL)
 
   // Create the WebSocket connection
   const ws = new WebSocket(`${WS_BASE_URL}/ws/session`)
