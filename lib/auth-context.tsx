@@ -60,27 +60,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkExistingSession = async () => {
       try {
-        // Check if we have a token
+        // Check if API is authenticated
         if (apiClient.isAuthenticated()) {
-          // Validate the token with the server
-          const sessionData = await apiClient.checkSession()
-          if (sessionData.authenticated && sessionData.user) {
-            setUser({
-              pubkey: sessionData.user.npub,
-              npub: sessionData.user.npub,
-              username: sessionData.user.username,
-              displayName: sessionData.user.displayName,
-              avatar: sessionData.user.profilePicture,
-            })
-          } else {
-            // If the token is invalid, clear it
-            apiClient.clearAuthToken()
+          // Get account info
+          try {
+            const accountInfo = await apiClient.getAccountInfo()
+            if (accountInfo) {
+              setUser({
+                pubkey: accountInfo.npub || "default-npub",
+                npub: accountInfo.npub || "default-npub",
+                username: accountInfo.username || "user",
+                displayName: accountInfo.displayName || "SEQ1 User",
+                avatar: accountInfo.profilePicture || "/default.jpg",
+              })
+            }
+          } catch (error) {
+            console.error("Error fetching account info:", error)
           }
         }
       } catch (error) {
         console.error("Error checking session:", error)
-        // If there's an error, clear the token
-        apiClient.clearAuthToken()
       } finally {
         setIsLoading(false)
       }
@@ -88,15 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkExistingSession()
 
-    // Listen for auth expiration events
-    const handleAuthExpired = () => {
+    // Listen for auth error events
+    const handleAuthError = (event: CustomEvent) => {
+      console.error("Authentication error:", event.detail?.message)
       setUser(null)
     }
 
-    window.addEventListener("seq1:auth:expired", handleAuthExpired)
+    window.addEventListener("seq1:auth:error", handleAuthError as EventListener)
 
     return () => {
-      window.removeEventListener("seq1:auth:expired", handleAuthExpired)
+      window.removeEventListener("seq1:auth:error", handleAuthError as EventListener)
     }
   }, [])
 
@@ -110,18 +110,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Invalid private key format")
       }
 
-      // Call the API to login
-      const response = await apiClient.login({ privateKey })
-
-      if (response.success && response.user) {
-        setUser({
-          pubkey: response.user.npub,
-          npub: response.user.npub,
-          username: response.user.username,
-          displayName: response.user.displayName,
-          avatar: response.user.profilePicture,
-        })
-        return true
+      // With X-API-Key authentication, we don't need to login with a private key
+      // Instead, we'll just fetch the account info to verify authentication
+      try {
+        const accountInfo = await apiClient.getAccountInfo()
+        if (accountInfo) {
+          setUser({
+            pubkey: accountInfo.npub || "default-npub",
+            npub: accountInfo.npub || "default-npub",
+            username: accountInfo.username || "user",
+            displayName: accountInfo.displayName || "SEQ1 User",
+            avatar: accountInfo.profilePicture || "/default.jpg",
+          })
+          return true
+        }
+      } catch (error) {
+        console.error("Error fetching account info:", error)
       }
 
       return false
@@ -153,16 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Logout user
   const logout = () => {
-    apiClient
-      .logout()
-      .then(() => {
-        setUser(null)
-      })
-      .catch((error) => {
-        console.error("Logout error:", error)
-        // Even if the API call fails, we still want to clear the local state
-        setUser(null)
-      })
+    // With X-API-Key authentication, we don't need to logout
+    // Just clear the user state
+    setUser(null)
   }
 
   // Save user profile
@@ -211,18 +208,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Failed to get public key from extension.")
       }
 
-      // Call the API to login with the extension
-      const response = await apiClient.login({ useExtension: true })
-
-      if (response.success && response.user) {
-        setUser({
-          pubkey: response.user.npub,
-          npub: response.user.npub,
-          username: response.user.username,
-          displayName: response.user.displayName,
-          avatar: response.user.profilePicture,
-        })
-        return true
+      // With X-API-Key authentication, we don't need to login with an extension
+      // Instead, we'll just fetch the account info to verify authentication
+      try {
+        const accountInfo = await apiClient.getAccountInfo()
+        if (accountInfo) {
+          setUser({
+            pubkey: accountInfo.npub || "default-npub",
+            npub: accountInfo.npub || "default-npub",
+            username: accountInfo.username || "user",
+            displayName: accountInfo.displayName || "SEQ1 User",
+            avatar: accountInfo.profilePicture || "/default.jpg",
+          })
+          return true
+        }
+      } catch (error) {
+        console.error("Error fetching account info:", error)
       }
 
       return false

@@ -7,38 +7,15 @@
 const API_BASE_URL = "https://api.seq1.net"
 const WS_BASE_URL = "wss://api.seq1.net"
 
-// Token storage keys
-const TOKEN_STORAGE_KEY = "seq1_auth_token"
+// API authentication
+const API_KEY = "5lXQzdP_uqPgEq-cT-lu6I4r81lxRzZhI2SMS7sYeqU"
 
 /**
- * Get the stored authentication token
- */
-export function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null
-  return localStorage.getItem(TOKEN_STORAGE_KEY)
-}
-
-/**
- * Store the authentication token
- */
-export function setAuthToken(token: string): void {
-  if (typeof window === "undefined") return
-  localStorage.setItem(TOKEN_STORAGE_KEY, token)
-}
-
-/**
- * Clear the stored authentication token
- */
-export function clearAuthToken(): void {
-  if (typeof window === "undefined") return
-  localStorage.removeItem(TOKEN_STORAGE_KEY)
-}
-
-/**
- * Check if the user is authenticated
+ * Check if the API key is valid
+ * This is a simple function to replace the JWT-based isAuthenticated
  */
 export function isAuthenticated(): boolean {
-  return !!getAuthToken()
+  return !!API_KEY
 }
 
 /**
@@ -51,12 +28,15 @@ function handleApiError(error: any): never {
   // If the error is a response object, try to parse it
   if (error.response) {
     try {
-      // If we get a 401, clear the token and redirect to login
-      if (error.response.status === 401) {
-        clearAuthToken()
+      // If we get a 401 or 403, handle authentication error
+      if (error.response.status === 401 || error.response.status === 403) {
         // Dispatch an event that can be caught by the auth context
-        window.dispatchEvent(new CustomEvent("seq1:auth:expired"))
-        throw new Error("Authentication required. Please log in again.")
+        window.dispatchEvent(
+          new CustomEvent("seq1:auth:error", {
+            detail: { message: "Authentication failed. Please check your API credentials." },
+          }),
+        )
+        throw new Error("Authentication failed. Please check your API credentials.")
       }
 
       // Otherwise, throw the error message from the response
@@ -80,14 +60,11 @@ function handleApiError(error: any): never {
  */
 export async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
-  const token = getAuthToken()
 
   // Set up headers
   const headers = new Headers(options.headers)
   headers.set("Content-Type", "application/json")
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`)
-  }
+  headers.set("X-API-Key", API_KEY)
 
   // Make the request
   try {
@@ -101,11 +78,14 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
 
     // Check if the response is an error
     if (!response.ok) {
-      // If we get a 401, clear the token and redirect to login
-      if (response.status === 401) {
-        clearAuthToken()
-        window.dispatchEvent(new CustomEvent("seq1:auth:expired"))
-        throw new Error("Authentication required. Please log in again.")
+      // If we get a 401 or 403, handle authentication error
+      if (response.status === 401 || response.status === 403) {
+        window.dispatchEvent(
+          new CustomEvent("seq1:auth:error", {
+            detail: { message: "Authentication failed. Please check your API credentials." },
+          }),
+        )
+        throw new Error("Authentication failed. Please check your API credentials.")
       }
 
       // Otherwise, throw the error
@@ -138,18 +118,13 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
  * Create a WebSocket connection
  */
 export function createWebSocket(onMessage: (event: MessageEvent) => void): WebSocket {
-  const token = getAuthToken()
-  if (!token) {
-    throw new Error("Authentication required for WebSocket connection")
-  }
-
   // Create the WebSocket connection
   const ws = new WebSocket(`${WS_BASE_URL}/ws/session`)
 
   // Set up event handlers
   ws.onopen = (event) => {
     // Send the authentication token
-    ws.send(JSON.stringify({ type: "authenticate", token }))
+    ws.send(JSON.stringify({ type: "authenticate", apiKey: API_KEY }))
   }
 
   ws.onmessage = onMessage
@@ -162,70 +137,11 @@ export function createWebSocket(onMessage: (event: MessageEvent) => void): WebSo
     console.log("WebSocket closed:", event)
     // Attempt to reconnect after a delay
     setTimeout(() => {
-      if (isAuthenticated()) {
-        createWebSocket(onMessage)
-      }
+      createWebSocket(onMessage)
     }, 5000)
   }
 
   return ws
-}
-
-// Authentication API
-
-/**
- * Login with Nostr private key or extension
- */
-export async function login(data: { privateKey?: string; useExtension?: boolean }): Promise<any> {
-  const response = await apiRequest<any>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-
-  // Store the token
-  if (response.token) {
-    setAuthToken(response.token)
-  }
-
-  return response
-}
-
-/**
- * Sign up a new user
- */
-export async function signup(data: { username: string; displayName?: string; email?: string }): Promise<any> {
-  const response = await apiRequest<any>("/api/auth/signup", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-
-  // Store the token
-  if (response.token) {
-    setAuthToken(response.token)
-  }
-
-  return response
-}
-
-/**
- * Logout the current user
- */
-export async function logout(): Promise<any> {
-  try {
-    await apiRequest<any>("/api/auth/logout", {
-      method: "POST",
-    })
-  } finally {
-    // Always clear the token, even if the request fails
-    clearAuthToken()
-  }
-}
-
-/**
- * Check the current session
- */
-export async function checkSession(): Promise<any> {
-  return await apiRequest<any>("/api/auth/session")
 }
 
 // Transport API
@@ -563,7 +479,6 @@ export async function exportProject(id: string, format: string, includeAudio: bo
  */
 export async function importProject(file: File): Promise<any> {
   const url = `${API_BASE_URL}/api/projects/import`
-  const token = getAuthToken()
 
   // Create form data
   const formData = new FormData()
@@ -571,9 +486,7 @@ export async function importProject(file: File): Promise<any> {
 
   // Set up headers
   const headers = new Headers()
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`)
-  }
+  headers.set("X-API-Key", API_KEY)
 
   // Make the request
   try {
@@ -628,7 +541,6 @@ export async function updateAccountInfo(updates: any): Promise<any> {
  */
 export async function updateProfilePicture(file: File): Promise<any> {
   const url = `${API_BASE_URL}/api/account/profile-picture`
-  const token = getAuthToken()
 
   // Create form data
   const formData = new FormData()
@@ -636,9 +548,7 @@ export async function updateProfilePicture(file: File): Promise<any> {
 
   // Set up headers
   const headers = new Headers()
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`)
-  }
+  headers.set("X-API-Key", API_KEY)
 
   // Make the request
   try {

@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react"
-import { createWebSocket, isAuthenticated } from "@/lib/api-client"
+import { createWebSocket } from "@/lib/api-client"
 
 interface WebSocketContextType {
   lastMessage: any | null
@@ -24,11 +24,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   // Set up WebSocket connection
   useEffect(() => {
-    // Only connect if the user is authenticated
-    if (!isAuthenticated()) {
-      return
-    }
-
     // Handle incoming messages
     const handleMessage = (event: MessageEvent) => {
       try {
@@ -65,7 +60,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   // Listen for auth changes
   useEffect(() => {
-    const handleAuthExpired = () => {
+    const handleAuthError = () => {
       // Close the WebSocket connection if it exists
       if (wsRef.current) {
         wsRef.current.close()
@@ -74,10 +69,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       setConnected(false)
     }
 
-    window.addEventListener("seq1:auth:expired", handleAuthExpired)
+    window.addEventListener("seq1:auth:error", handleAuthError)
 
     return () => {
-      window.removeEventListener("seq1:auth:expired", handleAuthExpired)
+      window.removeEventListener("seq1:auth:error", handleAuthError)
     }
   }, [])
 
