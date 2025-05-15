@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Loader2, CheckCircle, XCircle, FileText } from "lucide-react"
 import { apiTests } from "@/lib/api-tests"
+import { ServerLogsDisplay } from "@/components/server-logs-display"
 
 interface ApiTestRunnerProps {
   category: string
@@ -58,6 +59,8 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
   const [testStartTime, setTestStartTime] = useState<Date | null>(null)
   const [testEndTime, setTestEndTime] = useState<Date | null>(null)
   const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
+  const [refreshLogsTrigger, setRefreshLogsTrigger] = useState(0)
+  const [serverLogs, setServerLogs] = useState<string>("")
 
   // Filter tests by category
   const tests = category === "all" ? apiTests : apiTests.filter((test) => test.category === category)
@@ -170,6 +173,9 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
     const startTime = new Date()
     setTestStartTime(startTime)
     setTestEndTime(null)
+
+    // Refresh logs at the start of the test run
+    setRefreshLogsTrigger((prev) => prev + 1)
 
     // Reset results
     setResults(
@@ -285,7 +291,15 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
       failed: failedCount,
     })
 
+    // Refresh logs after tests complete
+    setRefreshLogsTrigger((prev) => prev + 1)
+
     setIsRunning(false)
+  }
+
+  // Update server logs from the ServerLogsDisplay component
+  const updateServerLogs = (logs: string) => {
+    setServerLogs(logs)
   }
 
   // Generate and download the test report
@@ -404,6 +418,18 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
         report += "\n" + "".padEnd(50, "-") + "\n\n"
       })
     }
+
+    // Add server logs section
+    report += "\nSERVER LOGS\n"
+    report += "===========\n\n"
+
+    if (serverLogs) {
+      report += serverLogs
+    } else {
+      report += "No server logs available.\n"
+    }
+
+    report += "\n" + "".padEnd(50, "-") + "\n\n"
 
     // Add environment information
     report += "\nENVIRONMENT INFORMATION\n"
@@ -617,6 +643,9 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
           </AccordionItem>
         ))}
       </Accordion>
+
+      {/* Server Logs Display */}
+      <ServerLogsDisplay refreshTrigger={refreshLogsTrigger} includeInReport={updateServerLogs} />
     </div>
   )
 }
