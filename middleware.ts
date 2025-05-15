@@ -2,7 +2,13 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  // Only apply to .well-known/nostr.json requests
+  // Handle WebSocket upgrade for the ws-proxy endpoint
+  if (request.nextUrl.pathname === "/api/ws-proxy") {
+    // This is handled by the WebSocket runtime
+    return NextResponse.next()
+  }
+
+  // Handle .well-known/nostr.json requests
   if (request.nextUrl.pathname === "/.well-known/nostr.json") {
     // Clone the response
     const response = NextResponse.next()
@@ -20,10 +26,11 @@ export function middleware(request: NextRequest) {
     return response
   }
 
+  // For all other requests, continue normally
   return NextResponse.next()
 }
 
-// Only run middleware on .well-known routes
+// Only run middleware on specific routes
 export const config = {
-  matcher: "/.well-known/:path*",
+  matcher: ["/api/ws-proxy", "/.well-known/:path*"],
 }

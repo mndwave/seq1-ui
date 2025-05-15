@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -11,6 +11,7 @@ import {
   runRealApiTestsByCategory,
   type RealApiTestResult,
 } from "@/lib/real-api-tests"
+import { useEnv } from "@/lib/env-provider"
 
 interface RealApiTestRunnerProps {
   category: string
@@ -22,17 +23,11 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
   const [summary, setSummary] = useState({ total: 0, success: 0, failed: 0 })
   const [testStartTime, setTestStartTime] = useState<Date | null>(null)
   const [testEndTime, setTestEndTime] = useState<Date | null>(null)
-  const [apiUrl, setApiUrl] = useState<string>("")
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
+  const env = useEnv()
 
   // Get tests for the selected category
   const tests = category === "all" ? realApiTests : realApiTests.filter((test) => test.category === category)
-
-  // Get API URL on component mount
-  useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_SEQ1_API_URL || "Not configured"
-    setApiUrl(url)
-  }, [])
 
   // Toggle expanded state for an item
   const toggleExpanded = (id: string) => {
@@ -80,7 +75,12 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
     let report = "SEQ1 REAL API TEST REPORT\n"
     report += "========================\n\n"
     report += `Date: ${now.toISOString()}\n`
-    report += `API URL: ${apiUrl}\n`
+
+    if (env.isLoaded) {
+      report += `REST API URL: ${env.apiUrl}\n`
+      report += `WebSocket URL: ${env.wsUrl}\n`
+    }
+
     report += `Category: ${category}\n\n`
 
     // Add summary
@@ -125,7 +125,11 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
     report += "---------------\n"
     report += `Browser: ${navigator.userAgent}\n`
     report += `Time: ${now.toISOString()}\n`
-    report += `API URL: ${apiUrl}\n`
+
+    if (env.isLoaded) {
+      report += `REST API URL: ${env.apiUrl}\n`
+      report += `WebSocket URL: ${env.wsUrl}\n`
+    }
 
     // Create and download file
     const blob = new Blob([report], { type: "text/plain" })
@@ -144,14 +148,21 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
       <div className="bg-red-900/30 border border-red-500 p-4 rounded-md text-white">
         <div className="flex items-center mb-2">
           <AlertTriangle className="h-5 w-5 mr-2 text-red-400" />
-          <h3 className="text-lg font-semibold">Direct API Testing Mode</h3>
+          <h3 className="text-lg font-semibold">Server-Side API Testing Mode</h3>
         </div>
-        <p className="text-sm">
-          This mode bypasses all Next.js API routes and makes direct API calls to your backend at:
-        </p>
-        <code className="block bg-black/30 p-2 rounded mt-2 text-red-200 font-mono text-sm">
-          {apiUrl || "API URL not configured"}
-        </code>
+        <p className="text-sm">This mode uses server-side proxies to make authenticated API calls to your backend.</p>
+        {env.isLoaded && (
+          <div className="mt-2 space-y-2">
+            <div>
+              <span className="text-sm font-semibold">REST API URL:</span>
+              <code className="block bg-black/30 p-2 rounded mt-1 text-red-200 font-mono text-sm">{env.apiUrl}</code>
+            </div>
+            <div>
+              <span className="text-sm font-semibold">WebSocket URL:</span>
+              <code className="block bg-black/30 p-2 rounded mt-1 text-red-200 font-mono text-sm">{env.wsUrl}</code>
+            </div>
+          </div>
+        )}
         <p className="text-sm mt-2">If tests succeed when your API is offline, there is a configuration issue.</p>
       </div>
 
@@ -236,6 +247,11 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {test.isWebSocket && (
+                      <Badge variant="outline" className="bg-purple-900/30 text-purple-300 border-purple-500">
+                        WebSocket
+                      </Badge>
+                    )}
                     {result?.duration && (
                       <Badge variant="outline" className="ml-2">
                         {result.duration}ms
@@ -259,7 +275,7 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
                     <div className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 font-mono">{test.method}</div>
                   </div>
                   <div className="font-mono text-sm text-gray-300 mt-1">
-                    {apiUrl}
+                    {env.isLoaded ? (test.isWebSocket ? env.wsUrl : env.apiUrl) : "Loading..."}
                     {test.endpoint}
                   </div>
                 </div>

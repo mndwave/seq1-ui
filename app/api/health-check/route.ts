@@ -1,35 +1,42 @@
 import { NextResponse } from "next/server"
-import * as serverApi from "@/lib/server/api-server"
+import { getApiUrl } from "@/lib/server/api-server"
 
 export async function GET() {
   try {
-    // Check API health
-    const apiHealth = await serverApi.checkApiHealth()
+    // Get the API URL from environment variables
+    const apiUrl = await getApiUrl()
 
-    // Return the health status
-    return NextResponse.json({
-      success: apiHealth.success,
-      message: apiHealth.message,
-      details: {
-        apiUrl: process.env.NEXT_PUBLIC_SEQ1_API_URL || "https://api.seq1.net",
-        apiHealth: apiHealth.success ? "Online" : "Offline",
-        serverTime: new Date().toISOString(),
-        hasApiKey: !!process.env.SEQ1_API_KEY,
+    // Make a request to the API health endpoint
+    const response = await fetch(`${apiUrl}/api/health`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
       },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(`API health check failed with status: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    return NextResponse.json({
+      success: true,
+      message: "API is healthy",
+      apiUrl: apiUrl.replace(/\/+$/, ""), // Remove trailing slashes
+      status: data.status || "unknown",
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Health check error:", error)
+    console.error("API health check error:", error)
 
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : "Unknown error",
-        details: {
-          apiUrl: process.env.NEXT_PUBLIC_SEQ1_API_URL || "https://api.seq1.net",
-          apiHealth: "Error",
-          serverTime: new Date().toISOString(),
-          hasApiKey: !!process.env.SEQ1_API_KEY,
-        },
+        message: "API health check failed",
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
       },
       { status: 500 },
     )

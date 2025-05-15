@@ -4,15 +4,6 @@
  * with absolutely no mocking, caching, or simulation.
  */
 
-// Get the API URL from environment variables
-const getApiUrl = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_SEQ1_API_URL || ""
-  if (!apiUrl) {
-    throw new Error("NEXT_PUBLIC_SEQ1_API_URL environment variable is not set")
-  }
-  return apiUrl
-}
-
 // Interface for test results
 export interface RealApiTestResult {
   success: boolean
@@ -37,6 +28,7 @@ export interface RealApiTest {
   body?: any
   headers?: Record<string, string>
   requiresAuth?: boolean
+  isWebSocket?: boolean
 }
 
 /**
@@ -44,23 +36,21 @@ export interface RealApiTest {
  * This bypasses all Next.js API routes and makes a direct fetch to the API
  */
 export async function makeRealApiCall(test: RealApiTest): Promise<RealApiTestResult> {
-  const apiUrl = getApiUrl()
   const startTime = performance.now()
   const timestamp = new Date().toISOString()
 
-  // For authenticated requests, we need to use the server proxy
-  const useServerProxy = test.requiresAuth === true
-
-  // Determine the URL to call
+  // For all requests, we now use the server proxy
+  // This ensures we're using the server-side API URL and API key
   let url: string
-  if (useServerProxy) {
-    // Use server proxy for authenticated requests
-    url = `/api/proxy${test.endpoint}`
-    console.log(`🔴 REAL API TEST: Making ${test.method} request to ${test.endpoint} via server proxy`)
+
+  if (test.isWebSocket) {
+    // For WebSocket tests, use the WebSocket proxy
+    url = `/api/ws-proxy-test${test.endpoint}`
+    console.log(`🔴 REAL API TEST: Testing WebSocket connection via proxy`)
   } else {
-    // Direct API call for unauthenticated requests
-    url = `${apiUrl}${test.endpoint}`
-    console.log(`🔴 REAL API TEST: Making ${test.method} request directly to ${url}`)
+    // For all other tests, use the API proxy
+    url = `/api/proxy${test.endpoint}`
+    console.log(`🔴 REAL API TEST: Making ${test.method} request to ${test.endpoint} via proxy`)
   }
 
   try {
@@ -234,6 +224,17 @@ export const realApiTests: RealApiTest[] = [
     endpoint: "/api/account",
     method: "GET",
     requiresAuth: true,
+  },
+
+  // WebSocket test
+  {
+    id: "websocket-connection",
+    name: "WebSocket Connection",
+    category: "websocket",
+    description: "Tests WebSocket connection to the API",
+    endpoint: "/", // WebSocket root endpoint
+    method: "GET",
+    isWebSocket: true,
   },
 ]
 

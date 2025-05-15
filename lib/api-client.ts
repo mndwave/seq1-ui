@@ -5,13 +5,6 @@
  * This is the client-side API client that does NOT contain sensitive environment variables
  */
 
-// API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_SEQ1_API_URL || "https://api.seq1.net"
-// WebSocket base URL - ensure we're using wss:// for secure connections
-const WS_BASE_URL = (process.env.NEXT_PUBLIC_SEQ1_API_URL || "https://api.seq1.net")
-  .replace("https://", "wss://")
-  .replace("http://", "ws://")
-
 // Debug mode
 const DEBUG = true
 
@@ -63,9 +56,10 @@ export async function testApiConnectivity(): Promise<{
  * Make an authenticated API request from the client
  */
 async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`
+  // Use the proxy endpoint to make authenticated requests
+  const url = `/api/proxy${endpoint}`
 
-  debugLog(`Making ${options.method || "GET"} request to ${endpoint}`)
+  debugLog(`Making ${options.method || "GET"} request to ${endpoint} via proxy`)
 
   // Set up headers
   const headers = new Headers(options.headers)
@@ -144,7 +138,8 @@ export async function getTransportState(): Promise<any> {
  */
 export async function getPublicTransportState(): Promise<any> {
   try {
-    return await fetch(`${API_BASE_URL}/api/public/transport`, {
+    // Use the proxy for public endpoints too for consistency
+    return await fetch("/api/proxy/api/public/transport", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

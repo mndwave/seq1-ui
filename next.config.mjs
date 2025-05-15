@@ -10,19 +10,22 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Remove all rewrites
-  // Simply ensure CORS headers are set for the .well-known directory
+  // Add environment variables that should be available on the client
+  env: {
+    NEXT_PUBLIC_SEQ1_API_URL: process.env.SEQ1_API_URL || "https://api.seq1.net",
+  },
+  // Add headers for CORS
   async headers() {
     return [
       {
         source: "/.well-known/nostr.json",
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Content-Type", value: "application/json" }
-        ]
-      }
+          { key: "Content-Type", value: "application/json" },
+        ],
+      },
     ]
-  }
-};
+  },
+}
 
-export default nextConfig;
+export default nextConfig

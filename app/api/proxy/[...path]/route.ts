@@ -19,7 +19,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { path:
 async function proxyRequest(request: NextRequest, pathSegments: string[], method: string) {
   try {
     // Get API URL and key from environment variables
-    const apiUrl = process.env.SEQ1_API_URL || process.env.NEXT_PUBLIC_SEQ1_API_URL
+    const apiUrl = process.env.SEQ1_API_URL
     const apiKey = process.env.SEQ1_API_KEY
 
     if (!apiUrl) {
@@ -32,7 +32,9 @@ async function proxyRequest(request: NextRequest, pathSegments: string[], method
 
     // Reconstruct the path
     const path = pathSegments.join("/")
-    const url = `${apiUrl}/api/${path}`
+
+    // Determine if this is an API endpoint or a direct path
+    const url = path.startsWith("api/") ? `${apiUrl}/${path}` : `${apiUrl}/api/${path}`
 
     console.log(`Proxying ${method} request to ${url}`)
 

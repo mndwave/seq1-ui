@@ -1,7 +1,12 @@
-import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 
-export function GET(request: NextRequest) {
-  // This is a placeholder for the WebSocket proxy
-  // In a real implementation, you would use a WebSocket library to proxy the connection
-  return new Response("WebSocket proxy not implemented yet", { status: 501 })
+export function GET() {
+  // This route will be upgraded to a WebSocket connection by middleware
+  // For now, return a message indicating this is a WebSocket endpoint
+  return NextResponse.json({
+    error: "This endpoint is meant to be used as a WebSocket connection",
+    message: "Please use a WebSocket client to connect to this endpoint",
+  })
 }
+
+export const dynamic = "force-dynamic"

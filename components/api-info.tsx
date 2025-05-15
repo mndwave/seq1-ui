@@ -3,27 +3,17 @@
 import { useState, useEffect } from "react"
 import { getSystemStatus } from "@/lib/api-client"
 import { Badge } from "@/components/ui/badge"
+import { useEnv } from "@/lib/env-provider"
 
 export function ApiInfo() {
-  const [apiUrl, setApiUrl] = useState<string>("")
   const [apiStatus, setApiStatus] = useState<string>("Checking...")
   const [authStatus, setAuthStatus] = useState<string>("Not authenticated")
-  const [wsUrl, setWsUrl] = useState<string>("")
   const [lastChecked, setLastChecked] = useState<string>("")
+  const env = useEnv()
 
   useEffect(() => {
-    // Get the API URL from the api-client.ts file
+    // Check authentication status
     import("@/lib/api-client").then((module) => {
-      // @ts-ignore - We're accessing a private variable
-      setApiUrl(module.API_BASE_URL || "Unknown")
-
-      // Get WebSocket URL
-      const wsBaseUrl = (module.API_BASE_URL || "https://api.seq1.net")
-        .replace("https://", "wss://")
-        .replace("http://", "ws://")
-      setWsUrl(wsBaseUrl)
-
-      // Check authentication status
       setAuthStatus(module.isAuthenticated() ? "JWT Authenticated" : "Not authenticated")
     })
 
@@ -54,12 +44,12 @@ export function ApiInfo() {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-sm font-medium text-gray-300">API URL:</span>
-            <span className="text-sm font-mono">{apiUrl}</span>
+            <span className="text-sm font-mono">{env.apiUrl || "Loading..."}</span>
           </div>
 
           <div className="flex justify-between">
             <span className="text-sm font-medium text-gray-300">WebSocket URL:</span>
-            <span className="text-sm font-mono">{wsUrl}</span>
+            <span className="text-sm font-mono">{env.wsUrl || "Loading..."}</span>
           </div>
 
           <div className="flex justify-between">

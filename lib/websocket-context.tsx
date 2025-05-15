@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react"
-import { createWebSocket } from "@/lib/api-client"
+import { useEnv } from "@/lib/env-provider"
 
 interface WebSocketContextType {
   lastMessage: any | null
@@ -21,9 +21,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [lastMessage, setLastMessage] = useState<any | null>(null)
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
+  const env = useEnv()
 
   // Set up WebSocket connection
   useEffect(() => {
+    // Don't try to connect until environment variables are loaded
+    if (!env.isLoaded) return
+
     // Handle incoming messages
     const handleMessage = (event: MessageEvent) => {
       try {
@@ -36,15 +40,27 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     // Create WebSocket connection
     try {
-      wsRef.current = createWebSocket(handleMessage)
+      // Use the WebSocket proxy instead of connecting directly
+      const wsProxyUrl = window.location.protocol.replace("http", "ws") + "//" + window.location.host + "/api/ws-proxy"
+      console.log("Creating WebSocket connection to proxy:", wsProxyUrl)
+
+      wsRef.current = new WebSocket(wsProxyUrl)
 
       // Update connection status
       wsRef.current.onopen = () => {
         setConnected(true)
+        console.log("WebSocket connected")
       }
+
+      wsRef.current.onmessage = handleMessage
 
       wsRef.current.onclose = () => {
         setConnected(false)
+        console.log("WebSocket disconnected")
+      }
+
+      wsRef.current.onerror = (error) => {
+        console.error("WebSocket error:", error)
       }
     } catch (error) {
       console.error("Error creating WebSocket connection:", error)
@@ -56,7 +72,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         wsRef.current.close()
       }
     }
-  }, [])
+  }, [env.isLoaded])
 
   // Listen for auth changes
   useEffect(() => {
