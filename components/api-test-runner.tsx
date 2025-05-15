@@ -21,8 +21,34 @@ interface TestResult {
   status: TestStatus
   duration?: number
   error?: any
+  errorDetails?: {
+    message?: string
+    stack?: string
+    code?: string
+    type?: string
+    request?: any
+    response?: any
+    context?: any
+  }
   response?: any
   timestamp?: Date
+  requestDetails?: {
+    url?: string
+    method?: string
+    headers?: Record<string, string>
+    body?: any
+  }
+  responseDetails?: {
+    status?: number
+    statusText?: string
+    headers?: Record<string, string>
+    size?: number
+    timing?: {
+      start: number
+      end: number
+      duration: number
+    }
+  }
 }
 
 export function ApiTestRunner({ category }: ApiTestRunnerProps) {
@@ -31,6 +57,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
   const [summary, setSummary] = useState({ total: 0, success: 0, failed: 0 })
   const [testStartTime, setTestStartTime] = useState<Date | null>(null)
   const [testEndTime, setTestEndTime] = useState<Date | null>(null)
+  const [expandedErrors, setExpandedErrors] = useState<Record<string, boolean>>({})
 
   // Filter tests by category
   const tests = category === "all" ? apiTests : apiTests.filter((test) => test.category === category)
@@ -47,6 +74,95 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
       })),
     )
   }, [category])
+
+  // Toggle error details expansion
+  const toggleErrorExpansion = (id: string) => {
+    setExpandedErrors((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
+
+  // Extract all properties from an error object
+  const extractErrorDetails = (error: any): Record<string, any> => {
+    if (!error) return {}
+
+    // Start with an empty object
+    const details: Record<string, any> = {}
+
+    // If it's not an object, just return the error as a string
+    if (typeof error !== "object") {
+      return { value: String(error) }
+    }
+
+    // Extract all properties from the error object
+    try {
+      // Get all properties including non-enumerable ones
+      const propertyNames = new Set([...Object.getOwnPropertyNames(error), ...Object.keys(error)])
+
+      // Add each property to the details object
+      for (const prop of propertyNames) {
+        try {
+          const value = error[prop]
+          // Skip functions and circular references
+          if (typeof value !== "function") {
+            details[prop] = value
+          }
+        } catch (e) {
+          details[`${prop}_error`] = "Could not access property"
+        }
+      }
+
+      // Special handling for response objects
+      if (error.response) {
+        try {
+          details.responseStatus = error.response.status
+          details.responseStatusText = error.response.statusText
+
+          // Try to get response data
+          if (error.response.data) {
+            details.responseData = error.response.data
+          }
+
+          // Try to get headers
+          if (error.response.headers) {
+            details.responseHeaders = error.response.headers
+          }
+        } catch (e) {
+          details.responseError = "Could not extract response details"
+        }
+      }
+
+      // Special handling for request objects
+      if (error.request) {
+        try {
+          details.requestUrl = error.request.url || error.request._url
+          details.requestMethod = error.request.method
+          details.requestHeaders = error.request.headers
+        } catch (e) {
+          details.requestError = "Could not extract request details"
+        }
+      }
+
+      // Special handling for axios errors
+      if (error.config) {
+        try {
+          details.requestConfig = {
+            url: error.config.url,
+            method: error.config.method,
+            headers: error.config.headers,
+            data: error.config.data,
+          }
+        } catch (e) {
+          details.configError = "Could not extract request config"
+        }
+      }
+    } catch (e) {
+      details.extractionError = "Error extracting properties"
+    }
+
+    return details
+  }
 
   // Run all tests
   const runAllTests = async () => {
@@ -75,10 +191,32 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
       setResults((prev) => prev.map((r) => (r.id === test.id ? { ...r, status: "running" } : r)))
 
       try {
+        // Capture request details
+        const requestDetails: any = {
+          testId: test.id,
+          testName: test.name,
+          startTime: new Date().toISOString(),
+        }
+
+        // Start timing
         const testStartTime = performance.now()
+
+        // Run the test
         const response = await test.run()
+
+        // End timing
         const testEndTime = performance.now()
         const timestamp = new Date()
+
+        // Capture response details
+        const responseDetails = {
+          status: 200, // Assuming success
+          timing: {
+            start: testStartTime,
+            end: testEndTime,
+            duration: Math.round(testEndTime - testStartTime),
+          },
+        }
 
         // Update result with success
         setResults((prev) =>
@@ -90,22 +228,41 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
                   duration: Math.round(testEndTime - testStartTime),
                   response,
                   timestamp,
+                  requestDetails,
+                  responseDetails,
                 }
               : r,
           ),
         )
 
         successCount++
-      } catch (error) {
+      } catch (error: any) {
         const timestamp = new Date()
-        // Update result with error
+
+        // Extract as much information as possible from the error
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        const errorStack = error instanceof Error ? error.stack : undefined
+        const errorType = error instanceof Error ? error.constructor.name : typeof error
+
+        // Extract all properties from the error object
+        const errorDetails = extractErrorDetails(error)
+
+        console.error(`Test failed: ${test.name}`, error, errorDetails)
+
+        // Update result with detailed error information
         setResults((prev) =>
           prev.map((r) =>
             r.id === test.id
               ? {
                   ...r,
                   status: "error",
-                  error: error instanceof Error ? error.message : String(error),
+                  error: errorMessage,
+                  errorDetails: {
+                    message: errorMessage,
+                    stack: errorStack,
+                    type: errorType,
+                    ...errorDetails,
+                  },
                   timestamp,
                 }
               : r,
@@ -113,7 +270,6 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
         )
 
         failedCount++
-        console.error(`Test failed: ${test.name}`, error)
       }
 
       // Small delay between tests to avoid overwhelming the API
@@ -190,11 +346,32 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
           report += `Duration: ${result.duration}ms\n`
         }
 
-        if (result.status === "error" && result.error) {
+        if (result.requestDetails) {
+          report += "\nREQUEST DETAILS:\n"
+          report += "---------------\n"
+          report += JSON.stringify(result.requestDetails, null, 2) + "\n"
+        }
+
+        if (result.responseDetails) {
+          report += "\nRESPONSE DETAILS:\n"
+          report += "----------------\n"
+          report += JSON.stringify(result.responseDetails, null, 2) + "\n"
+        }
+
+        if (result.status === "error") {
           report += "\nERROR DETAILS:\n"
           report += "-------------\n"
-          report += typeof result.error === "object" ? JSON.stringify(result.error, null, 2) : result.error
-          report += "\n"
+          report += `Message: ${result.error}\n`
+
+          if (result.errorDetails) {
+            report += "\nFull Error Information:\n"
+            report += JSON.stringify(result.errorDetails, null, 2) + "\n"
+
+            if (result.errorDetails.stack) {
+              report += "\nStack Trace:\n"
+              report += result.errorDetails.stack + "\n"
+            }
+          }
         }
 
         if (result.status === "success" && result.response) {
@@ -217,7 +394,13 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
       failedTests.forEach((result) => {
         report += `Test: ${result.name}\n`
         report += `Category: ${result.category}\n`
-        report += `Error: ${typeof result.error === "object" ? JSON.stringify(result.error, null, 2) : result.error}\n`
+        report += `Error: ${result.error}\n`
+
+        if (result.errorDetails) {
+          report += "\nDetailed Error Information:\n"
+          report += JSON.stringify(result.errorDetails, null, 2) + "\n"
+        }
+
         report += "\n" + "".padEnd(50, "-") + "\n\n"
       })
     }
@@ -228,6 +411,8 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
     report += `User Agent: ${navigator.userAgent}\n`
     report += `Window Size: ${window.innerWidth}x${window.innerHeight}\n`
     report += `API URL: ${process.env.NEXT_PUBLIC_SEQ1_API_URL || "Not available"}\n`
+    report += `Date/Time: ${new Date().toISOString()}\n`
+    report += `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n`
 
     // Create and trigger download
     const blob = new Blob([report], { type: "text/plain" })
@@ -346,11 +531,55 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
               <div className="mb-2 text-sm text-gray-400">{result.description}</div>
 
               {result.status === "error" && (
-                <div className="bg-red-900/30 p-3 rounded-md mb-3 border border-red-500">
-                  <div className="font-semibold text-red-300 mb-1">Error:</div>
-                  <div className="text-red-200 font-mono text-sm whitespace-pre-wrap">
-                    {typeof result.error === "object" ? JSON.stringify(result.error, null, 2) : result.error}
+                <div className="space-y-3">
+                  <div className="bg-red-900/30 p-3 rounded-md mb-3 border border-red-500">
+                    <div className="font-semibold text-red-300 mb-1">Error:</div>
+                    <div className="text-red-200 font-mono text-sm whitespace-pre-wrap">
+                      {typeof result.error === "object" ? JSON.stringify(result.error, null, 2) : result.error}
+                    </div>
                   </div>
+
+                  {result.errorDetails && (
+                    <div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleErrorExpansion(result.id)}
+                        className="mb-2 text-xs"
+                      >
+                        {expandedErrors[result.id] ? "Hide Detailed Error Info" : "Show Detailed Error Info"}
+                      </Button>
+
+                      {expandedErrors[result.id] && (
+                        <div className="bg-gray-900 p-3 rounded-md border border-gray-700 mt-2">
+                          <div className="font-semibold mb-1 text-white">Full Error Details:</div>
+
+                          {result.errorDetails.type && (
+                            <div className="mb-2">
+                              <span className="text-gray-400 text-xs">Error Type: </span>
+                              <span className="text-white text-xs">{result.errorDetails.type}</span>
+                            </div>
+                          )}
+
+                          {result.errorDetails.stack && (
+                            <div className="mb-3">
+                              <div className="text-gray-400 text-xs mb-1">Stack Trace:</div>
+                              <pre className="text-xs overflow-auto max-h-[200px] bg-gray-950 p-2 rounded text-gray-300">
+                                {result.errorDetails.stack}
+                              </pre>
+                            </div>
+                          )}
+
+                          <div className="mb-2">
+                            <div className="text-gray-400 text-xs mb-1">All Error Properties:</div>
+                            <pre className="text-xs overflow-auto max-h-[300px] bg-gray-950 p-2 rounded text-gray-300">
+                              {JSON.stringify(result.errorDetails, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -359,6 +588,24 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
                   <div className="font-semibold mb-1 text-white">Response:</div>
                   <pre className="text-sm overflow-auto max-h-[300px] text-gray-300">
                     {JSON.stringify(result.response, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {result.requestDetails && (
+                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700">
+                  <div className="font-semibold mb-1 text-white">Request Details:</div>
+                  <pre className="text-xs overflow-auto max-h-[200px] text-gray-300">
+                    {JSON.stringify(result.requestDetails, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {result.responseDetails && (
+                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700">
+                  <div className="font-semibold mb-1 text-white">Response Details:</div>
+                  <pre className="text-xs overflow-auto max-h-[200px] text-gray-300">
+                    {JSON.stringify(result.responseDetails, null, 2)}
                   </pre>
                 </div>
               )}
