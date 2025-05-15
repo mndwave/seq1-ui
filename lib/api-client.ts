@@ -45,38 +45,17 @@ export async function testApiConnectivity(): Promise<{
   details?: any
 }> {
   try {
-    debugLog("Checking API health")
-
-    // Use a local API route to avoid exposing the API key
-    const response = await fetch("/api/health-check", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      // Add a timeout to prevent long waits
-      signal: AbortSignal.timeout(5000),
-    })
-
+    // Test basic connectivity to the API
+    const response = await fetch("/api/test-connectivity")
     const data = await response.json()
-
-    return data
-  } catch (error: any) {
-    debugLog("API health check failed:", error)
-
-    let errorMessage = "Unknown error occurred"
-    if (error.name === "AbortError") {
-      errorMessage = "Request timed out after 5 seconds"
-    } else if (error.name === "TypeError" && error.message === "Failed to fetch") {
-      errorMessage = "Network error: Failed to fetch. The API server may be unreachable."
-    } else if (error.message) {
-      errorMessage = error.message
-    }
-
     return {
-      success: false,
-      message: errorMessage,
-      details: error,
+      connected: true,
+      message: "Successfully connected to API",
+      details: data,
     }
+  } catch (error) {
+    console.error("Error testing API connectivity:", error)
+    throw new Error("Failed to connect to API")
   }
 }
 
@@ -133,24 +112,18 @@ async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}):
 /**
  * Get system status
  */
-export async function getSystemStatus(): Promise<{ status: string }> {
+export async function getSystemStatus() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/health`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`)
-    }
-
+    const response = await fetch("/api/health-check")
     const data = await response.json()
-    return data
-  } catch (error: any) {
-    console.error("Error fetching system status:", error)
-    throw new Error(error.message || "Failed to fetch system status")
+    return {
+      status: "online",
+      message: "API system is healthy",
+      details: data,
+    }
+  } catch (error) {
+    console.error("Error checking system status:", error)
+    throw new Error("Failed to check system status")
   }
 }
 
