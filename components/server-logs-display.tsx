@@ -2,20 +2,21 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2, Copy, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
+import { Loader2, RefreshCw, Copy, ChevronUp, ChevronDown } from "lucide-react"
 
 interface ServerLogsDisplayProps {
-  refreshTrigger?: number
-  includeInReport?: (logs: string) => void
+  refreshTrigger: number
+  includeInReport: (logs: string) => void
 }
 
 export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLogsDisplayProps) {
   const [logs, setLogs] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isVisible, setIsVisible] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(true)
   const logsRef = useRef<HTMLPreElement>(null)
 
+  // Fetch logs from the server
   const fetchLogs = async () => {
     setIsLoading(true)
     setError(null)
@@ -30,36 +31,29 @@ export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLog
       const text = await response.text()
       setLogs(text)
 
-      // If includeInReport callback is provided, call it with the logs
-      if (includeInReport) {
-        includeInReport(text)
-      }
-    } catch (err) {
-      console.error("Error fetching server logs:", err)
-      setError(err instanceof Error ? err.message : "Failed to fetch server logs")
-      setLogs("")
+      // Pass logs to parent component for inclusion in report
+      includeInReport(text)
 
-      // If includeInReport callback is provided, call it with the error
-      if (includeInReport) {
-        includeInReport(`Server logs unavailable: ${err instanceof Error ? err.message : "Unknown error"}`)
+      // Scroll to bottom of logs
+      if (logsRef.current) {
+        logsRef.current.scrollTop = logsRef.current.scrollHeight
       }
+    } catch (error) {
+      console.error("Error fetching logs:", error)
+      setError(error instanceof Error ? error.message : "Failed to fetch logs")
+      setLogs("")
+      includeInReport("")
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Fetch logs when the component mounts or when refreshTrigger changes
+  // Fetch logs when component mounts or refreshTrigger changes
   useEffect(() => {
     fetchLogs()
   }, [refreshTrigger])
 
-  // Scroll to bottom of logs when they update
-  useEffect(() => {
-    if (logsRef.current && logs) {
-      logsRef.current.scrollTop = logsRef.current.scrollHeight
-    }
-  }, [logs])
-
+  // Copy logs to clipboard
   const copyLogs = () => {
     navigator.clipboard
       .writeText(logs)
@@ -72,18 +66,43 @@ export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLog
       })
   }
 
-  // Function to highlight error and warning lines
-  const highlightLogs = (logText: string) => {
-    if (!logText) return null
+  // Toggle expanded state
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded)
+  }
 
-    return logText.split("\n").map((line, index) => {
-      const isError = line.includes("ERROR") || line.includes("Traceback") || line.includes("Exception")
-      const isWarning = line.includes("WARNING") || line.includes("WARN")
+  // Highlight errors and warnings in logs
+  const highlightLogs = (text: string) => {
+    if (!text) return null
 
-      const className = isError ? "text-red-500" : isWarning ? "text-yellow-500" : ""
+    // Split by lines to process each line
+    return text.split("\n").map((line, index) => {
+      // Highlight error lines
+      if (
+        line.includes("ERROR") ||
+        line.includes("Traceback") ||
+        line.includes("Exception") ||
+        line.includes("FATAL")
+      ) {
+        return (
+          <div key={index} className="text-red-400">
+            {line}
+          </div>
+        )
+      }
 
+      // Highlight warning lines
+      if (line.includes("WARNING") || line.includes("WARN")) {
+        return (
+          <div key={index} className="text-yellow-400">
+            {line}
+          </div>
+        )
+      }
+
+      // Regular lines
       return (
-        <div key={index} className={className}>
+        <div key={index} className="text-gray-300">
           {line}
         </div>
       )
@@ -92,13 +111,13 @@ export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLog
 
   return (
     <div className="mt-8 border border-gray-700 rounded-md bg-gray-900">
-      <div className="flex items-center justify-between p-3 border-b border-gray-700">
+      <div className="flex justify-between items-center p-4 border-b border-gray-700">
         <div className="flex items-center">
-          <Button variant="ghost" size="sm" onClick={() => setIsVisible(!isVisible)} className="mr-2">
-            {isVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            <span className="ml-2">Server Logs</span>
+          <Button variant="ghost" size="sm" onClick={toggleExpanded} className="mr-2">
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+          <h3 className="text-lg font-semibold">Server Logs</h3>
+          {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-400" />}
         </div>
 
         <div className="flex gap-2">
@@ -114,19 +133,19 @@ export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLog
         </div>
       </div>
 
-      {isVisible && (
-        <div className="p-0">
+      {isExpanded && (
+        <div className="p-4">
           {error ? (
-            <div className="p-4 text-red-500 bg-red-900/20">{error}</div>
+            <div className="bg-red-900/30 p-3 rounded-md border border-red-500 text-red-200">{error}</div>
           ) : logs ? (
             <pre
               ref={logsRef}
-              className="p-4 text-xs font-mono overflow-auto bg-gray-950 text-gray-300 max-h-[400px] whitespace-pre-wrap"
+              className="font-mono text-xs whitespace-pre-wrap bg-gray-950 p-4 rounded-md overflow-auto max-h-[400px]"
             >
               {highlightLogs(logs)}
             </pre>
           ) : (
-            <div className="p-4 text-gray-400">{isLoading ? "Loading logs..." : "No logs available"}</div>
+            <div className="text-gray-400 italic">{isLoading ? "Loading logs..." : "No logs available"}</div>
           )}
         </div>
       )}

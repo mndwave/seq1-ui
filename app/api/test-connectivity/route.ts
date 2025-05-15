@@ -1,82 +1,41 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { getApiUrl } from "@/lib/server/api-server"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get the API URL from the server
+    // Get the API URL from the server configuration
     const apiUrl = await getApiUrl()
 
-    // Test basic connectivity to the API
+    // Make a real request to the API health endpoint
     const response = await fetch(`${apiUrl}/api/health`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SEQ1_API_KEY}`,
       },
-      // Add a timeout to prevent long waits
-      signal: AbortSignal.timeout(5000),
+      next: { revalidate: 0 }, // Don't cache the response
     })
 
-    // Get the response data
-    let data
-    try {
-      data = await response.json()
-    } catch (error) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "API returned invalid JSON response",
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          error: String(error),
-        },
-        { status: 500 },
-      )
+    if (!response.ok) {
+      throw new Error(`API health check failed: ${response.status} ${response.statusText}`)
     }
 
-    // Check if the response is successful
-    if (response.ok) {
-      return NextResponse.json({
-        success: true,
-        message: "Successfully connected to API",
-        apiUrl,
-        status: response.status,
-        data,
-      })
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `API returned error status: ${response.status}`,
-          apiUrl,
-          status: response.status,
-          statusText: response.statusText,
-          data,
-        },
-        { status: response.status },
-      )
-    }
-  } catch (error: any) {
-    // Detailed error information
-    const errorDetails: Record<string, any> = {
-      message: error.message || "Unknown error",
-      name: error.name,
-      stack: error.stack,
-    }
+    const data = await response.json()
 
-    // Check for specific error types
-    if (error.name === "AbortError") {
-      errorDetails.reason = "Request timed out after 5 seconds"
-    } else if (error.name === "TypeError" && error.message === "Failed to fetch") {
-      errorDetails.reason = "Network error: Failed to fetch. The API server may be unreachable."
-    }
+    return NextResponse.json({
+      success: true,
+      message: "API connectivity test successful",
+      apiUrl: apiUrl,
+      details: data,
+    })
+  } catch (error) {
+    console.error("API connectivity test failed:", error)
 
-    // Return detailed error response
     return NextResponse.json(
       {
         success: false,
-        message: errorDetails.message,
-        error: errorDetails,
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        timestamp: new Date().toISOString(),
       },
       { status: 500 },
     )

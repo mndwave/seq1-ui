@@ -18,9 +18,20 @@ async function runWithDetailedErrors<T>(
   context: { endpoint?: string; method?: string; params?: any },
 ): Promise<T> {
   try {
+    // Log the API call to console for debugging
+    console.log(`Making API call to ${context.endpoint} (${context.method})`, context.params)
+
+    // Make the actual API call - no mocking!
     const result = await apiCall()
+
+    // Log the result
+    console.log(`API call to ${context.endpoint} succeeded:`, result)
+
     return result
   } catch (error: any) {
+    // Log the error
+    console.error(`API call to ${context.endpoint} failed:`, error)
+
     // Enhance the error with additional context
     if (error instanceof Error) {
       // Add context to the error
