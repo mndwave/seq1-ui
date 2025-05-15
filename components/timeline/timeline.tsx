@@ -121,6 +121,23 @@ export default function Timeline({
       } catch (err) {
         console.error("Failed to fetch timeline clips:", err)
         setError("Failed to load timeline data")
+        // Use mock data as fallback when API fails
+        setSections([
+          {
+            id: "mock-1",
+            name: "Demo Section 01",
+            start: 0,
+            length: 16,
+            color: "#FF5555",
+          },
+          {
+            id: "mock-2",
+            name: "Demo Section 02",
+            start: 16,
+            length: 16,
+            color: "#55FF55",
+          },
+        ])
       } finally {
         setIsLoading(false)
       }

@@ -23,6 +23,7 @@ export function useTransport() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(false)
 
   // Fetch transport state
   const fetchTransportState = useCallback(async () => {
@@ -31,9 +32,11 @@ export function useTransport() {
       const state = await getTransportState()
       setTransportState(state)
       setError(null)
+      setIsOffline(false)
     } catch (err) {
       console.error("Failed to fetch transport state:", err)
       setError("Failed to load transport state")
+      setIsOffline(true)
     } finally {
       setIsLoading(false)
     }
@@ -45,22 +48,28 @@ export function useTransport() {
 
     // Set up polling for transport state updates
     const intervalId = setInterval(() => {
-      if (transportState.isPlaying) {
+      if (transportState.isPlaying && !isOffline) {
         fetchTransportState()
       }
-    }, 1000) // Poll every second when playing
+    }, 1000) // Poll every second when playing and online
 
     return () => clearInterval(intervalId)
-  }, [fetchTransportState, transportState.isPlaying])
+  }, [fetchTransportState, transportState.isPlaying, isOffline])
 
   // Toggle play/pause
   const togglePlayback = useCallback(async () => {
     try {
       const newState = transportState.isPlaying ? await stopPlayback() : await startPlayback()
       setTransportState(newState)
+      setError(null)
     } catch (err) {
       console.error("Failed to toggle playback:", err)
       setError("Failed to toggle playback")
+      // Update local state to provide immediate feedback
+      setTransportState((prev) => ({
+        ...prev,
+        isPlaying: !prev.isPlaying,
+      }))
     }
   }, [transportState.isPlaying])
 
@@ -69,9 +78,15 @@ export function useTransport() {
     try {
       const newState = await setPlayheadPosition(position)
       setTransportState(newState)
+      setError(null)
     } catch (err) {
       console.error("Failed to set playhead position:", err)
       setError("Failed to set playhead position")
+      // Update local state to provide immediate feedback
+      setTransportState((prev) => ({
+        ...prev,
+        playheadPosition: position,
+      }))
     }
   }, [])
 
@@ -80,9 +95,15 @@ export function useTransport() {
     try {
       const newState = await updateLoopState(!transportState.isLooping)
       setTransportState(newState)
+      setError(null)
     } catch (err) {
       console.error("Failed to toggle looping:", err)
       setError("Failed to toggle looping")
+      // Update local state to provide immediate feedback
+      setTransportState((prev) => ({
+        ...prev,
+        isLooping: !prev.isLooping,
+      }))
     }
   }, [transportState.isLooping])
 
@@ -92,9 +113,15 @@ export function useTransport() {
       try {
         const newState = await updateLoopState(transportState.isLooping, loopRegion)
         setTransportState(newState)
+        setError(null)
       } catch (err) {
         console.error("Failed to set loop region:", err)
         setError("Failed to set loop region")
+        // Update local state to provide immediate feedback
+        setTransportState((prev) => ({
+          ...prev,
+          loopRegion,
+        }))
       }
     },
     [transportState.isLooping],
@@ -105,9 +132,15 @@ export function useTransport() {
     try {
       const newState = await updateBpm(bpm)
       setTransportState(newState)
+      setError(null)
     } catch (err) {
       console.error("Failed to set BPM:", err)
       setError("Failed to set BPM")
+      // Update local state to provide immediate feedback
+      setTransportState((prev) => ({
+        ...prev,
+        bpm,
+      }))
     }
   }, [])
 
@@ -116,9 +149,15 @@ export function useTransport() {
     try {
       const newState = await updateTimeSignature(timeSignature)
       setTransportState(newState)
+      setError(null)
     } catch (err) {
       console.error("Failed to set time signature:", err)
       setError("Failed to set time signature")
+      // Update local state to provide immediate feedback
+      setTransportState((prev) => ({
+        ...prev,
+        timeSignature,
+      }))
     }
   }, [])
 
@@ -126,6 +165,7 @@ export function useTransport() {
     transportState,
     isLoading,
     error,
+    isOffline,
     togglePlayback,
     seekPlayhead,
     toggleLooping,

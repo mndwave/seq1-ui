@@ -128,18 +128,22 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       comingSoon: false,
       dividerBefore: true,
     },
-    {
-      id: "account",
-      label: "ACCOUNT",
-      icon: <User size={14} />,
-      action: () => {
-        console.log("Account action triggered")
-        setShowAccountModal(true)
-      },
-      disabled: false,
-      comingSoon: false,
-      dividerBefore: true,
-    },
+    ...(isAuthenticated
+      ? [
+          {
+            id: "account",
+            label: "ACCOUNT",
+            icon: <User size={14} />,
+            action: () => {
+              console.log("Account action triggered")
+              setShowAccountModal(true)
+            },
+            disabled: false,
+            comingSoon: false,
+            dividerBefore: true,
+          },
+        ]
+      : []),
   ]
 
   // Set mounted state after component mounts (for SSR compatibility)
@@ -315,18 +319,20 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
           {/* Single divider before account options */}
           <div className="border-t border-[#3a2a30] my-2"></div>
 
-          {/* Account option with green color */}
-          <button
-            className="w-full text-left px-4 py-2 text-xs text-[#4ade80] hover:bg-[#3a2a30] flex items-center rounded-sm"
-            onClick={() => {
-              closeMenu()
-              setShowAccountModal(true)
-            }}
-            role="menuitem"
-          >
-            <User size={14} className="mr-3 text-[#4ade80]" />
-            <span>ACCOUNT</span>
-          </button>
+          {/* Account option with green color - only show when authenticated */}
+          {isAuthenticated && (
+            <button
+              className="w-full text-left px-4 py-2 text-xs text-[#4ade80] hover:bg-[#3a2a30] flex items-center rounded-sm"
+              onClick={() => {
+                closeMenu()
+                setShowAccountModal(true)
+              }}
+              role="menuitem"
+            >
+              <User size={14} className="mr-3 text-[#4ade80]" />
+              <span>ACCOUNT</span>
+            </button>
+          )}
 
           {/* Auth option (login/signup or sign out) */}
           {renderAuthOption()}

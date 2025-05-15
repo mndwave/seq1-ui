@@ -17,7 +17,7 @@ declare global {
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { generateSecretKey, getPublicKey } from "nostr-tools"
-import * as apiClient from "@/lib/api-client"
+import * as serverApi from "@/lib/server/api-server"
 
 // Define types for our auth context
 export interface NostrUser {
@@ -64,9 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Test API connectivity
   const testApiConnectivity = async (): Promise<boolean> => {
     try {
-      const result = await apiClient.testApiConnectivity()
-      setApiConnected(result.success)
-      return result.success
+      // We'll use the public health endpoint to test connectivity
+      const response = await fetch("/api/health-check")
+      const data = await response.json()
+      setApiConnected(data.success)
+      return data.success
     } catch (error) {
       console.error("Error testing API connectivity:", error)
       setApiConnected(false)
@@ -88,10 +90,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Check if API is authenticated
-        if (apiClient.isAuthenticated()) {
-          // Get account info
-          try {
-            const accountInfo = await apiClient.getAccountInfo()
+        try {
+          const authStatus = await serverApi.checkAuthStatusServer()
+          if (authStatus.isAuthenticated && authStatus.user) {
+            const accountInfo = await serverApi.getAccountInfoServer()
             if (accountInfo) {
               setUser({
                 pubkey: accountInfo.npub || "default-npub",
@@ -101,9 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 avatar: accountInfo.profilePicture || "/default.jpg",
               })
             }
-          } catch (error) {
-            console.error("Error fetching account info:", error)
           }
+        } catch (error) {
+          console.error("Error fetching account info:", error)
         }
       } catch (error) {
         console.error("Error checking session:", error)
@@ -153,10 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Invalid private key format")
       }
 
-      // With X-API-Key authentication, we don't need to login with a private key
-      // Instead, we'll just fetch the account info to verify authentication
+      // With server-side authentication, we'll just fetch the account info to verify authentication
       try {
-        const accountInfo = await apiClient.getAccountInfo()
+        const accountInfo = await serverApi.getAccountInfoServer()
         if (accountInfo) {
           setUser({
             pubkey: accountInfo.npub || "default-npub",
@@ -200,9 +201,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Logout user
   const logout = () => {
-    // With X-API-Key authentication, we don't need to logout
-    // Just clear the user state
-    setUser(null)
+    // With server-side authentication, we'll need to clear the session
+    fetch("/api/auth/logout", { method: "POST" })
+      .then(() => {
+        setUser(null)
+      })
+      .catch((error) => {
+        console.error("Logout error:", error)
+        // Still clear the user state even if the API call fails
+        setUser(null)
+      })
   }
 
   // Save user profile
@@ -223,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Call the API to update the profile
-      const response = await apiClient.updateAccountInfo(profile)
+      const response = await serverApi.updateAccountInfoServer(profile)
 
       if (response.success) {
         // Update the local state
@@ -267,10 +275,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Failed to get public key from extension.")
       }
 
-      // With X-API-Key authentication, we don't need to login with an extension
-      // Instead, we'll just fetch the account info to verify authentication
+      // With server-side authentication, we'll just fetch the account info to verify authentication
       try {
-        const accountInfo = await apiClient.getAccountInfo()
+        const accountInfo = await serverApi.getAccountInfoServer()
         if (accountInfo) {
           setUser({
             pubkey: accountInfo.npub || "default-npub",
