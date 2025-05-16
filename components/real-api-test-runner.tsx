@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -11,7 +11,6 @@ import {
   runRealApiTestsByCategory,
   type RealApiTestResult,
 } from "@/lib/real-api-tests"
-import { useEnv } from "@/lib/env-provider"
 
 interface RealApiTestRunnerProps {
   category: string
@@ -23,11 +22,41 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
   const [summary, setSummary] = useState({ total: 0, success: 0, failed: 0 })
   const [testStartTime, setTestStartTime] = useState<Date | null>(null)
   const [testEndTime, setTestEndTime] = useState<Date | null>(null)
+  const [apiInfo, setApiInfo] = useState<{ apiUrl: string; wsUrl: string } | null>(null)
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({})
-  const env = useEnv()
 
   // Get tests for the selected category
   const tests = category === "all" ? realApiTests : realApiTests.filter((test) => test.category === category)
+
+  // Get API URL on component mount
+  useEffect(() => {
+    async function fetchApiInfo() {
+      try {
+        // Fetch API info from the server
+        const response = await fetch("/api/proxy-base")
+        const data = await response.json()
+
+        if (data.baseUrl) {
+          // Convert to WebSocket URL for display
+          let wsUrl = data.baseUrl
+          if (wsUrl.startsWith("https://")) {
+            wsUrl = wsUrl.replace("https://", "wss://")
+          } else if (!wsUrl.startsWith("wss://")) {
+            wsUrl = `wss://${wsUrl.replace(/^(http:\/\/|\/\/)/i, "")}`
+          }
+
+          setApiInfo({
+            apiUrl: data.baseUrl,
+            wsUrl: wsUrl,
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching API info:", error)
+      }
+    }
+
+    fetchApiInfo()
+  }, [])
 
   // Toggle expanded state for an item
   const toggleExpanded = (id: string) => {
@@ -76,9 +105,9 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
     report += "========================\n\n"
     report += `Date: ${now.toISOString()}\n`
 
-    if (env.isLoaded) {
-      report += `REST API URL: ${env.apiUrl}\n`
-      report += `WebSocket URL: ${env.wsUrl}\n`
+    if (apiInfo) {
+      report += `REST API URL: ${apiInfo.apiUrl}\n`
+      report += `WebSocket URL: ${apiInfo.wsUrl}\n`
     }
 
     report += `Category: ${category}\n\n`
@@ -126,9 +155,9 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
     report += `Browser: ${navigator.userAgent}\n`
     report += `Time: ${now.toISOString()}\n`
 
-    if (env.isLoaded) {
-      report += `REST API URL: ${env.apiUrl}\n`
-      report += `WebSocket URL: ${env.wsUrl}\n`
+    if (apiInfo) {
+      report += `REST API URL: ${apiInfo.apiUrl}\n`
+      report += `WebSocket URL: ${apiInfo.wsUrl}\n`
     }
 
     // Create and download file
@@ -151,15 +180,17 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
           <h3 className="text-lg font-semibold">Server-Side API Testing Mode</h3>
         </div>
         <p className="text-sm">This mode uses server-side proxies to make authenticated API calls to your backend.</p>
-        {env.isLoaded && (
+        {apiInfo && (
           <div className="mt-2 space-y-2">
             <div>
               <span className="text-sm font-semibold">REST API URL:</span>
-              <code className="block bg-black/30 p-2 rounded mt-1 text-red-200 font-mono text-sm">{env.apiUrl}</code>
+              <code className="block bg-black/30 p-2 rounded mt-1 text-red-200 font-mono text-sm">
+                {apiInfo.apiUrl}
+              </code>
             </div>
             <div>
               <span className="text-sm font-semibold">WebSocket URL:</span>
-              <code className="block bg-black/30 p-2 rounded mt-1 text-red-200 font-mono text-sm">{env.wsUrl}</code>
+              <code className="block bg-black/30 p-2 rounded mt-1 text-red-200 font-mono text-sm">{apiInfo.wsUrl}</code>
             </div>
           </div>
         )}
@@ -275,7 +306,7 @@ export function RealApiTestRunner({ category }: RealApiTestRunnerProps) {
                     <div className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300 font-mono">{test.method}</div>
                   </div>
                   <div className="font-mono text-sm text-gray-300 mt-1">
-                    {env.isLoaded ? (test.isWebSocket ? env.wsUrl : env.apiUrl) : "Loading..."}
+                    {apiInfo ? (test.isWebSocket ? apiInfo.wsUrl : apiInfo.apiUrl) : "Loading..."}
                     {test.endpoint}
                   </div>
                 </div>

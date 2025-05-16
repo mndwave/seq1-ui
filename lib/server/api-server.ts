@@ -68,3 +68,41 @@ export async function makeApiRequest<T = any>(endpoint: string, options: Request
   // Return the data
   return data
 }
+
+/**
+ * Check authentication status
+ */
+export async function checkAuthStatusServer(): Promise<{ isAuthenticated: boolean; user?: any }> {
+  try {
+    const data = await makeApiRequest("/api/auth/session")
+    return {
+      isAuthenticated: true,
+      user: data,
+    }
+  } catch (error) {
+    return {
+      isAuthenticated: false,
+    }
+  }
+}
+
+/**
+ * Get account information
+ */
+export async function getAccountInfoServer(): Promise<any> {
+  return await makeApiRequest("/api/account")
+}
+
+/**
+ * Update account information
+ */
+export async function updateAccountInfoServer(profile: {
+  username: string
+  displayName?: string
+  avatar?: string
+}): Promise<any> {
+  return await makeApiRequest("/api/account", {
+    method: "PUT",
+    body: JSON.stringify(profile),
+  })
+}

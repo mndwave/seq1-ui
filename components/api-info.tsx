@@ -3,15 +3,32 @@
 import { useState, useEffect } from "react"
 import { getSystemStatus } from "@/lib/api-client"
 import { Badge } from "@/components/ui/badge"
-import { useEnv } from "@/lib/env-provider"
 
 export function ApiInfo() {
+  const [apiUrl, setApiUrl] = useState<string>("")
   const [apiStatus, setApiStatus] = useState<string>("Checking...")
   const [authStatus, setAuthStatus] = useState<string>("Not authenticated")
+  const [wsUrl, setWsUrl] = useState<string>("")
   const [lastChecked, setLastChecked] = useState<string>("")
-  const env = useEnv()
 
   useEffect(() => {
+    // Get the API URL from the proxy-base endpoint
+    fetch("/api/proxy-base")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.baseUrl) {
+          setApiUrl(data.baseUrl)
+
+          // Convert HTTP URL to WebSocket URL
+          const wsBaseUrl = data.baseUrl.replace("https://", "wss://").replace("http://", "ws://")
+          setWsUrl(wsBaseUrl)
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching API URL:", error)
+        setApiUrl("Error fetching API URL")
+      })
+
     // Check authentication status
     import("@/lib/api-client").then((module) => {
       setAuthStatus(module.isAuthenticated() ? "JWT Authenticated" : "Not authenticated")
@@ -44,12 +61,12 @@ export function ApiInfo() {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-sm font-medium text-gray-300">API URL:</span>
-            <span className="text-sm font-mono">{env.apiUrl || "Loading..."}</span>
+            <span className="text-sm font-mono">{apiUrl}</span>
           </div>
 
           <div className="flex justify-between">
             <span className="text-sm font-medium text-gray-300">WebSocket URL:</span>
-            <span className="text-sm font-mono">{env.wsUrl || "Loading..."}</span>
+            <span className="text-sm font-mono">{wsUrl}</span>
           </div>
 
           <div className="flex justify-between">

@@ -9,6 +9,27 @@ export default function JwtAuthDemo() {
   const [publicTransportData, setPublicTransportData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
+  const [apiUrl, setApiUrl] = useState<string>("")
+
+  // Get API URL on component mount
+  useEffect(() => {
+    async function fetchApiInfo() {
+      try {
+        // Fetch API info from the server
+        const response = await fetch("/api/proxy-base")
+        const data = await response.json()
+
+        if (data.baseUrl) {
+          setApiUrl(data.baseUrl)
+        }
+      } catch (error) {
+        console.error("Error fetching API info:", error)
+      }
+    }
+
+    fetchApiInfo()
+    fetchPublicTransport()
+  }, [])
 
   const checkAuth = async () => {
     setLoading(true)
@@ -52,14 +73,18 @@ export default function JwtAuthDemo() {
     }
   }
 
-  // Fetch public data on mount
-  useEffect(() => {
-    fetchPublicTransport()
-  }, [])
-
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">SEQ1 JWT Authentication Demo</h1>
+
+      {apiUrl && (
+        <div className="bg-gray-800 p-4 rounded-lg mb-6">
+          <h2 className="text-xl font-semibold mb-2">API Configuration</h2>
+          <p className="text-sm">
+            <span className="font-semibold">API URL:</span> {apiUrl}
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-gray-800 p-4 rounded-lg">

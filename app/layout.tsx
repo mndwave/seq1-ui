@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
 import { Poppins, Space_Mono } from "next/font/google"
 import ApiErrorHandler from "@/components/api-error-handler"
-import Script from "next/script"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -47,16 +46,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <Script id="env-script" strategy="beforeInteractive">
-          {`
-            // Ensure process.env is available
-            window.process = window.process || {};
-            window.process.env = window.process.env || {};
-            
-            // Set default value for NEXT_PUBLIC_SEQ1_API_URL
-            window.process.env.NEXT_PUBLIC_SEQ1_API_URL = window.process.env.NEXT_PUBLIC_SEQ1_API_URL || "https://api.seq1.net";
-          `}
-        </Script>
+        {/* Remove the script that sets NEXT_PUBLIC_SEQ1_API_URL */}
       </head>
       <body className={cn("min-h-screen bg-background font-mono antialiased", poppins.variable, spaceMono.variable)}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">

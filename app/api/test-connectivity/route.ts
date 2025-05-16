@@ -1,22 +1,39 @@
 import { NextResponse } from "next/server"
-import { getApiUrl } from "@/lib/server/api-server"
 
 export async function GET() {
   try {
-    // Get the API URL from environment variables
-    const apiUrl = await getApiUrl()
+    // Get API URL from server-side environment variable
+    const apiUrl = process.env.SEQ1_API_URL
 
-    // Make a request to the API health endpoint
-    const response = await fetch(`${apiUrl}/api/health`, {
+    if (!apiUrl) {
+      return NextResponse.json({ error: "API URL not configured" }, { status: 500 })
+    }
+
+    // Get API key from server-side environment variable
+    const apiKey = process.env.SEQ1_API_KEY
+
+    if (!apiKey) {
+      return NextResponse.json({ error: "API key not configured" }, { status: 500 })
+    }
+
+    // Test the API connection
+    const healthEndpoint = `${apiUrl}/api/health`
+
+    const response = await fetch(healthEndpoint, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
       cache: "no-store",
     })
 
     if (!response.ok) {
-      throw new Error(`API connectivity test failed with status: ${response.status}`)
+      return NextResponse.json({
+        success: false,
+        message: `API returned status ${response.status}`,
+        endpoint: healthEndpoint.replace(apiKey, "[REDACTED]"), // Don't expose the API key
+      })
     }
 
     const data = await response.json()
@@ -24,21 +41,14 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       message: "Successfully connected to API",
-      apiUrl: apiUrl.replace(/\/+$/, ""), // Remove trailing slashes
-      status: data.status || "unknown",
-      timestamp: new Date().toISOString(),
+      data,
+      endpoint: healthEndpoint.replace(apiKey, "[REDACTED]"), // Don't expose the API key
     })
   } catch (error) {
     console.error("API connectivity test error:", error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to connect to API",
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({
+      success: false,
+      message: error instanceof Error ? error.message : String(error),
+    })
   }
 }

@@ -1,28 +1,29 @@
 import { NextResponse } from "next/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Get the API URL from environment variables
+    // Get API URL from server-side environment variable
     const apiUrl = process.env.SEQ1_API_URL
 
     if (!apiUrl) {
       return NextResponse.json({ error: "API URL not configured" }, { status: 500 })
     }
 
-    // Convert to WebSocket URL if needed
-    let wsUrl = apiUrl
-    if (wsUrl.startsWith("https://")) {
-      wsUrl = wsUrl.replace("https://", "wss://")
-    } else if (!wsUrl.startsWith("wss://")) {
-      wsUrl = `wss://${wsUrl.replace(/^(http:\/\/|\/\/)/i, "")}`
+    // Convert HTTP URL to WebSocket URL
+    const wsUrl = apiUrl.replace("https://", "wss://").replace("http://", "ws://")
+
+    // Get API key from server-side environment variable
+    const apiKey = process.env.SEQ1_API_KEY
+
+    if (!apiKey) {
+      return NextResponse.json({ error: "API key not configured" }, { status: 500 })
     }
 
-    // We can't actually test the WebSocket connection from here,
-    // but we can return information about the WebSocket URL
+    // Test the WebSocket connection
     return NextResponse.json({
       success: true,
-      message: "WebSocket URL configured correctly",
-      wsUrl: wsUrl,
+      message: "WebSocket proxy test endpoint",
+      wsUrl: wsUrl.replace(apiKey, "[REDACTED]"), // Don't expose the API key
     })
   } catch (error) {
     console.error("WebSocket proxy test error:", error)

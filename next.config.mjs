@@ -1,30 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  swcMinify: true,
+  images: {
+    domains: ['api.seq1.net', 'localhost'],
+    unoptimized: true,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,
   },
-  images: {
-    unoptimized: true,
-  },
-  // Add environment variables that should be available on the client
-  env: {
-    NEXT_PUBLIC_SEQ1_API_URL: process.env.SEQ1_API_URL || "https://api.seq1.net",
-  },
-  // Add headers for CORS
-  async headers() {
-    return [
-      {
-        source: "/.well-known/nostr.json",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Content-Type", value: "application/json" },
-        ],
-      },
-    ]
+  // Remove any environment variable mapping
+  // We'll use server-side environment variables directly
+  experimental: {
+    serverActions: true,
   },
 }
 

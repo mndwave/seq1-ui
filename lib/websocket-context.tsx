@@ -1,120 +1,79 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useRef, type ReactNode } from "react"
-import { useEnv } from "@/lib/env-provider"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { createWebSocket } from "@/lib/api-client"
 
+// Define the WebSocket context type
 interface WebSocketContextType {
+  isConnected: boolean
   lastMessage: any | null
-  connected: boolean
   sendMessage: (message: any) => void
 }
 
-// Create the context with default values
+// Create the WebSocket context
 const WebSocketContext = createContext<WebSocketContextType>({
+  isConnected: false,
   lastMessage: null,
-  connected: false,
   sendMessage: () => {},
 })
 
-// Provider component
+// Provider component that manages the WebSocket connection
 export function WebSocketProvider({ children }: { children: ReactNode }) {
+  const [socket, setSocket] = useState<WebSocket | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<any | null>(null)
-  const [connected, setConnected] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
-  const env = useEnv()
 
-  // Set up WebSocket connection
+  // Initialize the WebSocket connection
   useEffect(() => {
-    // Don't try to connect until environment variables are loaded
-    if (!env.isLoaded) return
-
-    // Handle incoming messages
+    // Handler for WebSocket messages
     const handleMessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data)
         setLastMessage(data)
       } catch (error) {
         console.error("Error parsing WebSocket message:", error)
+        setLastMessage(event.data)
       }
     }
 
-    // Create WebSocket connection
-    try {
-      // Use the WebSocket proxy instead of connecting directly
-      const wsProxyUrl = window.location.protocol.replace("http", "ws") + "//" + window.location.host + "/api/ws-proxy"
-      console.log("Creating WebSocket connection to proxy:", wsProxyUrl)
+    // Create the WebSocket connection
+    const ws = createWebSocket(handleMessage)
 
-      wsRef.current = new WebSocket(wsProxyUrl)
-
-      // Update connection status
-      wsRef.current.onopen = () => {
-        setConnected(true)
-        console.log("WebSocket connected")
-      }
-
-      wsRef.current.onmessage = handleMessage
-
-      wsRef.current.onclose = () => {
-        setConnected(false)
-        console.log("WebSocket disconnected")
-      }
-
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error)
-      }
-    } catch (error) {
-      console.error("Error creating WebSocket connection:", error)
+    // Set up event handlers
+    ws.onopen = () => {
+      console.log("WebSocket connected")
+      setIsConnected(true)
     }
+
+    ws.onclose = () => {
+      console.log("WebSocket disconnected")
+      setIsConnected(false)
+    }
+
+    // Store the WebSocket instance
+    setSocket(ws)
 
     // Clean up on unmount
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
-    }
-  }, [env.isLoaded])
-
-  // Listen for auth changes
-  useEffect(() => {
-    const handleAuthError = () => {
-      // Close the WebSocket connection if it exists
-      if (wsRef.current) {
-        wsRef.current.close()
-        wsRef.current = null
-      }
-      setConnected(false)
-    }
-
-    window.addEventListener("seq1:auth:error", handleAuthError)
-
-    return () => {
-      window.removeEventListener("seq1:auth:error", handleAuthError)
+      ws.close()
     }
   }, [])
 
-  // Send a message through the WebSocket
+  // Function to send a message through the WebSocket
   const sendMessage = (message: any) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message))
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(typeof message === "string" ? message : JSON.stringify(message))
     } else {
-      console.error("WebSocket not connected")
+      console.error("WebSocket is not connected")
     }
   }
 
   return (
-    <WebSocketContext.Provider
-      value={{
-        lastMessage,
-        connected,
-        sendMessage,
-      }}
-    >
-      {children}
-    </WebSocketContext.Provider>
+    <WebSocketContext.Provider value={{ isConnected, lastMessage, sendMessage }}>{children}</WebSocketContext.Provider>
   )
 }
 
-// Custom hook for using WebSocket context
+// Hook to use the WebSocket context
 export function useWebSocket() {
   return useContext(WebSocketContext)
 }

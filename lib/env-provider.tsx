@@ -68,19 +68,4 @@ export function useEnv() {
   return useContext(EnvContext)
 }
 
-// Polyfill for process.env to support legacy code
-if (typeof window !== "undefined") {
-  // @ts-ignore - Add a global polyfill for process.env
-  window.process = window.process || {}
-  // @ts-ignore - Add a global polyfill for process.env
-  window.process.env = window.process.env || {}
-
-  // This will be populated after the EnvProvider loads
-  // It provides a fallback for any code that directly accesses process.env
-  Object.defineProperty(window.process.env, "NEXT_PUBLIC_SEQ1_API_URL", {
-    get: () => {
-      // Default to https://api.seq1.net if not loaded yet
-      return window.__SEQ1_ENV?.apiUrl || "https://api.seq1.net"
-    },
-  })
-}
+// Remove the polyfill for process.env that references NEXT_PUBLIC_SEQ1_API_URL

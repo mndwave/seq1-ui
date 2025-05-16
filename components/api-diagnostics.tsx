@@ -12,9 +12,22 @@ export function ApiDiagnostics() {
     details?: any
     timestamp: string
   } | null>(null)
+  const [apiUrl, setApiUrl] = useState<string>("")
 
   // Run the test when the component is mounted
   useEffect(() => {
+    // Get API URL from the proxy-base endpoint
+    fetch("/api/proxy-base")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.baseUrl) {
+          setApiUrl(data.baseUrl)
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching API URL:", error)
+      })
+
     const runTest = async () => {
       setIsRunning(true)
       try {
@@ -90,6 +103,11 @@ export function ApiDiagnostics() {
       </div>
       <div className="mt-2">
         <p className="text-sm">{results?.message || "Testing API connectivity..."}</p>
+        {apiUrl && (
+          <p className="text-xs mt-1">
+            API URL: <span className="font-mono">{apiUrl}</span>
+          </p>
+        )}
         {results?.details && (
           <details className="mt-2">
             <summary className="text-sm cursor-pointer">View Details</summary>

@@ -1,40 +1,73 @@
 import type { NextRequest } from "next/server"
-
-// Get the API key from environment variables (server-side only)
-const API_KEY = process.env.SEQ1_API_KEY || ""
-const API_BASE_URL = process.env.NEXT_PUBLIC_SEQ1_API_URL || "https://api.seq1.net"
+import { NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { midiBase64, deviceId } = await request.json()
+    // Get request body
+    const body = await request.json()
+    const { midiBase64, deviceId } = body
 
-    // If no device ID is provided, just return success
-    if (!deviceId) {
-      return Response.json({ success: true })
+    if (!midiBase64) {
+      return NextResponse.json({ error: "Missing MIDI data" }, { status: 400 })
     }
 
-    // Send the MIDI data to the device using the server-side API key
-    const response = await fetch(`${API_BASE_URL}/api/midi/send`, {
+    // Get API URL from server-side environment variable
+    const apiUrl = process.env.SEQ1_API_URL
+
+    if (!apiUrl) {
+      return NextResponse.json({ error: "API URL not configured" }, { status: 500 })
+    }
+
+    // Get API key from server-side environment variable
+    const apiKey = process.env.SEQ1_API_KEY
+
+    if (!apiKey) {
+      return NextResponse.json({ error: "API key not configured" }, { status: 500 })
+    }
+
+    // Prepare request body
+    const requestBody: any = {
+      midi_base64: midiBase64,
+    }
+
+    // Add device ID if provided
+    if (deviceId) {
+      requestBody.device_id = deviceId
+    }
+
+    // Send request to API
+    const response = await fetch(`${apiUrl}/api/midi/play`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ deviceId, midiData: midiBase64 }),
+      body: JSON.stringify(requestBody),
     })
 
-    const data = await response.json()
-
+    // Check response
     if (!response.ok) {
-      return Response.json(
-        { success: false, message: data.message || "Failed to send MIDI data" },
+      const errorData = await response.json().catch(() => ({}))
+      return NextResponse.json(
+        {
+          error: "Failed to play MIDI clip",
+          status: response.status,
+          details: errorData,
+        },
         { status: response.status },
       )
     }
 
-    return Response.json(data)
-  } catch (error: any) {
-    console.error("Error in MIDI play API route:", error)
-    return Response.json({ success: false, message: error.message || "An error occurred" }, { status: 500 })
+    // Return success
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error playing MIDI clip:", error)
+    return NextResponse.json(
+      {
+        error: "Error playing MIDI clip",
+        message: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    )
   }
 }

@@ -42,13 +42,16 @@ export async function testApiConnectivity(): Promise<{
     const response = await fetch("/api/test-connectivity")
     const data = await response.json()
     return {
-      connected: true,
-      message: "Successfully connected to API",
+      success: data.success,
+      message: data.message,
       details: data,
     }
   } catch (error) {
     console.error("Error testing API connectivity:", error)
-    throw new Error("Failed to connect to API")
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to connect to API",
+    }
   }
 }
 
@@ -111,13 +114,17 @@ export async function getSystemStatus() {
     const response = await fetch("/api/health-check")
     const data = await response.json()
     return {
-      status: "online",
-      message: "API system is healthy",
+      status: data.status === "ok" ? "online" : "offline",
+      message: data.message,
       details: data,
     }
   } catch (error) {
     console.error("Error checking system status:", error)
-    throw new Error("Failed to check system status")
+    return {
+      status: "offline",
+      message: "Failed to check system status",
+      error: error instanceof Error ? error.message : String(error),
+    }
   }
 }
 
