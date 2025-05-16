@@ -5,6 +5,10 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "SEQ1 | API Test Suite",
   description: "Test and verify SEQ1 API endpoints and functionality",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 }
 
 export default function ApiTestPage() {

@@ -520,17 +520,17 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
                   : "border-gray-700 bg-gray-800 text-white"
             }`}
           >
-            <AccordionTrigger className="px-4 py-2 hover:no-underline">
-              <div className="flex items-center justify-between w-full">
+            <AccordionTrigger className="hover:no-underline">
+              <div className="flex items-center justify-between w-full ml-[-16px] pr-4">
                 <div className="flex items-center">
                   {result.status === "running" && <Loader2 className="mr-2 h-4 w-4 animate-spin text-blue-500" />}
                   {result.status === "success" && <CheckCircle className="mr-2 h-4 w-4 text-green-500" />}
                   {result.status === "error" && <XCircle className="mr-2 h-4 w-4 text-red-500" />}
                   {result.status === "pending" && <div className="w-4 h-4 mr-2" />}
-                  <span>{result.name}</span>
+                  <span className="text-left">{result.name}</span>
                 </div>
 
-                <div className="flex items-center gap-4 mr-4">
+                <div className="flex items-center gap-4">
                   {result.duration && (
                     <Badge variant="outline" className="ml-2">
                       {result.duration}ms
@@ -553,7 +553,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
               </div>
             </AccordionTrigger>
 
-            <AccordionContent className="px-4 py-2 transition-all duration-300 ease-in-out data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+            <AccordionContent className="px-4 py-2 transition-all duration-300 ease-in-out">
               <div className="mb-2 text-sm text-gray-400">{result.description}</div>
 
               {result.status === "error" && (

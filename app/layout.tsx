@@ -31,8 +31,8 @@ export const metadata: Metadata = {
   description:
     "A new type of DAW that harnesses AI with human emotion. Connect your hardware synths and create music that adapts to your creative direction.",
   icons: {
-    icon: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: "/favicon.png",
+    apple: "/favicon.png",
   },
     generator: 'v0.dev'
 }
@@ -45,8 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        {/* Remove the script that sets NEXT_PUBLIC_SEQ1_API_URL */}
+        <link rel="icon" href="/favicon.png" type="image/svg+xml" />
       </head>
       <body className={cn("min-h-screen bg-background font-mono antialiased", poppins.variable, spaceMono.variable)}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
