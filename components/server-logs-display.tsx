@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2, RefreshCw, Copy, ChevronUp, ChevronDown } from "lucide-react"
+import { Loader2, Copy, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 
 interface ServerLogsDisplayProps {
   refreshTrigger: number
-  includeInReport: (logs: string) => void
+  includeInReport?: (logs: string) => void
 }
 
 export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLogsDisplayProps) {
@@ -14,7 +14,19 @@ export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLog
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isExpanded, setIsExpanded] = useState(true)
-  const logsRef = useRef<HTMLPreElement>(null)
+  const [isCopied, setIsCopied] = useState(false)
+
+  // Fetch logs when the component mounts or refreshTrigger changes
+  useEffect(() => {
+    fetchLogs()
+  }, [refreshTrigger])
+
+  // Pass logs to parent component for report inclusion
+  useEffect(() => {
+    if (includeInReport && logs) {
+      includeInReport(logs)
+    }
+  }, [logs, includeInReport])
 
   // Fetch logs from the server
   const fetchLogs = async () => {
@@ -28,42 +40,23 @@ export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLog
         throw new Error(`Failed to fetch logs: ${response.status} ${response.statusText}`)
       }
 
-      const text = await response.text()
-      setLogs(text)
-
-      // Pass logs to parent component for inclusion in report
-      includeInReport(text)
-
-      // Scroll to bottom of logs
-      if (logsRef.current) {
-        logsRef.current.scrollTop = logsRef.current.scrollHeight
-      }
-    } catch (error) {
-      console.error("Error fetching logs:", error)
-      setError(error instanceof Error ? error.message : "Failed to fetch logs")
-      setLogs("")
-      includeInReport("")
+      const data = await response.text()
+      setLogs(data)
+    } catch (err) {
+      console.error("Error fetching logs:", err)
+      setError(err instanceof Error ? err.message : "Failed to fetch server logs")
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Fetch logs when component mounts or refreshTrigger changes
-  useEffect(() => {
-    fetchLogs()
-  }, [refreshTrigger])
-
   // Copy logs to clipboard
   const copyLogs = () => {
-    navigator.clipboard
-      .writeText(logs)
-      .then(() => {
-        // Could add a toast notification here
-        console.log("Logs copied to clipboard")
-      })
-      .catch((err) => {
-        console.error("Failed to copy logs:", err)
-      })
+    if (logs) {
+      navigator.clipboard.writeText(logs)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    }
   }
 
   // Toggle expanded state
@@ -71,84 +64,72 @@ export function ServerLogsDisplay({ refreshTrigger, includeInReport }: ServerLog
     setIsExpanded(!isExpanded)
   }
 
-  // Highlight errors and warnings in logs
-  const highlightLogs = (text: string) => {
-    if (!text) return null
-
-    // Split by lines to process each line
-    return text.split("\n").map((line, index) => {
-      // Highlight error lines
-      if (
-        line.includes("ERROR") ||
-        line.includes("Traceback") ||
-        line.includes("Exception") ||
-        line.includes("FATAL")
-      ) {
-        return (
-          <div key={index} className="text-red-400">
-            {line}
-          </div>
-        )
-      }
-
-      // Highlight warning lines
-      if (line.includes("WARNING") || line.includes("WARN")) {
-        return (
-          <div key={index} className="text-yellow-400">
-            {line}
-          </div>
-        )
-      }
-
-      // Regular lines
-      return (
-        <div key={index} className="text-gray-300">
-          {line}
-        </div>
-      )
-    })
+  // Highlight error and warning lines
+  const highlightLogLine = (line: string) => {
+    if (line.includes("ERROR") || line.includes("Traceback") || line.includes("Exception")) {
+      return "text-red-400"
+    } else if (line.includes("WARNING")) {
+      return "text-yellow-400"
+    }
+    return ""
   }
 
+  // Format logs with syntax highlighting
+  const formattedLogs = logs
+    ? logs.split("\n").map((line, index) => (
+        <div key={index} className={`${highlightLogLine(line)}`}>
+          {line}
+        </div>
+      ))
+    : []
+
   return (
-    <div className="mt-8 border border-gray-700 rounded-md bg-gray-900">
+    <div className="mt-8 border border-gray-700 rounded-md bg-gray-800 transition-all duration-300 ease-in-out">
       <div className="flex justify-between items-center p-4 border-b border-gray-700">
         <div className="flex items-center">
-          <Button variant="ghost" size="sm" onClick={toggleExpanded} className="mr-2">
-            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-          <h3 className="text-lg font-semibold">Server Logs</h3>
-          {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-gray-400" />}
+          <h3 className="text-lg font-semibold text-white">Server Logs</h3>
+          {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-blue-500" />}
         </div>
-
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={copyLogs} disabled={!logs || isLoading}>
-            <Copy className="h-4 w-4 mr-1" />
-            Copy
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={copyLogs}
+            disabled={!logs || isLoading}
+            className="text-xs flex items-center gap-1"
+          >
+            <Copy className="h-3 w-3" />
+            {isCopied ? "Copied!" : "Copy"}
           </Button>
-
-          <Button variant="outline" size="sm" onClick={fetchLogs} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? "animate-spin" : ""}`} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchLogs}
+            disabled={isLoading}
+            className="text-xs flex items-center gap-1"
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
+          </Button>
+          <Button variant="ghost" size="sm" onClick={toggleExpanded} className="text-xs">
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </div>
       </div>
 
-      {isExpanded && (
-        <div className="p-4">
-          {error ? (
-            <div className="bg-red-900/30 p-3 rounded-md border border-red-500 text-red-200">{error}</div>
-          ) : logs ? (
-            <pre
-              ref={logsRef}
-              className="font-mono text-xs whitespace-pre-wrap bg-gray-950 p-4 rounded-md overflow-auto max-h-[400px]"
-            >
-              {highlightLogs(logs)}
-            </pre>
-          ) : (
-            <div className="text-gray-400 italic">{isLoading ? "Loading logs..." : "No logs available"}</div>
-          )}
-        </div>
-      )}
+      <div
+        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        {error ? (
+          <div className="p-4 text-red-400">{error}</div>
+        ) : logs ? (
+          <pre className="p-4 overflow-auto font-mono text-xs text-gray-300 max-h-[500px]">{formattedLogs}</pre>
+        ) : (
+          <div className="p-4 text-gray-400">No logs available. Click "Refresh" to fetch logs.</div>
+        )}
+      </div>
     </div>
   )
 }

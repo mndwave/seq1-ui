@@ -167,6 +167,11 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
     return details
   }
 
+  // Update server logs from the ServerLogsDisplay component
+  const updateServerLogs = (logs: string) => {
+    setServerLogs(logs)
+  }
+
   // Run all tests
   const runAllTests = async () => {
     setIsRunning(true)
@@ -295,11 +300,6 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
     setRefreshLogsTrigger((prev) => prev + 1)
 
     setIsRunning(false)
-  }
-
-  // Update server logs from the ServerLogsDisplay component
-  const updateServerLogs = (logs: string) => {
-    setServerLogs(logs)
   }
 
   // Generate and download the test report
@@ -436,7 +436,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
     report += "======================\n\n"
     report += `User Agent: ${navigator.userAgent}\n`
     report += `Window Size: ${window.innerWidth}x${window.innerHeight}\n`
-    report += `API URL: ${process.env.NEXT_PUBLIC_SEQ1_API_URL || "Not available"}\n`
+    report += `API URL: ${process.env.SEQ1_API_URL || "Not available"}\n`
     report += `Date/Time: ${new Date().toISOString()}\n`
     report += `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n`
 
@@ -453,7 +453,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
   }
 
   return (
-    <div>
+    <div className="transition-all duration-300 ease-in-out">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-xl font-semibold">
@@ -512,7 +512,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
           <AccordionItem
             key={result.id}
             value={result.id}
-            className={`border rounded-md ${
+            className={`border rounded-md transition-all duration-300 ease-in-out ${
               result.status === "error"
                 ? "border-red-500 bg-red-900/30 text-white"
                 : result.status === "success"
@@ -530,7 +530,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
                   <span>{result.name}</span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4 mr-4">
                   {result.duration && (
                     <Badge variant="outline" className="ml-2">
                       {result.duration}ms
@@ -553,7 +553,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
               </div>
             </AccordionTrigger>
 
-            <AccordionContent className="px-4 py-2">
+            <AccordionContent className="px-4 py-2 transition-all duration-300 ease-in-out data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
               <div className="mb-2 text-sm text-gray-400">{result.description}</div>
 
               {result.status === "error" && (
@@ -577,7 +577,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
                       </Button>
 
                       {expandedErrors[result.id] && (
-                        <div className="bg-gray-900 p-3 rounded-md border border-gray-700 mt-2">
+                        <div className="bg-gray-900 p-3 rounded-md border border-gray-700 mt-2 transition-all duration-300 ease-in-out">
                           <div className="font-semibold mb-1 text-white">Full Error Details:</div>
 
                           {result.errorDetails.type && (
@@ -610,7 +610,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
               )}
 
               {result.status === "success" && result.response && (
-                <div className="bg-gray-800 p-3 rounded-md border border-gray-700">
+                <div className="bg-gray-800 p-3 rounded-md border border-gray-700 transition-all duration-300 ease-in-out">
                   <div className="font-semibold mb-1 text-white">Response:</div>
                   <pre className="text-sm overflow-auto max-h-[300px] text-gray-300">
                     {JSON.stringify(result.response, null, 2)}
@@ -619,7 +619,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
               )}
 
               {result.requestDetails && (
-                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700">
+                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700 transition-all duration-300 ease-in-out">
                   <div className="font-semibold mb-1 text-white">Request Details:</div>
                   <pre className="text-xs overflow-auto max-h-[200px] text-gray-300">
                     {JSON.stringify(result.requestDetails, null, 2)}
@@ -628,7 +628,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
               )}
 
               {result.responseDetails && (
-                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700">
+                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700 transition-all duration-300 ease-in-out">
                   <div className="font-semibold mb-1 text-white">Response Details:</div>
                   <pre className="text-xs overflow-auto max-h-[200px] text-gray-300">
                     {JSON.stringify(result.responseDetails, null, 2)}

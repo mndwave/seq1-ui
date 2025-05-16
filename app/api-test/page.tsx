@@ -1,5 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { RealApiTestRunner } from "@/components/real-api-test-runner"
+import { ApiTestRunner } from "@/components/api-test-runner"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "SEQ1 | API Test Suite",
+  description: "Test and verify SEQ1 API endpoints and functionality",
+}
 
 export default function ApiTestPage() {
   return (
@@ -20,24 +26,24 @@ export default function ApiTestPage() {
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all">
-          <RealApiTestRunner category="all" />
+        <TabsContent value="all" className="transition-all duration-300 ease-in-out">
+          <ApiTestRunner category="all" />
         </TabsContent>
 
-        <TabsContent value="system">
-          <RealApiTestRunner category="system" />
+        <TabsContent value="system" className="transition-all duration-300 ease-in-out">
+          <ApiTestRunner category="system" />
         </TabsContent>
 
-        <TabsContent value="transport">
-          <RealApiTestRunner category="transport" />
+        <TabsContent value="transport" className="transition-all duration-300 ease-in-out">
+          <ApiTestRunner category="transport" />
         </TabsContent>
 
-        <TabsContent value="timeline">
-          <RealApiTestRunner category="timeline" />
+        <TabsContent value="timeline" className="transition-all duration-300 ease-in-out">
+          <ApiTestRunner category="timeline" />
         </TabsContent>
 
-        <TabsContent value="account">
-          <RealApiTestRunner category="account" />
+        <TabsContent value="account" className="transition-all duration-300 ease-in-out">
+          <ApiTestRunner category="account" />
         </TabsContent>
       </Tabs>
     </div>
