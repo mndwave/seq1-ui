@@ -309,12 +309,21 @@ export default function GlobalTransport({
     <div className="h-16 border-b border-[#3a2a30] flex items-center px-4 bg-[#2a1a20] relative z-20" ref={modalRef}>
       <div className="flex-1 flex items-center justify-between relative z-10">
         <div className="flex items-center">
-          {/* Ensure the AnimatedLogo component is using the skipAnimation prop correctly */}
-          <AnimatedLogo
-            className="mr-8 seq1-logo-glow"
-            onAnimationComplete={handleLogoAnimationComplete}
-            skipAnimation={hasLogoAnimationPlayed}
-          />
+          {/* Logo container with explicit pointer-events and cursor styles */}
+          <div
+            className="mr-8 relative"
+            style={{
+              pointerEvents: "auto",
+              cursor: "default",
+            }}
+          >
+            {/* Ensure the AnimatedLogo component is using the skipAnimation prop correctly */}
+            <AnimatedLogo
+              className="seq1-logo-glow"
+              onAnimationComplete={handleLogoAnimationComplete}
+              skipAnimation={hasLogoAnimationPlayed}
+            />
+          </div>
 
           {/* Update the play and loop buttons to be disabled when hardware isn't connected */}
           <div className="flex space-x-3">

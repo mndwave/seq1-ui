@@ -30,6 +30,7 @@ export default function AnimatedLogo({
 }: AnimatedLogoProps) {
   const [animationState, setAnimationState] = useState<LogoAnimationState>(skipAnimation ? "hot" : "outline")
   const [hasInitialized, setHasInitialized] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
 
   useEffect(() => {
     if (skipAnimation) {
@@ -69,6 +70,27 @@ export default function AnimatedLogo({
     }
   }, [onAnimationComplete, skipAnimation, hasInitialized])
 
+  // Update the getGlowStyle function to remove the transform/scale effect and only enhance the glow
+
+  // Calculate the glow intensity based on hover state
+  const getGlowStyle = () => {
+    if (animationState === "outline") {
+      return {}
+    }
+
+    // Base glow for "hot" state
+    const baseGlow = "0 0 10px rgba(240, 230, 200, 0.6)"
+
+    // Enhanced glow for hover state - slightly stronger but no transform
+    const hoverGlow = "0 0 15px rgba(240, 230, 200, 0.8), 0 0 25px rgba(240, 230, 200, 0.4)"
+
+    return {
+      textShadow: isHovered ? hoverGlow : baseGlow,
+      transition: "text-shadow 0.4s ease-in-out",
+      // Removed the transform/scale property
+    }
+  }
+
   return (
     <h1
       className={`text-2xl font-semibold italic font-poppins transition-all duration-700 ${className} ${
@@ -78,8 +100,10 @@ export default function AnimatedLogo({
         color: animationState === "outline" ? "transparent" : undefined,
         WebkitTextStroke: animationState === "outline" ? "1px #f0e6c8" : undefined,
         opacity: animationState === "outline" ? 0.7 : 1,
-        textShadow: animationState === "hot" ? "0 0 10px rgba(240, 230, 200, 0.6)" : undefined,
+        ...getGlowStyle(),
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       SEQ1
     </h1>

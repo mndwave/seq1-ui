@@ -96,6 +96,20 @@ body {
   }
 }
 
+/* Force default cursor for the SEQ1 logo and its container */
+.seq1-logo-glow,
+.seq1-logo-glow * {
+  cursor: default !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure the logo container doesn't inherit disabled styles */
+.seq1-logo-container {
+  pointer-events: auto !important;
+  cursor: default !important;
+  opacity: 1 !important;
+}
+
 /* Custom styles for the SEQ1 UI */
 .channel-button {
   position: relative;

@@ -27,7 +27,7 @@ const spaceMono = Space_Mono({
 
 // Update the metadata section with a more fitting title and description
 export const metadata: Metadata = {
-  title: "SEQ1 | AI-Powered Hardware Sequencer",
+  title: "SEQ1 | Intent-Driven Hardware Sequencer",
   description:
     "A new type of DAW that harnesses AI with human emotion. Connect your hardware synths and create music that adapts to your creative direction.",
   icons: {
