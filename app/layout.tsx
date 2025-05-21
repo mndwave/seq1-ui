@@ -42,7 +42,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Simple, direct favicon reference */}
-        <link rel="icon" href="/seq1-favicon.png" />
+        <link rel="icon" href="/seq1-correct-favicon.png" />
       </head>
       <body className={cn("min-h-screen bg-background font-mono antialiased", poppins.variable, spaceMono.variable)}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
