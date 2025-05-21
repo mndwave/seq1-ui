@@ -30,10 +30,6 @@ export const metadata: Metadata = {
   title: "SEQ1 | Intent-Driven Hardware Sequencer",
   description:
     "A new type of DAW that harnesses AI with human emotion. Connect your hardware synths and create music that adapts to your creative direction.",
-  icons: {
-    icon: "/favicon.png",
-    apple: "/apple-touch-icon.png",
-  },
     generator: 'v0.dev'
 }
 
@@ -45,8 +41,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* Simple, direct favicon reference */}
+        <link rel="icon" href="/seq1-favicon.png" />
       </head>
       <body className={cn("min-h-screen bg-background font-mono antialiased", poppins.variable, spaceMono.variable)}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} forcedTheme="dark">
