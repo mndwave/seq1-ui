@@ -10,139 +10,87 @@ export type TransportState = {
   timeSignature: string
 }
 
-// Default transport state to use as fallback when API fails
-const DEFAULT_TRANSPORT_STATE: TransportState = {
-  playheadPosition: 0,
-  isPlaying: false,
-  isLooping: false,
-  loopRegion: null,
-  bpm: 120,
-  timeSignature: "4/4",
-}
-
 /**
- * Get the current transport state
+ * Get the current transport state - NO FALLBACKS
  */
 export async function getTransportState(): Promise<TransportState> {
-  try {
-    console.log("Fetching transport state from API...")
-    const response = await makeApiRequest("/api/transport")
-    console.log("Transport state response:", response)
-    return response
-  } catch (error) {
-    console.warn("Transport API unavailable, using default state:", error)
-    // Don't throw an error, just return the default state
-    return DEFAULT_TRANSPORT_STATE
-  }
+  console.log("🔴 DIRECT API CALL: Fetching transport state from API...")
+  const response = await makeApiRequest("/api/transport")
+  console.log("🔴 DIRECT API RESPONSE: Transport state:", response)
+  return response
 }
 
 /**
- * Start playback
+ * Start playback - NO FALLBACKS
  */
 export async function startPlayback(): Promise<TransportState> {
-  try {
-    const response = await makeApiRequest("/api/transport/play", { method: "POST" })
-    return response
-  } catch (error) {
-    console.warn("Failed to start playback via API, updating local state:", error)
-    // Return optimistic state update
-    return { ...DEFAULT_TRANSPORT_STATE, isPlaying: true }
-  }
+  console.log("🔴 DIRECT API CALL: Starting playback...")
+  const response = await makeApiRequest("/api/transport/play", { method: "POST" })
+  console.log("🔴 DIRECT API RESPONSE: Playback started:", response)
+  return response
 }
 
 /**
- * Stop playback
+ * Stop playback - NO FALLBACKS
  */
 export async function stopPlayback(): Promise<TransportState> {
-  try {
-    const response = await makeApiRequest("/api/transport/stop", { method: "POST" })
-    return response
-  } catch (error) {
-    console.warn("Failed to stop playback via API, updating local state:", error)
-    // Return optimistic state update
-    return { ...DEFAULT_TRANSPORT_STATE, isPlaying: false }
-  }
+  console.log("🔴 DIRECT API CALL: Stopping playback...")
+  const response = await makeApiRequest("/api/transport/stop", { method: "POST" })
+  console.log("🔴 DIRECT API RESPONSE: Playback stopped:", response)
+  return response
 }
 
 /**
- * Set the playhead position
+ * Set the playhead position - NO FALLBACKS
  */
 export async function setPlayheadPosition(position: number): Promise<TransportState> {
-  try {
-    const response = await makeApiRequest("/api/transport/playhead", {
-      method: "POST",
-      body: JSON.stringify({ position }),
-    })
-    return response
-  } catch (error) {
-    console.warn("Failed to set playhead position via API, updating local state:", error)
-    // Return optimistic state update
-    return { ...DEFAULT_TRANSPORT_STATE, playheadPosition: position }
-  }
+  console.log("🔴 DIRECT API CALL: Setting playhead position to:", position)
+  const response = await makeApiRequest("/api/transport/playhead", {
+    method: "POST",
+    body: JSON.stringify({ position }),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Playhead position set:", response)
+  return response
 }
 
 /**
- * Toggle loop state or update loop region
+ * Toggle loop state or update loop region - NO FALLBACKS
  */
 export async function updateLoopState(
   isLooping: boolean,
   loopRegion?: { startBar: number; endBar: number } | null,
 ): Promise<TransportState> {
-  try {
-    const response = await makeApiRequest("/api/transport/loop", {
-      method: "POST",
-      body: JSON.stringify({ isLooping, loopRegion }),
-    })
-    return response
-  } catch (error) {
-    console.warn("Failed to update loop state via API, updating local state:", error)
-    // Return optimistic state update
-    return { ...DEFAULT_TRANSPORT_STATE, isLooping, loopRegion: loopRegion || null }
-  }
+  console.log("🔴 DIRECT API CALL: Updating loop state:", { isLooping, loopRegion })
+  const response = await makeApiRequest("/api/transport/loop", {
+    method: "POST",
+    body: JSON.stringify({ isLooping, loopRegion }),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Loop state updated:", response)
+  return response
 }
 
 /**
- * Update BPM
+ * Update BPM - NO FALLBACKS
  */
 export async function updateBpm(bpm: number): Promise<TransportState> {
-  try {
-    const response = await makeApiRequest("/api/transport/bpm", {
-      method: "POST",
-      body: JSON.stringify({ bpm }),
-    })
-    return response
-  } catch (error) {
-    console.warn("Failed to update BPM via API, updating local state:", error)
-    // Return optimistic state update
-    return { ...DEFAULT_TRANSPORT_STATE, bpm }
-  }
+  console.log("🔴 DIRECT API CALL: Updating BPM to:", bpm)
+  const response = await makeApiRequest("/api/transport/bpm", {
+    method: "POST",
+    body: JSON.stringify({ bpm }),
+  })
+  console.log("🔴 DIRECT API RESPONSE: BPM updated:", response)
+  return response
 }
 
 /**
- * Update time signature
+ * Update time signature - NO FALLBACKS
  */
 export async function updateTimeSignature(timeSignature: string): Promise<TransportState> {
-  try {
-    const response = await makeApiRequest("/api/transport/time-signature", {
-      method: "POST",
-      body: JSON.stringify({ timeSignature }),
-    })
-    return response
-  } catch (error) {
-    console.warn("Failed to update time signature via API, updating local state:", error)
-    // Return optimistic state update
-    return { ...DEFAULT_TRANSPORT_STATE, timeSignature }
-  }
-}
-
-/**
- * Check if the transport API is available
- */
-export async function isTransportApiAvailable(): Promise<boolean> {
-  try {
-    await makeApiRequest("/api/transport")
-    return true
-  } catch (error) {
-    return false
-  }
+  console.log("🔴 DIRECT API CALL: Updating time signature to:", timeSignature)
+  const response = await makeApiRequest("/api/transport/time-signature", {
+    method: "POST",
+    body: JSON.stringify({ timeSignature }),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Time signature updated:", response)
+  return response
 }

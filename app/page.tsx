@@ -8,7 +8,6 @@ import SmallScreenMessage from "@/components/small-screen-message"
 import EarlyAccessAnnouncement from "@/components/early-access-announcement"
 import AppLoader from "@/components/app-loader"
 import TimelineContainer from "@/components/timeline/timeline-container"
-import { devices } from "@/lib/mock-data"
 
 export default function Home() {
   // Set to true to use the single DATA indicator, false for separate IN/OUT indicators
@@ -16,7 +15,7 @@ export default function Home() {
   const [showEmptyDeviceRack, setShowEmptyDeviceRack] = useState(false)
   const [isSmallScreen, setIsSmallScreen] = useState(false)
   // Track if hardware is connected - this would be determined by your MIDI state in a real implementation
-  const [isHardwareConnected, setIsHardwareConnected] = useState(true) // Set to true for testing
+  const [isHardwareConnected, setIsHardwareConnected] = useState(false) // Changed to false - will be set by API
   // State for the early access announcement
   const [showAnnouncement, setShowAnnouncement] = useState(true)
   // State to track if the app is mounted
@@ -26,7 +25,7 @@ export default function Home() {
   // State to track selected device for timeline
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
   // State to track if looping is enabled
-  const [isLooping, setIsLooping] = useState(true)
+  const [isLooping, setIsLooping] = useState(false) // Changed to false - will be set by API
 
   // Set mounted state after component mounts
   useEffect(() => {
@@ -76,8 +75,9 @@ export default function Home() {
             onLoopChange={setIsLooping}
           />
           <div className="flex flex-1 overflow-hidden border-t border-[#3a2a30]">
+            {/* DeviceRack now gets devices from API only - no mock data */}
             <DeviceRack
-              devices={showEmptyDeviceRack ? [] : devices}
+              devices={[]} // Always empty - DeviceRack will fetch from API
               useSingleIndicator={useSingleDataIndicator}
               onHardwareConnectionChange={setIsHardwareConnected}
               onDeviceSelect={setSelectedDeviceId}
@@ -86,7 +86,7 @@ export default function Home() {
             <ChatWindow isHardwareConnected={isHardwareConnected} />
           </div>
 
-          {/* Timeline component - now spans full width with proper height */}
+          {/* Timeline component - gets data from API only */}
           {showTimeline && (
             <TimelineContainer
               className="h-20 border-t border-[#3a2a30]"

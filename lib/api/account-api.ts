@@ -1,4 +1,4 @@
-import * as apiClient from "@/lib/api-client"
+import { makeApiRequest } from "@/lib/server/api-server"
 
 export interface AccountInfo {
   npub: string
@@ -34,42 +34,45 @@ export interface ReferralResponse {
   hoursAdded?: number
 }
 
-// Get account info
+// Get account info - NO FALLBACKS
 export async function getAccountInfo(): Promise<AccountInfo> {
-  try {
-    return await apiClient.getAccountInfo()
-  } catch (error) {
-    console.error("Error getting account info:", error)
-    throw error
-  }
+  console.log("🔴 DIRECT API CALL: Fetching account info...")
+  const response = await makeApiRequest("/api/account", {
+    method: "GET",
+  })
+  console.log("🔴 DIRECT API RESPONSE: Account info:", response)
+  return response
 }
 
-// Top up account
+// Top up account - NO FALLBACKS
 export async function topUpAccount(request: TopUpRequest): Promise<TopUpResponse> {
-  try {
-    return await apiClient.topUpAccount(request.amount, request.currency, request.paymentMethod)
-  } catch (error) {
-    console.error("Error topping up account:", error)
-    throw error
-  }
+  console.log("🔴 DIRECT API CALL: Topping up account:", request)
+  const response = await makeApiRequest("/api/billing/top-up", {
+    method: "POST",
+    body: JSON.stringify(request),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Account topped up:", response)
+  return response
 }
 
-// Claim referral code
+// Claim referral code - NO FALLBACKS
 export async function claimReferralCode(code: string): Promise<ReferralResponse> {
-  try {
-    return await apiClient.claimReferralCode(code)
-  } catch (error) {
-    console.error("Error claiming referral code:", error)
-    throw error
-  }
+  console.log("🔴 DIRECT API CALL: Claiming referral code:", code)
+  const response = await makeApiRequest("/api/referrals/claim", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Referral claimed:", response)
+  return response
 }
 
-// Delete account
+// Delete account - NO FALLBACKS
 export async function deleteAccount(): Promise<{ success: boolean; error?: string }> {
-  try {
-    return await apiClient.deleteAccount("DELETE MY ACCOUNT")
-  } catch (error) {
-    console.error("Error deleting account:", error)
-    throw error
-  }
+  console.log("🔴 DIRECT API CALL: Deleting account...")
+  const response = await makeApiRequest("/api/account", {
+    method: "DELETE",
+    body: JSON.stringify({ confirmation: "DELETE MY ACCOUNT" }),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Account deleted:", response)
+  return response
 }

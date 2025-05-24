@@ -9,143 +9,63 @@ export type TimelineSection = {
   color: string
 }
 
-// Mock data for fallback
-const MOCK_SECTIONS: TimelineSection[] = [
-  {
-    id: "mock-1",
-    name: "Demo Section 01",
-    start: 0,
-    length: 16,
-    color: "#FF5555",
-  },
-  {
-    id: "mock-2",
-    name: "Demo Section 02",
-    start: 16,
-    length: 16,
-    color: "#55FF55",
-  },
-]
-
 /**
- * Check if the timeline API is available
- */
-export async function isTimelineApiAvailable(): Promise<boolean> {
-  try {
-    await makeApiRequest("/api/timeline/health")
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
- * Get all timeline clips
- * Always returns data - either from API or mock fallback
+ * Get all timeline clips - NO FALLBACKS
  */
 export async function getTimelineClips(): Promise<TimelineSection[]> {
-  try {
-    console.log("Fetching timeline clips from API...")
-    const response = await makeApiRequest<TimelineSection[]>("/api/timeline/clips")
-    console.log("Timeline clips response:", response)
-    return response
-  } catch (error) {
-    console.warn("Timeline API unavailable, using mock data:", error)
-    return MOCK_SECTIONS
-  }
+  console.log("🔴 DIRECT API CALL: Fetching timeline clips from API...")
+  const response = await makeApiRequest<{ clips: TimelineSection[] }>("/api/clips")
+  console.log("🔴 DIRECT API RESPONSE: Timeline clips:", response)
+  return response.clips || response
 }
 
 /**
- * Create a new timeline clip
- * Returns optimistic result when API is unavailable
+ * Create a new timeline clip - NO FALLBACKS
  */
 export async function createTimelineClip(clip: Omit<TimelineSection, "id">): Promise<TimelineSection> {
-  try {
-    return await makeApiRequest<TimelineSection>("/api/timeline/clips", {
-      method: "POST",
-      body: JSON.stringify(clip),
-    })
-  } catch (error) {
-    console.warn("Timeline API unavailable, creating optimistic clip:", error)
-    // Return optimistic result with generated ID
-    const optimisticClip: TimelineSection = {
-      ...clip,
-      id: `optimistic-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    }
-    return optimisticClip
-  }
+  console.log("🔴 DIRECT API CALL: Creating timeline clip:", clip)
+  const response = await makeApiRequest<TimelineSection>("/api/clips", {
+    method: "POST",
+    body: JSON.stringify(clip),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Clip created:", response)
+  return response
 }
 
 /**
- * Update an existing timeline clip
- * Returns optimistic result when API is unavailable
+ * Update an existing timeline clip - NO FALLBACKS
  */
 export async function updateTimelineClip(id: string, updates: Partial<TimelineSection>): Promise<TimelineSection> {
-  try {
-    return await makeApiRequest<TimelineSection>(`/api/timeline/clips/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    })
-  } catch (error) {
-    console.warn("Timeline API unavailable, returning optimistic update:", error)
-    // Return optimistic result
-    const optimisticClip: TimelineSection = {
-      id,
-      name: updates.name || "Updated Section",
-      start: updates.start || 0,
-      length: updates.length || 16,
-      color: updates.color || "#FF5555",
-      ...updates,
-    }
-    return optimisticClip
-  }
+  console.log("🔴 DIRECT API CALL: Updating timeline clip:", id, updates)
+  const response = await makeApiRequest<TimelineSection>(`/api/clips/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Clip updated:", response)
+  return response
 }
 
 /**
- * Delete a timeline clip
- * Returns success when API is unavailable (optimistic)
+ * Delete a timeline clip - NO FALLBACKS
  */
 export async function deleteTimelineClip(id: string): Promise<{ success: boolean }> {
-  try {
-    return await makeApiRequest<{ success: boolean }>(`/api/timeline/clips/${id}`, {
-      method: "DELETE",
-    })
-  } catch (error) {
-    console.warn("Timeline API unavailable, returning optimistic delete:", error)
-    // Return optimistic success
-    return { success: true }
-  }
+  console.log("🔴 DIRECT API CALL: Deleting timeline clip:", id)
+  const response = await makeApiRequest<{ success: boolean }>(`/api/clips/${id}`, {
+    method: "DELETE",
+  })
+  console.log("🔴 DIRECT API RESPONSE: Clip deleted:", response)
+  return response
 }
 
 /**
- * Reorder timeline clips
- * Returns current order when API is unavailable
+ * Reorder timeline clips - NO FALLBACKS
  */
 export async function reorderTimelineClips(orderedIds: string[]): Promise<TimelineSection[]> {
-  try {
-    return await makeApiRequest<TimelineSection[]>("/api/timeline/clips/reorder", {
-      method: "POST",
-      body: JSON.stringify({ orderedIds }),
-    })
-  } catch (error) {
-    console.warn("Timeline API unavailable, returning mock sections:", error)
-    // Return mock sections in the requested order (best effort)
-    return MOCK_SECTIONS
-  }
-}
-
-/**
- * Get timeline API status
- */
-export async function getTimelineApiStatus(): Promise<{
-  available: boolean
-  mode: "online" | "offline"
-  message: string
-}> {
-  const available = await isTimelineApiAvailable()
-  return {
-    available,
-    mode: available ? "online" : "offline",
-    message: available ? "Timeline API is available" : "Timeline API unavailable - using offline mode with mock data",
-  }
+  console.log("🔴 DIRECT API CALL: Reordering timeline clips:", orderedIds)
+  const response = await makeApiRequest<{ clips: TimelineSection[] }>("/api/clips/reorder", {
+    method: "POST",
+    body: JSON.stringify({ orderedIds }),
+  })
+  console.log("🔴 DIRECT API RESPONSE: Clips reordered:", response)
+  return response.clips || response
 }

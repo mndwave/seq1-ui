@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Loader2, CheckCircle, XCircle, FileText } from "lucide-react"
-import { apiTests } from "@/lib/api-tests"
+import { realApiTests, runRealApiTest } from "@/lib/real-api-tests"
+import type { RealApiTestResult } from "@/lib/real-api-tests"
 import { ServerLogsDisplay } from "@/components/server-logs-display"
 
 interface ApiTestRunnerProps {
@@ -22,34 +23,10 @@ interface TestResult {
   status: TestStatus
   duration?: number
   error?: any
-  errorDetails?: {
-    message?: string
-    stack?: string
-    code?: string
-    type?: string
-    request?: any
-    response?: any
-    context?: any
-  }
   response?: any
   timestamp?: Date
-  requestDetails?: {
-    url?: string
-    method?: string
-    headers?: Record<string, string>
-    body?: any
-  }
-  responseDetails?: {
-    status?: number
-    statusText?: string
-    headers?: Record<string, string>
-    size?: number
-    timing?: {
-      start: number
-      end: number
-      duration: number
-    }
-  }
+  httpStatus?: number
+  endpoint?: string
 }
 
 export function ApiTestRunner({ category }: ApiTestRunnerProps) {
@@ -62,8 +39,8 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
   const [refreshLogsTrigger, setRefreshLogsTrigger] = useState(0)
   const [serverLogs, setServerLogs] = useState<string>("")
 
-  // Filter tests by category
-  const tests = category === "all" ? apiTests : apiTests.filter((test) => test.category === category)
+  // Filter tests by category - these are REAL API tests only
+  const tests = category === "all" ? realApiTests : realApiTests.filter((test) => test.category === category)
 
   // Initialize results
   useEffect(() => {
@@ -74,6 +51,7 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
         category: test.category,
         description: test.description,
         status: "pending",
+        endpoint: test.endpoint,
       })),
     )
   }, [category])
@@ -86,93 +64,12 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
     }))
   }
 
-  // Extract all properties from an error object
-  const extractErrorDetails = (error: any): Record<string, any> => {
-    if (!error) return {}
-
-    // Start with an empty object
-    const details: Record<string, any> = {}
-
-    // If it's not an object, just return the error as a string
-    if (typeof error !== "object") {
-      return { value: String(error) }
-    }
-
-    // Extract all properties from the error object
-    try {
-      // Get all properties including non-enumerable ones
-      const propertyNames = new Set([...Object.getOwnPropertyNames(error), ...Object.keys(error)])
-
-      // Add each property to the details object
-      for (const prop of propertyNames) {
-        try {
-          const value = error[prop]
-          // Skip functions and circular references
-          if (typeof value !== "function") {
-            details[prop] = value
-          }
-        } catch (e) {
-          details[`${prop}_error`] = "Could not access property"
-        }
-      }
-
-      // Special handling for response objects
-      if (error.response) {
-        try {
-          details.responseStatus = error.response.status
-          details.responseStatusText = error.response.statusText
-
-          // Try to get response data
-          if (error.response.data) {
-            details.responseData = error.response.data
-          }
-
-          // Try to get headers
-          if (error.response.headers) {
-            details.responseHeaders = error.response.headers
-          }
-        } catch (e) {
-          details.responseError = "Could not extract response details"
-        }
-      }
-
-      // Special handling for request objects
-      if (error.request) {
-        try {
-          details.requestUrl = error.request.url || error.request._url
-          details.requestMethod = error.request.method
-          details.requestHeaders = error.request.headers
-        } catch (e) {
-          details.requestError = "Could not extract request details"
-        }
-      }
-
-      // Special handling for axios errors
-      if (error.config) {
-        try {
-          details.requestConfig = {
-            url: error.config.url,
-            method: error.config.method,
-            headers: error.config.headers,
-            data: error.config.data,
-          }
-        } catch (e) {
-          details.configError = "Could not extract request config"
-        }
-      }
-    } catch (e) {
-      details.extractionError = "Error extracting properties"
-    }
-
-    return details
-  }
-
   // Update server logs from the ServerLogsDisplay component
   const updateServerLogs = (logs: string) => {
     setServerLogs(logs)
   }
 
-  // Run all tests
+  // Run all tests - DIRECT API CALLS ONLY
   const runAllTests = async () => {
     setIsRunning(true)
     const startTime = new Date()
@@ -190,100 +87,81 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
         category: test.category,
         description: test.description,
         status: "pending",
+        endpoint: test.endpoint,
       })),
     )
 
     let successCount = 0
     let failedCount = 0
 
-    // Run tests sequentially
+    // Run tests sequentially - REAL API CALLS ONLY
     for (const test of tests) {
       // Update status to running
       setResults((prev) => prev.map((r) => (r.id === test.id ? { ...r, status: "running" } : r)))
 
       try {
-        // Capture request details
-        const requestDetails: any = {
-          testId: test.id,
-          testName: test.name,
-          startTime: new Date().toISOString(),
+        console.log(`🔴 RUNNING REAL API TEST: ${test.name} -> ${test.endpoint}`)
+
+        // Make DIRECT API call - no mocking, no fallbacks
+        const result: RealApiTestResult = await runRealApiTest(test.id)
+
+        console.log(`🔴 REAL API TEST RESULT:`, result)
+
+        if (result.success) {
+          // Update result with success
+          setResults((prev) =>
+            prev.map((r) =>
+              r.id === test.id
+                ? {
+                    ...r,
+                    status: "success",
+                    duration: result.duration,
+                    response: result.response,
+                    timestamp: new Date(result.timestamp),
+                    httpStatus: result.status,
+                  }
+                : r,
+            ),
+          )
+          successCount++
+        } else {
+          // Update result with real error
+          setResults((prev) =>
+            prev.map((r) =>
+              r.id === test.id
+                ? {
+                    ...r,
+                    status: "error",
+                    duration: result.duration,
+                    error: result.error,
+                    timestamp: new Date(result.timestamp),
+                    httpStatus: result.status,
+                  }
+                : r,
+            ),
+          )
+          failedCount++
         }
-
-        // Start timing
-        const testStartTime = performance.now()
-
-        // Run the test
-        const response = await test.run()
-
-        // End timing
-        const testEndTime = performance.now()
-        const timestamp = new Date()
-
-        // Capture response details
-        const responseDetails = {
-          status: 200, // Assuming success
-          timing: {
-            start: testStartTime,
-            end: testEndTime,
-            duration: Math.round(testEndTime - testStartTime),
-          },
-        }
-
-        // Update result with success
-        setResults((prev) =>
-          prev.map((r) =>
-            r.id === test.id
-              ? {
-                  ...r,
-                  status: "success",
-                  duration: Math.round(testEndTime - testStartTime),
-                  response,
-                  timestamp,
-                  requestDetails,
-                  responseDetails,
-                }
-              : r,
-          ),
-        )
-
-        successCount++
       } catch (error: any) {
-        const timestamp = new Date()
+        console.error(`🔴 REAL API TEST FAILED: ${test.name}`, error)
 
-        // Extract as much information as possible from the error
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        const errorStack = error instanceof Error ? error.stack : undefined
-        const errorType = error instanceof Error ? error.constructor.name : typeof error
-
-        // Extract all properties from the error object
-        const errorDetails = extractErrorDetails(error)
-
-        console.error(`Test failed: ${test.name}`, error, errorDetails)
-
-        // Update result with detailed error information
+        // Update result with real error information
         setResults((prev) =>
           prev.map((r) =>
             r.id === test.id
               ? {
                   ...r,
                   status: "error",
-                  error: errorMessage,
-                  errorDetails: {
-                    message: errorMessage,
-                    stack: errorStack,
-                    type: errorType,
-                    ...errorDetails,
-                  },
-                  timestamp,
+                  error: error instanceof Error ? error.message : String(error),
+                  timestamp: new Date(),
                 }
               : r,
           ),
         )
-
         failedCount++
       }
 
-      // Small delay between tests to avoid overwhelming the API
+      // Small delay between tests
       await new Promise((resolve) => setTimeout(resolve, 500))
     }
 
@@ -308,11 +186,12 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
 
     const now = new Date()
     const formattedDate = now.toISOString().replace(/[:.]/g, "-").slice(0, 19)
-    const fileName = `seq1-api-test-report-${formattedDate}.txt`
+    const fileName = `seq1-real-api-test-report-${formattedDate}.txt`
 
     // Generate report header
-    let report = "SEQ1 API TEST REPORT\n"
-    report += "===================\n\n"
+    let report = "SEQ1 REAL API TEST REPORT\n"
+    report += "========================\n\n"
+    report += "⚠️  DIRECT API CALLS ONLY - NO MOCK DATA ⚠️\n\n"
     report += `Date: ${now.toLocaleString()}\n`
     report += `Category: ${category === "all" ? "All Tests" : category.charAt(0).toUpperCase() + category.slice(1)}\n`
     report += `Test Start Time: ${testStartTime.toLocaleString()}\n`
@@ -349,8 +228,13 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
       categoryResults.forEach((result) => {
         report += `Test: ${result.name}\n`
         report += `ID: ${result.id}\n`
+        report += `Endpoint: ${result.endpoint}\n`
         report += `Description: ${result.description}\n`
         report += `Status: ${result.status.toUpperCase()}\n`
+
+        if (result.httpStatus) {
+          report += `HTTP Status: ${result.httpStatus}\n`
+        }
 
         if (result.timestamp) {
           report += `Timestamp: ${result.timestamp.toLocaleString()}\n`
@@ -360,32 +244,11 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
           report += `Duration: ${result.duration}ms\n`
         }
 
-        if (result.requestDetails) {
-          report += "\nREQUEST DETAILS:\n"
-          report += "---------------\n"
-          report += JSON.stringify(result.requestDetails, null, 2) + "\n"
-        }
-
-        if (result.responseDetails) {
-          report += "\nRESPONSE DETAILS:\n"
-          report += "----------------\n"
-          report += JSON.stringify(result.responseDetails, null, 2) + "\n"
-        }
-
         if (result.status === "error") {
           report += "\nERROR DETAILS:\n"
           report += "-------------\n"
-          report += `Message: ${result.error}\n`
-
-          if (result.errorDetails) {
-            report += "\nFull Error Information:\n"
-            report += JSON.stringify(result.errorDetails, null, 2) + "\n"
-
-            if (result.errorDetails.stack) {
-              report += "\nStack Trace:\n"
-              report += result.errorDetails.stack + "\n"
-            }
-          }
+          report += typeof result.error === "object" ? JSON.stringify(result.error, null, 2) : result.error
+          report += "\n"
         }
 
         if (result.status === "success" && result.response) {
@@ -398,26 +261,6 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
         report += "\n" + "".padEnd(50, "-") + "\n\n"
       })
     })
-
-    // Add section specifically for failed tests for quick reference
-    const failedTests = results.filter((r) => r.status === "error")
-    if (failedTests.length > 0) {
-      report += "\nFAILED TESTS SUMMARY\n"
-      report += "===================\n\n"
-
-      failedTests.forEach((result) => {
-        report += `Test: ${result.name}\n`
-        report += `Category: ${result.category}\n`
-        report += `Error: ${result.error}\n`
-
-        if (result.errorDetails) {
-          report += "\nDetailed Error Information:\n"
-          report += JSON.stringify(result.errorDetails, null, 2) + "\n"
-        }
-
-        report += "\n" + "".padEnd(50, "-") + "\n\n"
-      })
-    }
 
     // Add server logs section
     report += "\nSERVER LOGS\n"
@@ -436,7 +279,6 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
     report += "======================\n\n"
     report += `User Agent: ${navigator.userAgent}\n`
     report += `Window Size: ${window.innerWidth}x${window.innerHeight}\n`
-    report += `API URL: ${process.env.SEQ1_API_URL || "Not available"}\n`
     report += `Date/Time: ${new Date().toISOString()}\n`
     report += `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}\n`
 
@@ -454,12 +296,25 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
 
   return (
     <div className="transition-all duration-300 ease-in-out">
+      <div className="bg-red-900/20 border border-red-500/50 rounded-md p-4 mb-4">
+        <div className="flex items-center gap-2 text-red-300 font-semibold mb-2">
+          <XCircle className="h-4 w-4" />
+          DIRECT API TESTING MODE
+        </div>
+        <div className="text-red-200 text-sm">
+          These tests make direct calls to your API server with no mock data or fallbacks. Tests will fail if your API
+          server is not running or endpoints are not implemented.
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-xl font-semibold">
-            {category === "all" ? "All API Tests" : `${category.charAt(0).toUpperCase() + category.slice(1)} API Tests`}
+            {category === "all"
+              ? "All Real API Tests"
+              : `${category.charAt(0).toUpperCase() + category.slice(1)} Real API Tests`}
           </h2>
-          <p className="text-sm text-gray-500">{tests.length} tests available</p>
+          <p className="text-sm text-gray-500">{tests.length} direct API tests available</p>
         </div>
 
         <div className="flex gap-2">
@@ -527,7 +382,10 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
                   {result.status === "success" && <CheckCircle className="mr-2 h-4 w-4 text-green-500" />}
                   {result.status === "error" && <XCircle className="mr-2 h-4 w-4 text-red-500" />}
                   {result.status === "pending" && <div className="w-4 h-4 mr-2" />}
-                  <span className="text-left">{result.name}</span>
+                  <div className="text-left">
+                    <div>{result.name}</div>
+                    <div className="text-xs text-gray-400">{result.endpoint}</div>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -535,6 +393,9 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
                     <Badge variant="outline" className="ml-2">
                       {result.duration}ms
                     </Badge>
+                  )}
+                  {result.httpStatus && (
+                    <Badge variant={result.httpStatus < 400 ? "success" : "destructive"}>{result.httpStatus}</Badge>
                   )}
                   <Badge
                     variant={
@@ -559,79 +420,19 @@ export function ApiTestRunner({ category }: ApiTestRunnerProps) {
               {result.status === "error" && (
                 <div className="space-y-3">
                   <div className="bg-red-900/30 p-3 rounded-md mb-3 border border-red-500">
-                    <div className="font-semibold text-red-300 mb-1">Error:</div>
+                    <div className="font-semibold text-red-300 mb-1">Real API Error:</div>
                     <div className="text-red-200 font-mono text-sm whitespace-pre-wrap">
                       {typeof result.error === "object" ? JSON.stringify(result.error, null, 2) : result.error}
                     </div>
                   </div>
-
-                  {result.errorDetails && (
-                    <div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleErrorExpansion(result.id)}
-                        className="mb-2 text-xs"
-                      >
-                        {expandedErrors[result.id] ? "Hide Detailed Error Info" : "Show Detailed Error Info"}
-                      </Button>
-
-                      {expandedErrors[result.id] && (
-                        <div className="bg-gray-900 p-3 rounded-md border border-gray-700 mt-2 transition-all duration-300 ease-in-out">
-                          <div className="font-semibold mb-1 text-white">Full Error Details:</div>
-
-                          {result.errorDetails.type && (
-                            <div className="mb-2">
-                              <span className="text-gray-400 text-xs">Error Type: </span>
-                              <span className="text-white text-xs">{result.errorDetails.type}</span>
-                            </div>
-                          )}
-
-                          {result.errorDetails.stack && (
-                            <div className="mb-3">
-                              <div className="text-gray-400 text-xs mb-1">Stack Trace:</div>
-                              <pre className="text-xs overflow-auto max-h-[200px] bg-gray-950 p-2 rounded text-gray-300">
-                                {result.errorDetails.stack}
-                              </pre>
-                            </div>
-                          )}
-
-                          <div className="mb-2">
-                            <div className="text-gray-400 text-xs mb-1">All Error Properties:</div>
-                            <pre className="text-xs overflow-auto max-h-[300px] bg-gray-950 p-2 rounded text-gray-300">
-                              {JSON.stringify(result.errorDetails, null, 2)}
-                            </pre>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )}
 
               {result.status === "success" && result.response && (
                 <div className="bg-gray-800 p-3 rounded-md border border-gray-700 transition-all duration-300 ease-in-out">
-                  <div className="font-semibold mb-1 text-white">Response:</div>
+                  <div className="font-semibold mb-1 text-white">Real API Response:</div>
                   <pre className="text-sm overflow-auto max-h-[300px] text-gray-300">
                     {JSON.stringify(result.response, null, 2)}
-                  </pre>
-                </div>
-              )}
-
-              {result.requestDetails && (
-                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700 transition-all duration-300 ease-in-out">
-                  <div className="font-semibold mb-1 text-white">Request Details:</div>
-                  <pre className="text-xs overflow-auto max-h-[200px] text-gray-300">
-                    {JSON.stringify(result.requestDetails, null, 2)}
-                  </pre>
-                </div>
-              )}
-
-              {result.responseDetails && (
-                <div className="mt-3 bg-gray-800 p-3 rounded-md border border-gray-700 transition-all duration-300 ease-in-out">
-                  <div className="font-semibold mb-1 text-white">Response Details:</div>
-                  <pre className="text-xs overflow-auto max-h-[200px] text-gray-300">
-                    {JSON.stringify(result.responseDetails, null, 2)}
                   </pre>
                 </div>
               )}
