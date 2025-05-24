@@ -9,6 +9,7 @@ import {
   updateLoopState,
   updateBpm,
   updateTimeSignature,
+  isTransportApiAvailable,
   type TransportState,
 } from "@/lib/api/transport-api"
 
@@ -24,6 +25,26 @@ export function useTransport() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(false)
+  const [apiAvailable, setApiAvailable] = useState<boolean | null>(null)
+
+  // Check if API is available
+  const checkApiAvailability = useCallback(async () => {
+    try {
+      const available = await isTransportApiAvailable()
+      setApiAvailable(available)
+      if (!available) {
+        setIsOffline(true)
+        setError("Transport API is not available")
+      } else {
+        setIsOffline(false)
+        setError(null)
+      }
+    } catch (err) {
+      setApiAvailable(false)
+      setIsOffline(true)
+      setError("Failed to check API availability")
+    }
+  }, [])
 
   // Fetch transport state
   const fetchTransportState = useCallback(async () => {
@@ -33,10 +54,12 @@ export function useTransport() {
       setTransportState(state)
       setError(null)
       setIsOffline(false)
+      setApiAvailable(true)
     } catch (err) {
-      console.error("Failed to fetch transport state:", err)
-      setError("Failed to load transport state")
+      console.warn("Failed to fetch transport state, using default:", err)
+      // Don't set error state, just use default values
       setIsOffline(true)
+      setApiAvailable(false)
     } finally {
       setIsLoading(false)
     }
@@ -44,17 +67,21 @@ export function useTransport() {
 
   // Load transport state on mount
   useEffect(() => {
-    fetchTransportState()
+    // Check API availability first
+    checkApiAvailability().then(() => {
+      // Then fetch transport state
+      fetchTransportState()
+    })
 
-    // Set up polling for transport state updates
+    // Set up polling for transport state updates (only if API is available)
     const intervalId = setInterval(() => {
-      if (transportState.isPlaying && !isOffline) {
+      if (transportState.isPlaying && !isOffline && apiAvailable) {
         fetchTransportState()
       }
     }, 1000) // Poll every second when playing and online
 
     return () => clearInterval(intervalId)
-  }, [fetchTransportState, transportState.isPlaying, isOffline])
+  }, [fetchTransportState, checkApiAvailability, transportState.isPlaying, isOffline, apiAvailable])
 
   // Toggle play/pause
   const togglePlayback = useCallback(async () => {
@@ -63,8 +90,7 @@ export function useTransport() {
       setTransportState(newState)
       setError(null)
     } catch (err) {
-      console.error("Failed to toggle playback:", err)
-      setError("Failed to toggle playback")
+      console.warn("Failed to toggle playback via API, updating local state:", err)
       // Update local state to provide immediate feedback
       setTransportState((prev) => ({
         ...prev,
@@ -80,8 +106,7 @@ export function useTransport() {
       setTransportState(newState)
       setError(null)
     } catch (err) {
-      console.error("Failed to set playhead position:", err)
-      setError("Failed to set playhead position")
+      console.warn("Failed to set playhead position via API, updating local state:", err)
       // Update local state to provide immediate feedback
       setTransportState((prev) => ({
         ...prev,
@@ -97,8 +122,7 @@ export function useTransport() {
       setTransportState(newState)
       setError(null)
     } catch (err) {
-      console.error("Failed to toggle looping:", err)
-      setError("Failed to toggle looping")
+      console.warn("Failed to toggle looping via API, updating local state:", err)
       // Update local state to provide immediate feedback
       setTransportState((prev) => ({
         ...prev,
@@ -115,8 +139,7 @@ export function useTransport() {
         setTransportState(newState)
         setError(null)
       } catch (err) {
-        console.error("Failed to set loop region:", err)
-        setError("Failed to set loop region")
+        console.warn("Failed to set loop region via API, updating local state:", err)
         // Update local state to provide immediate feedback
         setTransportState((prev) => ({
           ...prev,
@@ -134,8 +157,7 @@ export function useTransport() {
       setTransportState(newState)
       setError(null)
     } catch (err) {
-      console.error("Failed to set BPM:", err)
-      setError("Failed to set BPM")
+      console.warn("Failed to set BPM via API, updating local state:", err)
       // Update local state to provide immediate feedback
       setTransportState((prev) => ({
         ...prev,
@@ -151,8 +173,7 @@ export function useTransport() {
       setTransportState(newState)
       setError(null)
     } catch (err) {
-      console.error("Failed to set time signature:", err)
-      setError("Failed to set time signature")
+      console.warn("Failed to set time signature via API, updating local state:", err)
       // Update local state to provide immediate feedback
       setTransportState((prev) => ({
         ...prev,
@@ -166,6 +187,7 @@ export function useTransport() {
     isLoading,
     error,
     isOffline,
+    apiAvailable,
     togglePlayback,
     seekPlayhead,
     toggleLooping,
@@ -173,5 +195,6 @@ export function useTransport() {
     setBpm,
     setTimeSignature,
     refreshTransportState: fetchTransportState,
+    checkApiAvailability,
   }
 }

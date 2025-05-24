@@ -1,4 +1,4 @@
-import * as serverApi from "@/lib/server/api-server"
+import { makeApiRequest } from "@/lib/server/api-server"
 
 // Define the transport state type
 export type TransportState = {
@@ -26,12 +26,12 @@ const DEFAULT_TRANSPORT_STATE: TransportState = {
 export async function getTransportState(): Promise<TransportState> {
   try {
     console.log("Fetching transport state from API...")
-    const response = await serverApi.getTransportStateServer()
+    const response = await makeApiRequest("/api/transport")
     console.log("Transport state response:", response)
     return response
   } catch (error) {
-    console.error("Error getting transport state:", error)
-    console.log("Using default transport state as fallback")
+    console.warn("Transport API unavailable, using default state:", error)
+    // Don't throw an error, just return the default state
     return DEFAULT_TRANSPORT_STATE
   }
 }
@@ -41,9 +41,11 @@ export async function getTransportState(): Promise<TransportState> {
  */
 export async function startPlayback(): Promise<TransportState> {
   try {
-    return await serverApi.startPlaybackServer()
+    const response = await makeApiRequest("/api/transport/play", { method: "POST" })
+    return response
   } catch (error) {
-    console.error("Error starting playback:", error)
+    console.warn("Failed to start playback via API, updating local state:", error)
+    // Return optimistic state update
     return { ...DEFAULT_TRANSPORT_STATE, isPlaying: true }
   }
 }
@@ -53,9 +55,11 @@ export async function startPlayback(): Promise<TransportState> {
  */
 export async function stopPlayback(): Promise<TransportState> {
   try {
-    return await serverApi.stopPlaybackServer()
+    const response = await makeApiRequest("/api/transport/stop", { method: "POST" })
+    return response
   } catch (error) {
-    console.error("Error stopping playback:", error)
+    console.warn("Failed to stop playback via API, updating local state:", error)
+    // Return optimistic state update
     return { ...DEFAULT_TRANSPORT_STATE, isPlaying: false }
   }
 }
@@ -65,9 +69,14 @@ export async function stopPlayback(): Promise<TransportState> {
  */
 export async function setPlayheadPosition(position: number): Promise<TransportState> {
   try {
-    return await serverApi.setPlayheadPositionServer(position)
+    const response = await makeApiRequest("/api/transport/playhead", {
+      method: "POST",
+      body: JSON.stringify({ position }),
+    })
+    return response
   } catch (error) {
-    console.error("Error setting playhead position:", error)
+    console.warn("Failed to set playhead position via API, updating local state:", error)
+    // Return optimistic state update
     return { ...DEFAULT_TRANSPORT_STATE, playheadPosition: position }
   }
 }
@@ -80,9 +89,14 @@ export async function updateLoopState(
   loopRegion?: { startBar: number; endBar: number } | null,
 ): Promise<TransportState> {
   try {
-    return await serverApi.updateLoopStateServer(isLooping, loopRegion)
+    const response = await makeApiRequest("/api/transport/loop", {
+      method: "POST",
+      body: JSON.stringify({ isLooping, loopRegion }),
+    })
+    return response
   } catch (error) {
-    console.error("Error updating loop state:", error)
+    console.warn("Failed to update loop state via API, updating local state:", error)
+    // Return optimistic state update
     return { ...DEFAULT_TRANSPORT_STATE, isLooping, loopRegion: loopRegion || null }
   }
 }
@@ -92,9 +106,14 @@ export async function updateLoopState(
  */
 export async function updateBpm(bpm: number): Promise<TransportState> {
   try {
-    return await serverApi.updateBpmServer(bpm)
+    const response = await makeApiRequest("/api/transport/bpm", {
+      method: "POST",
+      body: JSON.stringify({ bpm }),
+    })
+    return response
   } catch (error) {
-    console.error("Error updating BPM:", error)
+    console.warn("Failed to update BPM via API, updating local state:", error)
+    // Return optimistic state update
     return { ...DEFAULT_TRANSPORT_STATE, bpm }
   }
 }
@@ -104,9 +123,26 @@ export async function updateBpm(bpm: number): Promise<TransportState> {
  */
 export async function updateTimeSignature(timeSignature: string): Promise<TransportState> {
   try {
-    return await serverApi.updateTimeSignatureServer(timeSignature)
+    const response = await makeApiRequest("/api/transport/time-signature", {
+      method: "POST",
+      body: JSON.stringify({ timeSignature }),
+    })
+    return response
   } catch (error) {
-    console.error("Error updating time signature:", error)
+    console.warn("Failed to update time signature via API, updating local state:", error)
+    // Return optimistic state update
     return { ...DEFAULT_TRANSPORT_STATE, timeSignature }
+  }
+}
+
+/**
+ * Check if the transport API is available
+ */
+export async function isTransportApiAvailable(): Promise<boolean> {
+  try {
+    await makeApiRequest("/api/transport")
+    return true
+  } catch (error) {
+    return false
   }
 }

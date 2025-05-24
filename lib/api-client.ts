@@ -180,34 +180,90 @@ export async function sendChatMessage(prompt: string, deviceId: string, clipId: 
  * This uses a proxy to avoid exposing the API key
  */
 export function createWebSocket(onMessage: (event: MessageEvent) => void): WebSocket {
+  // Check if WebSocket is supported
+  if (typeof WebSocket === "undefined") {
+    console.warn("WebSocket is not supported in this environment")
+    // Return a mock WebSocket that doesn't do anything
+    return {
+      close: () => {},
+      send: () => {},
+      readyState: WebSocket.CLOSED,
+      onopen: null,
+      onclose: null,
+      onmessage: null,
+      onerror: null,
+    } as WebSocket
+  }
+
   // Use a local WebSocket proxy instead of connecting directly to the API
-  const wsProxyUrl = window.location.protocol.replace("http", "ws") + "//" + window.location.host + "/api/ws-proxy"
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+  const wsProxyUrl = `${protocol}//${window.location.host}/api/ws-proxy`
   debugLog("Creating WebSocket connection to proxy:", wsProxyUrl)
 
-  const ws = new WebSocket(wsProxyUrl)
+  let ws: WebSocket
+  let reconnectAttempts = 0
+  const maxReconnectAttempts = 5
+  const reconnectDelay = 5000
 
-  ws.onopen = () => {
-    debugLog("WebSocket connection opened")
+  function createConnection(): WebSocket {
+    try {
+      const socket = new WebSocket(wsProxyUrl)
+
+      socket.onopen = () => {
+        debugLog("WebSocket connection opened")
+        reconnectAttempts = 0 // Reset reconnect attempts on successful connection
+      }
+
+      socket.onmessage = (event) => {
+        debugLog("WebSocket message received:", event.data)
+        try {
+          onMessage(event)
+        } catch (error) {
+          console.error("Error handling WebSocket message:", error)
+        }
+      }
+
+      socket.onerror = (error) => {
+        console.warn("WebSocket connection error (this is normal if the API server is not running):", error)
+        // Don't throw an error here, just log it
+      }
+
+      socket.onclose = (event) => {
+        debugLog("WebSocket connection closed:", event.code, event.reason)
+
+        // Only attempt to reconnect if it wasn't a manual close and we haven't exceeded max attempts
+        if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++
+          debugLog(`Attempting to reconnect WebSocket (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`)
+          setTimeout(() => {
+            try {
+              ws = createConnection()
+            } catch (error) {
+              console.warn("Failed to reconnect WebSocket:", error)
+            }
+          }, reconnectDelay)
+        } else if (reconnectAttempts >= maxReconnectAttempts) {
+          console.warn("Max WebSocket reconnection attempts reached. WebSocket functionality will be disabled.")
+        }
+      }
+
+      return socket
+    } catch (error) {
+      console.warn("Failed to create WebSocket connection (this is normal if the API server is not running):", error)
+      // Return a mock WebSocket that doesn't do anything
+      return {
+        close: () => {},
+        send: () => {},
+        readyState: WebSocket.CLOSED,
+        onopen: null,
+        onclose: null,
+        onmessage: null,
+        onerror: null,
+      } as WebSocket
+    }
   }
 
-  ws.onmessage = (event) => {
-    debugLog("WebSocket message received:", event.data)
-    onMessage(event)
-  }
-
-  ws.onerror = (error) => {
-    console.error("WebSocket error:", error)
-  }
-
-  ws.onclose = (event) => {
-    debugLog("WebSocket connection closed:", event.code, event.reason)
-    // Reconnect after a delay
-    setTimeout(() => {
-      debugLog("Reconnecting WebSocket...")
-      createWebSocket(onMessage)
-    }, 5000)
-  }
-
+  ws = createConnection()
   return ws
 }
 
