@@ -1,8 +1,18 @@
-import { getPublicKey, nip19, finalizeEvent, type EventTemplate, type Event as NostrToolsEvent } from "nostr-tools"
-import { utils as secp256k1Utils } from "@noble/secp256k1"
-import { Buffer } from "buffer"
+import {
+  nip19,
+  getPublicKey as getHexPublicKey, // Renaming for clarity, as it takes hex privKey and returns hex pubKey
+  finalizeEvent,
+  type EventTemplate,
+  type Event as NostrToolsEvent,
+} from "nostr-tools"
+import { utils as secp256k1Utils } from "@noble/secp256k1" // For private key generation
+import { Buffer } from "buffer" // Ensure Buffer is available
 
-// Types
+// Ensure window.Buffer is available for nostr-tools or other libraries if running in browser
+if (typeof window !== "undefined" && typeof window.Buffer === "undefined") {
+  window.Buffer = Buffer
+}
+
 export interface NostrKeypair {
   nsec: string
   npub: string
@@ -11,137 +21,132 @@ export interface NostrKeypair {
 }
 
 export interface StoredNostrKeypair extends NostrKeypair {
-  created: string
+  created: string // ISO date string
 }
 
-// Core key generation - CLIENT-SIDE ONLY
-export const generateNostrKeypair = (): NostrKeypair => {
-  const privateKeyBytes = secp256k1Utils.randomPrivateKey() // This is a Uint8Array
-  const privateKeyHex = Buffer.from(privateKeyBytes).toString("hex") // Convert to hex for getPublicKey and storage
-
-  const publicKeyHex = getPublicKey(privateKeyHex) // nostr-tools getPublicKey expects hex private key
-  const publicKeyBytes = Buffer.from(publicKeyHex, "hex") // npubEncode might also prefer Uint8Array, or hex is fine. Let's be consistent if possible.
-  // nip19.npubEncode actually expects a hex string for the public key.
-
-  return {
-    nsec: nip19.nsecEncode(privateKeyBytes), // Pass the Uint8Array directly
-    npub: nip19.npubEncode(publicKeyHex), // npubEncode expects a hex string for the public key
-    privateKeyHex, // Store the hex version
-    publicKeyHex,
-  }
-}
-
-// Secure storage manager
-export class SecureNostrStorage {
-  private STORAGE_KEY = "seq1_nostr_keys"
-  private NPUB_KEY = "seq1_npub" // For quick access if needed elsewhere
-
-  storeKeys(keypair: NostrKeypair): boolean {
-    const keyData: StoredNostrKeypair = {
-      ...keypair,
-      created: new Date().toISOString(),
-    }
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(keyData))
-    localStorage.setItem(this.NPUB_KEY, keypair.npub)
-    return true
-  }
-
-  getStoredKeys(): StoredNostrKeypair | null {
-    const stored = localStorage.getItem(this.STORAGE_KEY)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as StoredNostrKeypair
-        // Basic validation
-        if (parsed && parsed.nsec && parsed.npub && parsed.privateKeyHex && parsed.publicKeyHex) {
-          return parsed
-        }
-      } catch (e) {
-        console.error("Error parsing stored Nostr keys:", e)
-        this.clearKeys() // Clear corrupted data
-        return null
-      }
-    }
-    return null
-  }
-
-  hasStoredKeys(): boolean {
-    return !!this.getStoredKeys()
-  }
-
-  clearKeys(): void {
-    localStorage.removeItem(this.STORAGE_KEY)
-    localStorage.removeItem(this.NPUB_KEY)
-  }
-
-  // Get public data safe to send to server
-  getPublicData(): { npub: string; publicKeyHex: string } | null {
-    const keys = this.getStoredKeys()
-    return keys ? { npub: keys.npub, publicKeyHex: keys.publicKeyHex } : null
-  }
-}
-
-export const nostrStorage = new SecureNostrStorage()
-
-// Event Signing Functions
-export const signNostrEvent = (eventTemplate: EventTemplate, privateKeyHex: string): NostrToolsEvent => {
-  // finalizeEvent (from nostr-tools v1.x) expects an EventTemplate without pubkey.
-  // It will derive and add the pubkey itself.
-  // The EventTemplate type imported from nostr-tools v1.x will not have a pubkey field.
-  const templateForFinalize: EventTemplate = {
-    kind: eventTemplate.kind,
-    tags: eventTemplate.tags || [],
-    content: eventTemplate.content || "",
-    created_at: eventTemplate.created_at || Math.floor(Date.now() / 1000),
-  }
-  return finalizeEvent(templateForFinalize, privateKeyHex)
-}
-
-export const createAuthEvent = (challenge: string, privateKeyHex: string): NostrToolsEvent => {
-  // finalizeEvent (from nostr-tools v1.x) expects an EventTemplate without pubkey.
-  const authEventTemplateForFinalize: EventTemplate = {
-    kind: 22242, // NIP-42 Authentication
-    content: challenge,
-    tags: [],
-    created_at: Math.floor(Date.now() / 1000),
-  }
-  return finalizeEvent(authEventTemplateForFinalize, privateKeyHex)
-}
-
-// Helper to decode nsec to privateKeyHex
-export const decodeNsec = (nsec: string): string | null => {
-  try {
-    const { type, data } = nip19.decode(nsec) // data here will be Uint8Array if nsec is valid
-    if (type === "nsec") {
-      return Buffer.from(data as Uint8Array).toString("hex") // Convert Uint8Array to hex string
-    }
-    console.warn("Decoded type is not nsec:", type)
-    return null
-  } catch (e) {
-    console.error("Failed to decode nsec:", e)
-    return null
-  }
-}
-
-// Security Constants & Rules
-export const RESERVED_USERNAMES = ["kyle", "mndwave", "admin", "root", "seq1"]
-export const MINDWAVE_NPUB = "npub19tcq5k5fe26ujyllgcd7s6kayyp9hfh7vm0an58g9w2g3jud9u7sz84zw5"
-
-// CRITICAL SECURITY RULES
-export const SECURITY_RULES = {
-  NEVER_SEND_NSEC: "Private keys must never leave the client",
-  ONLY_SEND_NPUB: "Only public keys can be sent to server",
-  CLIENT_SIDE_GENERATION: "Keys must be generated client-side only",
-  LOCAL_STORAGE_ONLY: "Keys stored in browser localStorage only",
-  CLIENT_SIDE_SIGNING: "All event signing happens client-side",
-}
-
-// Define the structure of a Nostr event (for external use if needed, distinct from nostr-tools Event)
-export interface NostrEvent {
+export interface NostrNote {
   id: string
   pubkey: string
-  created_at: number
+  created_at: number // Unix timestamp in seconds
   kind: number
   tags: string[][]
   content: string
   sig: string
+}
+
+export function generateNostrKeypair(): NostrKeypair {
+  const privateKeyBytes: Uint8Array = secp256k1Utils.randomPrivateKey() // Generates a Uint8Array
+  const privateKeyHex: string = Buffer.from(privateKeyBytes).toString("hex") // Convert to hex
+
+  const publicKeyHex: string = getHexPublicKey(privateKeyHex) // nostr-tools' getPublicKey expects a hex private key
+
+  return {
+    nsec: nip19.nsecEncode(privateKeyBytes), // nsecEncode expects Uint8Array (raw private key bytes)
+    npub: nip19.npubEncode(publicKeyHex), // npubEncode expects hex public key
+    privateKeyHex,
+    publicKeyHex,
+  }
+}
+
+export function decodeNsec(nsec: string): string | null {
+  try {
+    const decoded = nip19.decode(nsec)
+    if (decoded.type === "nsec") {
+      // The 'data' for nsec is the raw private key bytes (Uint8Array)
+      return Buffer.from(decoded.data as Uint8Array).toString("hex")
+    }
+    return null
+  } catch (e) {
+    console.error("Error decoding nsec:", e)
+    return null
+  }
+}
+
+export const nostrStorage = {
+  storeKeys: (keys: NostrKeypair): void => {
+    if (typeof window !== "undefined") {
+      const storedKeypair: StoredNostrKeypair = { ...keys, created: new Date().toISOString() }
+      localStorage.setItem("seq1_nostr_keypair", JSON.stringify(storedKeypair))
+    }
+  },
+  getStoredKeys: (): StoredNostrKeypair | null => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("seq1_nostr_keypair")
+      return stored ? JSON.parse(stored) : null
+    }
+    return null
+  },
+  clearKeys: (): void => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("seq1_nostr_keypair")
+    }
+  },
+  getPublicData: (): { npub: string; publicKeyHex: string } | null => {
+    const keys = nostrStorage.getStoredKeys()
+    if (keys) {
+      return { npub: keys.npub, publicKeyHex: keys.publicKeyHex }
+    }
+    // Check for extension login
+    if (typeof window !== "undefined") {
+      const extensionNpub = localStorage.getItem("seq1_npub_extension")
+      if (extensionNpub) {
+        try {
+          const decoded = nip19.decode(extensionNpub)
+          if (decoded.type === "npub") {
+            return { npub: extensionNpub, publicKeyHex: decoded.data as string }
+          }
+        } catch (e) {
+          console.error("Error decoding extension npub for public data:", e)
+        }
+      }
+    }
+    return null
+  },
+}
+
+export function createAuthEvent(challenge: string, privateKeyHex: string): NostrToolsEvent {
+  // const pubkey = getHexPublicKey(privateKeyHex) // Not strictly needed here as finalizeEvent derives it
+  const eventTemplate: EventTemplate = {
+    kind: 22242, // NIP-42: Authentication
+    created_at: Math.floor(Date.now() / 1000),
+    tags: [["challenge", challenge]], // NIP-42 recommends putting challenge in a tag
+    content: "", // Content can be empty or relay URL for NIP-42
+    // pubkey field is not part of EventTemplate for finalizeEvent in nostr-tools v1
+  }
+  // finalizeEvent will compute ID, sign the event, and add the pubkey.
+  return finalizeEvent(eventTemplate, privateKeyHex)
+}
+
+export function formatRelativeTime(timestamp: number): string {
+  const now = new Date()
+  // Assuming timestamp is in seconds (Unix timestamp)
+  const date = new Date(timestamp * 1000)
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (diffInSeconds < 5) {
+    return "just now"
+  }
+  if (diffInSeconds < 60) {
+    return `${diffInSeconds}s ago`
+  }
+  const diffInMinutes = Math.floor(diffInSeconds / 60)
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes}m ago`
+  }
+  const diffInHours = Math.floor(diffInMinutes / 60)
+  if (diffInHours < 24) {
+    return `${diffInHours}h ago`
+  }
+  const diffInDays = Math.floor(diffInHours / 24)
+  if (diffInDays === 1) {
+    return "yesterday"
+  }
+  if (diffInDays < 7) {
+    return `${diffInDays}d ago`
+  }
+  const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
+  if (date.getFullYear() !== now.getFullYear()) {
+    options.year = "numeric"
+  }
+  return date.toLocaleDateString(undefined, options)
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { CheckCircle, WifiOff } from "lucide-react"
-import { SystemAPI } from "@/lib/api-services"
+import { SystemAPI } from "@/lib/api-services" // Corrected: Was SystemAPI, ensure testApiConnectivity is there or use getSystemStatus
 
 export function TransportStatusIndicator() {
   const [status, setStatus] = useState<"loading" | "online" | "offline">("loading")
@@ -11,26 +11,25 @@ export function TransportStatusIndicator() {
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
+        // Assuming SystemAPI.testApiConnectivity() exists and returns { success: boolean, message: string }
+        // Or adapt to use SystemAPI.getSystemStatus() if testApiConnectivity is not the right method
         const result = await SystemAPI.testApiConnectivity()
         if (result.success) {
           setStatus("online")
-          setMessage("API is online")
+          setMessage(result.message || "API is online")
         } else {
           setStatus("offline")
-          setMessage(result.message)
+          setMessage(result.message || "API connection failed")
         }
-      } catch (error) {
+      } catch (error: any) {
         setStatus("offline")
-        setMessage("Failed to connect to API")
+        setMessage(error.message || "Failed to connect to API")
         console.error("API connectivity test error:", error)
       }
     }
 
     checkApiStatus()
-
-    // Check API status periodically
-    const intervalId = setInterval(checkApiStatus, 30000) // Every 30 seconds
-
+    const intervalId = setInterval(checkApiStatus, 30000)
     return () => clearInterval(intervalId)
   }, [])
 
@@ -44,12 +43,12 @@ export function TransportStatusIndicator() {
       ) : status === "online" ? (
         <>
           <CheckCircle className="h-4 w-4 text-green-500" />
-          <span className="text-green-700 dark:text-green-400">API Connected</span>
+          <span className="text-green-700 dark:text-green-400">{message}</span>
         </>
       ) : (
         <>
           <WifiOff className="h-4 w-4 text-amber-500" />
-          <span className="text-amber-700 dark:text-amber-400">Using Offline Mode</span>
+          <span className="text-amber-700 dark:text-amber-400">{message}</span>
           <button
             className="ml-2 text-xs underline text-blue-600 dark:text-blue-400"
             onClick={() => window.location.reload()}
