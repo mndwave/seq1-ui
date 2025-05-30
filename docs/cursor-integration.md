@@ -136,4 +136,3 @@ def ask_seq1(prompt):
         },
     )
     return response.json()
-\`\`\`
