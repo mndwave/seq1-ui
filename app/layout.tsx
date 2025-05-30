@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
 import { Poppins, Space_Mono } from "next/font/google"
 import ApiErrorHandler from "@/components/api-error-handler"
+import AnonymousSessionTimer from "@/components/anonymous-session-timer"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   title: "SEQ1 | Intent-Driven Hardware Sequencer",
   description:
     "A new type of DAW that harnesses AI with human emotion. Connect your hardware synths and create music that adapts to your creative direction.",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -62,6 +63,7 @@ export default function RootLayout({
               </MIDIProvider>
             </LogoAnimationProvider>
           </EnvProvider>
+          <AnonymousSessionTimer />
         </ThemeProvider>
       </body>
     </html>

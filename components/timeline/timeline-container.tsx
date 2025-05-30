@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import Timeline from "./timeline"
 import type { TimelineClip } from "@/lib/timeline-clip-schema"
 import type { LoopRegion } from "@/lib/timeline-clip-schema" // import LoopRegion
+import { TransportAPI } from "@/lib/api-services"
 interface TimelineContainerProps {
   className?: string
   selectedDeviceId?: string | null
@@ -156,15 +157,22 @@ export default function TimelineContainer({
     [handleLoopRegionChange],
   )
 
-  const handleSectionSelect = (sectionId: string) => {
-    setSelectedSection(sectionId)
-    console.log(`Selected section ${sectionId} for device ${selectedDeviceId || "none"}`)
+  const handleSectionSelect = useCallback(
+    async (sectionId: string) => {
+      setSelectedSection(sectionId)
+      console.log(`Selected section ${sectionId} for device ${selectedDeviceId || "none"}`)
 
-    // Notify parent component about clip selection
-    if (onClipSelect) {
-      onClipSelect(sectionId)
-    }
-  }
+      // Notify parent component about clip selection
+      if (onClipSelect) {
+        onClipSelect(sectionId)
+      }
+
+      if (selectedDeviceId) {
+        await TransportAPI.playMidiClip(sectionId, selectedDeviceId)
+      }
+    },
+    [onClipSelect, selectedDeviceId],
+  )
 
   return (
     <Timeline

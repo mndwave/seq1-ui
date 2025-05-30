@@ -136,7 +136,18 @@ export default function TimelineContent({
         const orderedIds = newItems.map((item) => item.id)
         await reorderTimelineClips(orderedIds)
       } catch (error) {
-        console.error("Failed to update clip order:", error)
+        console.error("Failed to update clip order. Raw error object:", error)
+        if (error instanceof Error) {
+          console.error("Error message:", error.message)
+          console.error("Error name:", error.name)
+          console.error("Error stack:", error.stack)
+          // If the error object might have additional properties from the API response
+          // you could log them too, e.g. if 'error' is a custom error object.
+          // console.error("Error details (if any):", (error as any).details);
+        } else {
+          // If the caught object is not an Error instance
+          console.error("Caught non-Error object:", typeof error, JSON.stringify(error, null, 2))
+        }
         // Optionally revert the local state if the API call fails
         setSections(sections)
       }

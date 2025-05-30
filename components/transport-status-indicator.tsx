@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { CheckCircle, WifiOff } from "lucide-react"
-import { testApiConnectivity } from "@/lib/api-client"
+import { SystemAPI } from "@/lib/api-services"
 
 export function TransportStatusIndicator() {
   const [status, setStatus] = useState<"loading" | "online" | "offline">("loading")
@@ -11,7 +11,7 @@ export function TransportStatusIndicator() {
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        const result = await testApiConnectivity()
+        const result = await SystemAPI.testApiConnectivity()
         if (result.success) {
           setStatus("online")
           setMessage("API is online")

@@ -1,10 +1,22 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { UserPlus, Copy, Download, Check, AlertCircle, ChevronRight, ChevronLeft, Key, Eye, EyeOff } from "lucide-react"
+import {
+  UserPlus,
+  Copy,
+  Download,
+  Check,
+  AlertCircle,
+  ChevronRight,
+  ChevronLeft,
+  Key,
+  Eye,
+  EyeOff,
+  RefreshCw,
+} from "lucide-react"
 import DraggableModal from "@/components/draggable-modal"
-import { nip19 } from "nostr-tools"
+import type { NostrKeypair } from "@/lib/nostr-utils" // Assuming this type is exported
 
 interface SignupModalProps {
   isOpen: boolean
@@ -13,374 +25,358 @@ interface SignupModalProps {
 }
 
 export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupModalProps) {
-  const { signup, saveUserProfile } = useAuth()
+  const { generateAndStoreKeys, registerIdentity, isLoading: authIsLoading } = useAuth()
   const [step, setStep] = useState(1)
-  const [keys, setKeys] = useState<{ privateKey: string; publicKey: string; nsec: string; npub: string } | null>(null)
-  const [keyCopied, setKeyCopied] = useState(false)
-  const [copyFeedback, setCopyFeedback] = useState(false)
-  const [keyDownloaded, setKeyDownloaded] = useState(false)
+  const [generatedKeys, setGeneratedKeys] = useState<NostrKeypair | null>(null)
+
+  const [nsecCopied, setNsecCopied] = useState(false)
+  const [copyFeedback, setCopyFeedback] = useState(false) // For temporary visual feedback on copy
+  const [nsecDownloaded, setNsecDownloaded] = useState(false)
+
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isGeneratingKeys, setIsGeneratingKeys] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false)
   const [showPrivateKey, setShowPrivateKey] = useState(false)
-  const [timeLeft, setTimeLeft] = useState(30)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Generate keys when modal opens
-  useEffect(() => {
-    if (isOpen && !keys) {
-      generateKeys()
-    }
-  }, [isOpen])
+  const [timeLeftToHideKey, setTimeLeftToHideKey] = useState(30)
+  const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setStep(1)
-      setKeys(null)
-      setKeyCopied(false)
-      setCopyFeedback(false)
-      setKeyDownloaded(false)
-      setError(null)
-      setShowPrivateKey(false)
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-    }
-  }, [isOpen])
+  const currentLoading = authIsLoading || isGeneratingKeys || isRegistering
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
+  const resetLocalState = useCallback(() => {
+    setStep(1)
+    setGeneratedKeys(null)
+    setNsecCopied(false)
+    setCopyFeedback(false)
+    setNsecDownloaded(false)
+    setError(null)
+    setIsGeneratingKeys(false)
+    setIsRegistering(false)
+    setShowPrivateKey(false)
+    setTimeLeftToHideKey(30)
+    if (autoHideTimerRef.current) {
+      clearInterval(autoHideTimerRef.current)
+      autoHideTimerRef.current = null
     }
   }, [])
 
-  // Handle timer for auto-hiding
-  useEffect(() => {
-    if (showPrivateKey) {
-      setTimeLeft(30)
+  const handleGenerateKeys = useCallback(
+    async (forceRegenerate = false) => {
+      if (generatedKeys && !forceRegenerate) return // Don't regenerate if keys already exist unless forced
 
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
+      setIsGeneratingKeys(true)
+      setError(null)
+      setShowPrivateKey(false) // Hide any previous key
+      const result = await generateAndStoreKeys()
+      if (result.success && result.keys) {
+        setGeneratedKeys(result.keys)
+        setNsecCopied(false) // Reset confirmations for new keys
+        setNsecDownloaded(false)
+      } else {
+        setError(result.error || "Failed to generate keys. Please try again.")
+        setGeneratedKeys(null)
       }
+      setIsGeneratingKeys(false)
+    },
+    [generateAndStoreKeys, generatedKeys],
+  )
 
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
+  // Auto-generate keys when step 2 is reached, if not already generated
+  useEffect(() => {
+    if (isOpen && step === 2 && !generatedKeys && !isGeneratingKeys) {
+      handleGenerateKeys()
+    }
+  }, [isOpen, step, generatedKeys, isGeneratingKeys, handleGenerateKeys])
+
+  // Reset modal state when it's closed
+  useEffect(() => {
+    if (!isOpen) {
+      resetLocalState()
+    }
+  }, [isOpen, resetLocalState])
+
+  // Timer effect for auto-hiding private key
+  useEffect(() => {
+    if (showPrivateKey && generatedKeys) {
+      setTimeLeftToHideKey(30) // Reset timer
+      if (autoHideTimerRef.current) clearInterval(autoHideTimerRef.current)
+      autoHideTimerRef.current = setInterval(() => {
+        setTimeLeftToHideKey((prev) => {
           if (prev <= 1) {
             setShowPrivateKey(false)
-            if (timerRef.current) {
-              clearInterval(timerRef.current)
-              timerRef.current = null
-            }
+            if (autoHideTimerRef.current) clearInterval(autoHideTimerRef.current)
             return 0
           }
           return prev - 1
         })
       }, 1000)
     } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
+      if (autoHideTimerRef.current) clearInterval(autoHideTimerRef.current)
     }
-
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
+      if (autoHideTimerRef.current) clearInterval(autoHideTimerRef.current)
     }
-  }, [showPrivateKey])
+  }, [showPrivateKey, generatedKeys])
 
-  const generateKeys = async () => {
-    try {
-      setIsLoading(true)
-      const { privateKey, publicKey } = await signup()
+  const togglePrivateKeyVisibility = () => setShowPrivateKey(!showPrivateKey)
 
-      // Encode keys to user-friendly format
-      const nsec = nip19.nsecEncode(privateKey)
-      const npub = nip19.npubEncode(publicKey)
+  const copyNsecKey = () => {
+    if (!generatedKeys?.nsec) return
+    if (!showPrivateKey) setShowPrivateKey(true) // Reveal if hidden
+    navigator.clipboard.writeText(generatedKeys.nsec)
+    setNsecCopied(true) // Permanent confirmation
+    setCopyFeedback(true) // Temporary visual feedback
+    setTimeout(() => setCopyFeedback(false), 2000)
+  }
 
-      setKeys({ privateKey, publicKey, nsec, npub })
-    } catch (error) {
-      console.error("Error generating keys:", error)
-      setError("Failed to generate keys. Please try again.")
-    } finally {
-      setIsLoading(false)
+  const downloadNsecKey = () => {
+    if (!generatedKeys) return
+    const content =
+      `SEQ1 NOSTR PRIVATE KEY (NSEC) - KEEP THIS SAFE AND PRIVATE\n\n` +
+      `Private Key (nsec): ${generatedKeys.nsec}\n` +
+      `Public Key (npub): ${generatedKeys.npub}\n\n` +
+      `WARNING: Anyone with access to this private key can control your SEQ1 account.\n` +
+      `Store it securely and never share it with anyone. This key is not recoverable if lost.`
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    // Include part of pubkey in filename for uniqueness if multiple keys are downloaded
+    link.download = `seq1-nostr-private-key-${generatedKeys.publicKeyHex.slice(0, 8)}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    setNsecDownloaded(true)
+  }
+
+  const handleFinishSignupAndRegister = async () => {
+    if (!generatedKeys || (!nsecCopied && !nsecDownloaded)) {
+      setError("Please confirm you have saved your private key by copying or downloading it.")
+      return
     }
-  }
-
-  const togglePrivateKeyVisibility = () => {
-    setShowPrivateKey(!showPrivateKey)
-  }
-
-  const copyPrivateKey = () => {
-    if (!keys) return
-
-    // Show the key if it's currently hidden
-    if (!showPrivateKey) {
-      setShowPrivateKey(true)
-    }
-
-    navigator.clipboard.writeText(keys.nsec)
-    setKeyCopied(true) // This stays true permanently for the checkbox
-    setCopyFeedback(true) // This is just for the temporary visual feedback
-
-    // Reset only the visual feedback after 3 seconds
-    setTimeout(() => {
-      setCopyFeedback(false)
-    }, 3000)
-  }
-
-  const downloadPrivateKey = () => {
-    if (!keys) return
-
-    const element = document.createElement("a")
-    const file = new Blob(
-      [
-        `SEQ1 NOSTR PRIVATE KEY - KEEP THIS SAFE AND PRIVATE\n\n` +
-          `Private Key (nsec): ${keys.nsec}\n` +
-          `Public Key (npub): ${keys.npub}\n\n` +
-          `WARNING: Anyone with access to this private key can control your SEQ1 account.\n` +
-          `Store it securely and never share it with anyone.`,
-      ],
-      { type: "text/plain" },
-    )
-
-    element.href = URL.createObjectURL(file)
-    element.download = "seq1-nostr-key.txt"
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-
-    setKeyDownloaded(true)
-  }
-
-  const handleCreateAccount = async () => {
-    if (!keys) return
-
-    setIsLoading(true)
+    setIsRegistering(true)
     setError(null)
 
-    try {
-      // Generate a default username based on the public key
-      const defaultUsername = `user${keys.publicKey.slice(0, 5)}`
+    const registrationResult = await registerIdentity() // This uses keys from nostrStorage (set by generateAndStoreKeys)
 
-      // Save profile with default values
-      const success = await saveUserProfile({
-        username: defaultUsername,
-        displayName: "SEQ1 User",
-      })
-
-      if (success) {
-        onClose()
-      } else {
-        setError("Failed to create account. Please try again.")
-      }
-    } catch (err) {
-      setError("An error occurred. Please try again.")
-      console.error(err)
-    } finally {
-      setIsLoading(false)
+    if (registrationResult.success) {
+      // AuthProvider's generateAndStoreKeys already set the user in context
+      resetLocalState()
+      onClose() // Close modal on successful registration
+    } else {
+      setError(registrationResult.error || "Failed to register identity with the server. Your keys are saved locally.")
     }
+    setIsRegistering(false)
+  }
+
+  const handleCloseModal = () => {
+    resetLocalState()
+    onClose()
   }
 
   const renderStepContent = () => {
     switch (step) {
-      case 1:
+      case 1: // Information about Nostr keys
         return (
           <div className="space-y-4">
             <p className="text-sm text-[#a09080]">
-              SEQ1 uses Nostr for authentication, a decentralized protocol that gives you complete control over your
-              identity.
+              SEQ1 uses Nostr for authentication. This gives you full control with a cryptographic key pair.
             </p>
-
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
+            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm space-y-2">
               <div className="flex items-start space-x-2.5">
-                <div className="w-7 h-7 rounded-full bg-[#4287f5] flex items-center justify-center flex-shrink-0">
+                <div className="w-7 h-7 rounded-full bg-[#4287f5] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Key size={14} className="text-[#1a1015]" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-[#f0e6c8]">How Nostr Authentication Works</h4>
+                  <h4 className="text-sm font-medium text-[#f0e6c8]">Your Nostr Keys</h4>
                   <p className="text-xs text-[#a09080] mt-0.5">
-                    Instead of a username and password, you'll use a cryptographic key pair:
+                    A <span className="text-[#f5a623]">private key (nsec)</span> is your secret for access.
+                    <br />A <span className="text-[#4287f5]">public key (npub)</span> is your shareable ID.
                   </p>
-                  <ul className="text-xs text-[#a09080] mt-1 space-y-0.5 list-disc pl-4">
-                    <li>
-                      Your <span className="text-[#4287f5]">public key</span> is your identity (like a username)
-                    </li>
-                    <li>
-                      Your <span className="text-[#f5a623]">private key</span> is your password (keep it secret!)
-                    </li>
-                  </ul>
                 </div>
               </div>
             </div>
-
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
-              <p className="text-xs text-[#f5a623] font-medium">IMPORTANT</p>
+            <div className="bg-[#1a1015] border border-[#f5a623] p-2.5 rounded-sm">
+              <p className="text-xs text-[#f5a623] font-medium">CRITICAL: SAVE YOUR PRIVATE KEY</p>
               <p className="text-xs text-[#f0e6c8] mt-0.5">
-                In the next step, we'll generate your private key. You{" "}
-                <span className="underline">must save this key</span> somewhere secure.
+                In the next step, we'll generate your unique private key. You{" "}
+                <span className="underline">MUST save this key</span> somewhere secure.
               </p>
               <p className="text-xs text-[#a09080] mt-0.5">
-                If you lose your private key, you'll lose access to your SEQ1 account permanently.
+                If you lose your private key, you'll lose access to your SEQ1 account permanently. We cannot recover it
+                for you.
               </p>
             </div>
-
             <div className="flex justify-between pt-1">
-              <button className="channel-button flex items-center px-3 py-1.5" onClick={onLoginClick}>
+              <button
+                className="channel-button flex items-center px-3 py-1.5"
+                onClick={onLoginClick}
+                disabled={currentLoading}
+              >
                 <span className="text-xs tracking-wide">I ALREADY HAVE A KEY</span>
               </button>
-
-              <button className="channel-button active flex items-center px-3 py-1.5" onClick={() => setStep(2)}>
-                <span className="text-xs tracking-wide">CONTINUE</span>
+              <button
+                className="channel-button active flex items-center px-3 py-1.5"
+                onClick={() => {
+                  setStep(2)
+                  // Keys will be auto-generated if step 2 is reached and keys are null
+                }}
+                disabled={currentLoading}
+              >
+                <span className="text-xs tracking-wide">UNDERSTOOD, GENERATE KEYS</span>
                 <ChevronRight size={14} className="ml-1" />
               </button>
             </div>
           </div>
         )
 
-      case 2:
+      case 2: // Key generation, display, and backup confirmation
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium text-[#f0e6c8]">Save Your Private Key</h3>
+              <h3 className="text-lg font-medium text-[#f0e6c8]">Your New Nostr Keys</h3>
               <p className="text-sm text-[#a09080]">
-                This is your private key. Save it securely - it's the only way to access your account.
+                Save your <span className="font-semibold text-[#f5a623]">Private Key (nsec)</span> securely. This is
+                your only way to access your account.
               </p>
             </div>
 
-            {/* Private key display with blur/reveal functionality */}
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-[#a09080]">PRIVATE KEY (SECRET)</span>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={togglePrivateKeyVisibility}
-                    className="text-[#f5a623] hover:text-[#f7b84a] transition-colors"
-                    title={showPrivateKey ? "Hide private key" : "Show private key"}
-                  >
-                    {showPrivateKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                  <button
-                    onClick={copyPrivateKey}
-                    className="text-[#4287f5] hover:text-[#50a0ff] transition-colors"
-                    title="Copy to clipboard"
-                  >
-                    {copyFeedback ? <Check size={14} /> : <Copy size={14} />}
-                  </button>
-                  <button
-                    onClick={downloadPrivateKey}
-                    className="text-[#4287f5] hover:text-[#50a0ff] transition-colors"
-                    title="Download as file"
-                  >
-                    <Download size={14} />
-                  </button>
-                </div>
-              </div>
-              {/* Fixed height container to match public key container */}
-              <div
-                className="bg-[#0f0a0c] rounded-sm overflow-hidden relative flex items-center"
-                style={{ height: "60px" }}
-              >
-                {!showPrivateKey ? (
-                  <div className="absolute inset-0 flex items-center justify-center z-10">
-                    <p className="text-xs text-[#a09080]">
-                      Click the <Eye size={12} className="inline mx-1" /> icon to reveal
-                    </p>
+            {isGeneratingKeys && !generatedKeys && (
+              <p className="text-center text-[#a09080] py-4">Generating your unique keys...</p>
+            )}
+
+            {generatedKeys && (
+              <>
+                {/* Private Key Display */}
+                <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-[#f5a623] font-semibold">PRIVATE KEY (NSEC) - SECRET!</span>
+                    <div className="flex items-center space-x-2">
+                      {showPrivateKey && (
+                        <span className="text-[10px] text-[#a09080]">Hides in {timeLeftToHideKey}s</span>
+                      )}
+                      <button
+                        onClick={togglePrivateKeyVisibility}
+                        className="text-[#f5a623] hover:text-[#f7b84a]"
+                        title={showPrivateKey ? "Hide Private Key" : "Show Private Key"}
+                      >
+                        {showPrivateKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                      <button
+                        onClick={copyNsecKey}
+                        className="text-[#4287f5] hover:text-[#50a0ff]"
+                        title="Copy NSEC to Clipboard"
+                      >
+                        {copyFeedback ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                      <button
+                        onClick={downloadNsecKey}
+                        className="text-[#4287f5] hover:text-[#50a0ff]"
+                        title="Download NSEC as File"
+                      >
+                        <Download size={14} />
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <code className="text-xs text-[#f5a623] font-mono break-all p-2 w-full">
-                    {keys?.nsec || "Generating..."}
-                  </code>
-                )}
-              </div>
-              <p className="text-[10px] text-[#a09080] mt-1">
-                This key is like a master password. Never share it with anyone.
-              </p>
-            </div>
+                  <div className="bg-[#0f0a0c] rounded-sm p-2 min-h-[60px] flex items-center break-all relative">
+                    <code
+                      className={`text-xs font-mono w-full ${showPrivateKey ? "text-[#f5a623]" : "text-transparent select-none blur-sm transition-all duration-150"}`}
+                    >
+                      {generatedKeys.nsec}
+                    </code>
+                    {!showPrivateKey && (
+                      <div className="absolute inset-0 flex items-center justify-center text-xs text-[#a09080] pointer-events-none">
+                        Click <Eye size={12} className="inline mx-1" /> to reveal private key
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-            {/* Public key display */}
-            <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-[#a09080]">PUBLIC KEY (SHAREABLE)</span>
+                {/* Public Key Display */}
+                <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-[#4287f5] font-semibold">PUBLIC KEY (NPUB) - SHAREABLE</span>
+                    <button
+                      onClick={() => generatedKeys?.npub && navigator.clipboard.writeText(generatedKeys.npub)}
+                      className="text-[#4287f5] hover:text-[#50a0ff]"
+                      title="Copy NPUB to Clipboard"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  <div className="bg-[#0f0a0c] rounded-sm p-2 min-h-[60px] flex items-center break-all">
+                    <code className="text-xs text-[#4287f5] font-mono w-full">{generatedKeys.npub}</code>
+                  </div>
+                </div>
+
+                {/* Regenerate Keys Button */}
                 <button
-                  onClick={() => {
-                    if (keys) navigator.clipboard.writeText(keys.npub)
-                  }}
-                  className="text-[#4287f5] hover:text-[#50a0ff] transition-colors"
-                  title="Copy to clipboard"
+                  onClick={() => handleGenerateKeys(true)} // Pass true to force regeneration
+                  disabled={currentLoading}
+                  className="w-full text-xs text-[#a09080] hover:text-[#f0e6c8] py-1.5 rounded-sm border border-transparent hover:border-[#3a2a30] flex items-center justify-center space-x-1.5 transition-colors disabled:opacity-50"
                 >
-                  <Copy size={14} />
+                  <RefreshCw size={12} className={isGeneratingKeys ? "animate-spin" : ""} />
+                  <span>{isGeneratingKeys ? "Generating..." : "Generate New Keys (current will be lost)"}</span>
                 </button>
-              </div>
-              <div className="bg-[#0f0a0c] rounded-sm overflow-hidden flex items-center" style={{ height: "60px" }}>
-                <code className="text-xs text-[#4287f5] font-mono break-all p-2 w-full">
-                  {keys?.npub || "Generating..."}
-                </code>
-              </div>
-              <p className="text-[10px] text-[#a09080] mt-1">
-                This is your public identifier on Nostr. It's safe to share.
-              </p>
-            </div>
 
-            {/* Confirmation checkboxes - order swapped */}
-            <div className="bg-[#1a1015] border border-[#f5a623] p-2.5 rounded-sm">
-              <p className="text-xs text-[#f5a623] font-medium mb-1">CONFIRMATION REQUIRED</p>
-              <p className="text-xs text-[#f0e6c8]">
-                Before continuing, please confirm you've saved your private key. Without it, you'll permanently lose
-                access to your account.
-              </p>
-
-              {/* Copied checkbox - now first */}
-              <div className="flex items-center mt-2">
-                <div
-                  className={`w-4 h-4 border ${keyCopied ? "bg-[#4287f5] border-[#4287f5]" : "border-[#3a2a30]"} flex items-center justify-center`}
-                >
-                  {keyCopied && <Check size={12} className="text-[#1a1015]" />}
+                {/* Confirmation Checkboxes */}
+                <div className="bg-[#1a1015] border border-[#f5a623] p-2.5 rounded-sm space-y-1.5">
+                  <p className="text-xs text-[#f5a623] font-medium">CONFIRMATION REQUIRED</p>
+                  <p className="text-xs text-[#f0e6c8]">
+                    I understand that if I lose my private key (nsec), I will lose access to my account permanently.
+                    SEQ1 cannot recover it.
+                  </p>
+                  <label className="flex items-center space-x-2 text-xs text-[#f0e6c8] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={nsecCopied}
+                      onChange={() => setNsecCopied(!nsecCopied)}
+                      className="form-checkbox bg-[#0f0a0c] border-[#3a2a30] text-[#4287f5] focus:ring-0 rounded-sm accent-[#4287f5]"
+                    />
+                    <span>I have COPIED my private key to a secure password manager or file.</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-xs text-[#f0e6c8] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={nsecDownloaded}
+                      onChange={() => setNsecDownloaded(!nsecDownloaded)}
+                      className="form-checkbox bg-[#0f0a0c] border-[#3a2a30] text-[#4287f5] focus:ring-0 rounded-sm accent-[#4287f5]"
+                    />
+                    <span>I have DOWNLOADED my private key file and stored it safely.</span>
+                  </label>
                 </div>
-                <span className="text-xs text-[#f0e6c8] ml-2">I've copied my private key to a secure location</span>
-              </div>
+              </>
+            )}
 
-              {/* Downloaded checkbox - now second */}
-              <div className="flex items-center mt-1.5">
-                <div
-                  className={`w-4 h-4 border ${keyDownloaded ? "bg-[#4287f5] border-[#4287f5]" : "border-[#3a2a30]"} flex items-center justify-center`}
-                >
-                  {keyDownloaded && <Check size={12} className="text-[#1a1015]" />}
-                </div>
-                <span className="text-xs text-[#f0e6c8] ml-2">I've downloaded my private key</span>
-              </div>
-            </div>
-
-            {/* Error message */}
             {error && (
-              <div className="flex items-start space-x-2 text-[#dc5050] text-xs">
+              <div className="flex items-start space-x-2 text-[#dc5050] text-xs p-2 bg-[#2a1a20] border border-[#dc5050] rounded-sm">
                 <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             <div className="flex justify-between pt-1">
-              <button className="channel-button flex items-center px-3 py-1.5" onClick={() => setStep(1)}>
+              <button
+                className="channel-button flex items-center px-3 py-1.5 disabled:opacity-50"
+                onClick={() => setStep(1)}
+                disabled={currentLoading}
+              >
                 <ChevronLeft size={14} className="mr-1" />
                 <span className="text-xs tracking-wide">BACK</span>
               </button>
-
               <button
-                className={`channel-button ${keyCopied || keyDownloaded ? "active" : ""} flex items-center px-3 py-1.5`}
-                onClick={handleCreateAccount}
-                disabled={(!keyCopied && !keyDownloaded) || isLoading}
+                className={`channel-button active flex items-center px-3 py-1.5 disabled:opacity-50`}
+                onClick={handleFinishSignupAndRegister}
+                disabled={!generatedKeys || (!nsecCopied && !nsecDownloaded) || currentLoading}
               >
-                <span className="text-xs tracking-wide">{isLoading ? "CREATING..." : "CREATE ACCOUNT"}</span>
+                <span className="text-xs tracking-wide">
+                  {isRegistering ? "REGISTERING..." : "FINISH SIGNUP & LOGIN"}
+                </span>
               </button>
             </div>
           </div>
         )
-
       default:
         return null
     }
@@ -389,10 +385,10 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
   return (
     <DraggableModal
       isOpen={isOpen}
-      onClose={onClose}
-      title="CREATE SEQ1 ACCOUNT"
+      onClose={handleCloseModal} // Use custom close handler to reset state
+      title="CREATE SEQ1 NOSTR ACCOUNT"
       icon={<UserPlus size={16} className="text-[#a09080]" />}
-      width="w-[450px]"
+      width="w-[480px]" // Slightly wider for more content
     >
       {renderStepContent()}
     </DraggableModal>

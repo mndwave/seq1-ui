@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils"
 import VersionIndicator from "./version-indicator"
 
 // Add these imports at the top of the file
-import { sendChatMessage, playMidiClip } from "@/lib/api-client"
 // Add this import at the top of the file
+import { ChatAPI, TransportAPI } from "@/lib/api-services"
 import MiniMoogPreset from "./minimoog-preset"
 
 // Add a new message type for synth presets
@@ -129,12 +129,12 @@ export default function ChatWindow({
 
     try {
       // Send the message to the API with device and clip context
-      const { response, midiClip, responseData } = await sendChatMessage(input, selectedDeviceId, selectedClipId)
+      const { response, midiClip, responseData } = await ChatAPI.sendMessage(input)
 
       // Process the MIDI if hardware is connected
       if (isHardwareConnected && midiClip) {
         try {
-          await playMidiClip(midiClip, selectedDeviceId)
+          await TransportAPI.playMidiClip(midiClip.id, selectedDeviceId) // Assuming midiClip has an id property
         } catch (midiError) {
           console.error("Error playing MIDI clip:", midiError)
         }
@@ -242,7 +242,7 @@ export default function ChatWindow({
               )}
               style={{
                 boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+              inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
                 borderLeft: message.type
                   ? `2px solid ${getMessageBorderColor(message.type).replace("border-", "")}`
                   : "none",

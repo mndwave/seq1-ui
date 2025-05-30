@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { formatRelativeTime, type NostrNote } from "@/lib/nostr-utils"
+import { formatRelativeTime } from "@/lib/utils"
+import type { NostrNote } from "@/lib/nostr-utils"
 import { getMockNotes } from "@/lib/nostr-client"
 import ThinkingDots from "./thinking-dots"
 
@@ -79,7 +80,7 @@ export default function NostrFeed({ pubkey, onNotesLoaded }: NostrFeedProps) {
           className="max-w-3xl p-4 relative transition-all duration-300 bg-[#1a1015]"
           style={{
             boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                   inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+                 inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
           }}
         >
           <div className="flex items-center mb-2">
@@ -117,7 +118,7 @@ export default function NostrFeed({ pubkey, onNotesLoaded }: NostrFeedProps) {
           className="max-w-3xl p-4 relative transition-all duration-300 bg-[#1a1015] crt-flicker"
           style={{
             boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                   inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+                 inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
           }}
         >
           <p className="text-sm text-[#f0e6c8] mb-3">{error}</p>
@@ -147,7 +148,7 @@ export default function NostrFeed({ pubkey, onNotesLoaded }: NostrFeedProps) {
           className="max-w-3xl p-4 relative transition-all duration-300 bg-[#1a1015] crt-flicker"
           style={{
             boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                   inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+                 inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
           }}
         >
           <p className="text-sm text-[#f0e6c8]">No updates available at this time.</p>
@@ -172,7 +173,7 @@ export default function NostrFeed({ pubkey, onNotesLoaded }: NostrFeedProps) {
             className="max-w-3xl p-4 relative transition-all duration-300 bg-[#1a1015] border-l-2 border-[#f5a623]"
             style={{
               boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                     inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+                   inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
             }}
           >
             <p className="text-sm text-[#f5a623]">
@@ -192,7 +193,7 @@ export default function NostrFeed({ pubkey, onNotesLoaded }: NostrFeedProps) {
             className="max-w-3xl p-4 relative transition-all duration-300 bg-[#1a1015] crt-flicker"
             style={{
               boxShadow: `inset 0 0 0 1px rgba(240, 230, 200, 0.1), 
-                     inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
+                   inset 0 0 0 2px rgba(58, 42, 48, 0.8)`,
             }}
           >
             <p className="text-sm text-[#f0e6c8]">
