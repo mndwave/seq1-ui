@@ -11,59 +11,126 @@ function debugLog(...args: any[]) {
   }
 }
 
+// Types from the new document
+interface AnonymousSessionCreateResponse {
+  session_id: string
+  created_at: string // ISO Date string
+  expires_at: string // ISO Date string
+  time_remaining: number // seconds
+  usage_percentage: number
+  // ... any other fields returned
+}
+
+interface AnonymousSessionStatusResponse {
+  session_id: string
+  time_remaining: number // seconds
+  usage_percentage: number
+  is_expired: boolean
+  is_active: boolean
+  // ... any other fields
+}
+
+interface AnonymousSessionHeartbeatResponse {
+  session_id: string
+  used_time: number // seconds
+  time_remaining: number // seconds
+  usage_percentage: number
+  is_expired: boolean
+  // ... any other fields
+}
+
+interface ConvertToRegisteredUserResponse {
+  session_id: string
+  converted_to_npub: string
+  total_trial_time: number // seconds
+  preserved_data: any // or a more specific type
+  success: boolean
+  // ... any other fields
+}
+
+interface AuthTokenResponse {
+  token: string
+  // ... any other fields
+}
+
 export class SEQ1APIClient {
   baseURL: string
   token: string | null
   sessionId: string | null
-  sessionStartTime: string | null
-  SESSION_DURATION: number
+  sessionStartTime: string | null // Store actual start time from server if available, or client's perception
+  sessionExpiresAt: string | null // Store actual expiry time from server
+  SESSION_DURATION: number // Milliseconds
+
   private eventListeners: Record<string, ((data: any) => void)[]> = {}
 
-  constructor(baseURL: string = process.env.NEXT_PUBLIC_SEQ1_API_URL || "https://api.seq1.net") {
-    this.baseURL = baseURL
-    this.token = typeof window !== "undefined" ? localStorage.getItem("seq1_jwt_token") : null
-    this.sessionId = typeof window !== "undefined" ? localStorage.getItem("seq1_session_id") : null
-    this.sessionStartTime = typeof window !== "undefined" ? localStorage.getItem("seq1_session_start") : null
-    this.SESSION_DURATION = 3 * 60 * 60 * 1000 // 3 hours in ms
+  constructor() {
+    this.baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.seq1.net"
+    const trialDurationHours = Number.parseFloat(process.env.NEXT_PUBLIC_TRIAL_DURATION_HOURS || "3")
+    this.SESSION_DURATION = trialDurationHours * 60 * 60 * 1000 // Convert hours to ms
+
+    if (typeof window !== "undefined") {
+      this.token = localStorage.getItem("seq1_jwt_token")
+      this.sessionId = localStorage.getItem("seq1_anonymous_session_id") // Updated key name
+      this.sessionStartTime = localStorage.getItem("seq1_session_start_time")
+      this.sessionExpiresAt = localStorage.getItem("seq1_session_expires_at")
+    } else {
+      this.token = null
+      this.sessionId = null
+      this.sessionStartTime = null
+      this.sessionExpiresAt = null
+    }
   }
 
-  // Generic request method (direct)
+  // Generic request method (direct) - for calls directly to API base URL
   async directRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
     debugLog(`Making direct ${options.method || "GET"} request to ${url}`)
 
     const headers = new Headers(options.headers || {})
     if (!headers.has("Content-Type") && options.body && typeof options.body === "string") {
-      // Check if body is string for JSON
       headers.set("Content-Type", "application/json")
     }
 
     if (this.token) {
       headers.set("Authorization", `Bearer ${this.token}`)
-    } else if (this.sessionId) {
-      headers.set("X-Session-ID", this.sessionId)
+    } else if (this.sessionId && !endpoint.includes("/api/auth/nostr")) {
+      // Don't send session ID for auth token request
+      // Only add X-Session-ID if it's an anonymous session request, not for getting JWT
+      if (endpoint.startsWith("/api/sessions/anonymous") || endpoint.startsWith("/api/proxy")) {
+        headers.set("X-Session-ID", this.sessionId)
+      }
     }
 
     const response = await fetch(url, { ...options, headers })
 
     if (response.status === 401 && typeof window !== "undefined") {
-      this.clearToken()
+      this.clearToken() // Clear JWT
+      // Optionally clear session_id if 401 means anonymous session is also invalid
+      // this.clearAnonymousSessionDetails();
       window.dispatchEvent(new CustomEvent("seq1:auth:required", { detail: { message: "Authentication required" } }))
       this.emit("auth-required", { message: "Authentication required" })
-      throw { status: 401, message: "Authentication required" }
+      // Do not throw here if specific handlers in AuthContext will manage UI
     }
 
+    if (response.status === 410 && typeof window !== "undefined") {
+      // Trial expired
+      this.clearAnonymousSessionDetails()
+      window.dispatchEvent(new CustomEvent("seq1:trial:expired", { detail: { message: "Trial expired" } }))
+      this.emit("trial-expired", { message: "Trial expired" })
+    }
+
+    // 419 was previously used for session expiry, but 410 seems more specific for trial
     if (response.status === 419 && typeof window !== "undefined") {
-      this.clearSession()
+      this.clearAnonymousSessionDetails()
       window.dispatchEvent(new CustomEvent("seq1:session:expired", { detail: { message: "Session expired" } }))
       this.emit("session-expired", { message: "Session expired - please sign up to continue" })
-      throw { status: 419, message: "Session expired - please sign up to continue" }
     }
 
     if (!response.ok) {
       const errorData = await response
         .json()
         .catch(() => ({ message: `API request failed: ${response.status} ${response.statusText}` }))
+      // Include status in the thrown error object
       throw { status: response.status, ...errorData }
     }
 
@@ -71,7 +138,7 @@ export class SEQ1APIClient {
     return response.json()
   }
 
-  // Generic request method (proxied)
+  // Generic request method (proxied) - for calls via Next.js /api/proxy
   async proxiedRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const proxiedUrl = `/api/proxy${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
     debugLog(
@@ -80,83 +147,208 @@ export class SEQ1APIClient {
 
     const headers = new Headers(options.headers || {})
     if (!headers.has("Content-Type") && options.body && typeof options.body === "string") {
-      // Check if body is string for JSON
       headers.set("Content-Type", "application/json")
     }
-    // JWT token and Session ID will be added by the proxy if configured, or can be added here if proxy doesn't handle it.
-    // For now, assuming proxy might handle auth forwarding or these are added if needed.
+    // JWT token and Session ID are expected to be handled by the proxy or added by directRequest logic if it's called by proxy
 
     const response = await fetch(proxiedUrl, { ...options, headers })
 
+    // Error handling for 401/410/419 can also be centralized here if proxy returns these statuses directly
     if (response.status === 401 && typeof window !== "undefined") {
       this.clearToken()
-      window.dispatchEvent(new CustomEvent("seq1:auth:required", { detail: { message: "Authentication required" } }))
-      this.emit("auth-required", { message: "Authentication required" })
-      throw { status: 401, message: "Authentication required" }
+      window.dispatchEvent(
+        new CustomEvent("seq1:auth:required", { detail: { message: "Authentication required via proxy" } }),
+      )
+      this.emit("auth-required", { message: "Authentication required via proxy" })
+    }
+    if (response.status === 410 && typeof window !== "undefined") {
+      this.clearAnonymousSessionDetails()
+      window.dispatchEvent(new CustomEvent("seq1:trial:expired", { detail: { message: "Trial expired via proxy" } }))
+      this.emit("trial-expired", { message: "Trial expired via proxy" })
     }
     if (response.status === 419 && typeof window !== "undefined") {
-      this.clearSession()
-      window.dispatchEvent(new CustomEvent("seq1:session:expired", { detail: { message: "Session expired" } }))
-      this.emit("session-expired", { message: "Session expired - please sign up to continue" })
-      throw { status: 419, message: "Session expired - please sign up to continue" }
+      this.clearAnonymousSessionDetails()
+      window.dispatchEvent(
+        new CustomEvent("seq1:session:expired", { detail: { message: "Session expired via proxy" } }),
+      )
+      this.emit("session-expired", { message: "Session expired via proxy" })
     }
 
     if (!response.ok) {
       const errorData = await response
         .json()
-        .catch(() => ({ message: `API request failed: ${response.status} ${response.statusText}` }))
+        .catch(() => ({ message: `API request failed via proxy: ${response.status} ${response.statusText}` }))
       throw { status: response.status, ...errorData }
     }
     if (response.status === 204) return undefined as T
     return response.json()
   }
 
-  // Use proxiedRequest by default for client-side calls, directRequest for server-side or specific cases
+  // Default request method for general API calls (e.g., /api/clips, /api/devices)
+  // These should typically go through the proxy.
   async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    // In a real scenario, you might have logic to decide. For now, defaulting to proxied.
-    // If this apiClient is used server-side (e.g. in API routes), directRequest might be better.
     return this.proxiedRequest<T>(endpoint, options)
   }
 
-  async startAnonymousSession(): Promise<void> {
-    if (this.token || typeof window === "undefined") return
+  // --- Anonymous Session API Methods ---
+  async createAnonymousSession(): Promise<AnonymousSessionCreateResponse> {
+    if (typeof window === "undefined") throw new Error("Cannot create anonymous session on server.")
+    debugLog("Creating anonymous session.")
+    try {
+      const response = await this.directRequest<AnonymousSessionCreateResponse>("/api/sessions/anonymous/create", {
+        method: "POST",
+        body: JSON.stringify({
+          user_agent: navigator.userAgent,
+          ip_address: null, // Backend will detect
+          session_data: {
+            // Example session data, can be expanded
+            theme: localStorage.getItem("theme") || "dark",
+            client_app_version: process.env.NEXT_PUBLIC_APP_VERSION || "unknown",
+          },
+        }),
+      })
 
-    if (!this.sessionId || this.isSessionExpired()) {
-      debugLog("Starting/refreshing anonymous session.")
-      try {
-        // This call should be to your actual backend for setting up the initial session.
-        const { sessionId } = await this.directRequest<{ sessionId: string }>("/api/sessions/anonymous", {
-          method: "POST",
-        })
-
-        this.sessionId = sessionId
-        this.sessionStartTime = Date.now().toString()
-        localStorage.setItem("seq1_session_id", this.sessionId)
-        localStorage.setItem("seq1_session_start", this.sessionStartTime)
-        debugLog("Anonymous session started/refreshed:", this.sessionId)
-        this.emit("session-started", { sessionId: this.sessionId })
-      } catch (error) {
-        console.error("Failed to start anonymous session:", error)
-        this.emit("session-error", error)
-      }
+      this.sessionId = response.session_id
+      this.sessionStartTime = response.created_at // Use server's created_at as start time
+      this.sessionExpiresAt = response.expires_at
+      localStorage.setItem("seq1_anonymous_session_id", this.sessionId)
+      localStorage.setItem("seq1_session_start_time", this.sessionStartTime)
+      localStorage.setItem("seq1_session_expires_at", this.sessionExpiresAt)
+      debugLog("Anonymous session created:", response)
+      this.emit("anonymous-session-created", response)
+      return response
+    } catch (error) {
+      console.error("Failed to create anonymous session:", error)
+      this.emit("api-error", { context: "createAnonymousSession", error })
+      throw error
     }
   }
 
+  async getAnonymousSessionStatus(sessionId: string): Promise<AnonymousSessionStatusResponse> {
+    debugLog(`Getting status for anonymous session: ${sessionId}`)
+    try {
+      const response = await this.directRequest<AnonymousSessionStatusResponse>(`/api/sessions/anonymous/${sessionId}`)
+      this.emit("anonymous-session-status", response)
+      return response
+    } catch (error) {
+      console.error("Failed to get anonymous session status:", error)
+      this.emit("api-error", { context: "getAnonymousSessionStatus", error })
+      throw error
+    }
+  }
+
+  async updateAnonymousSessionHeartbeat(
+    sessionId: string,
+    activeTimeSeconds: number,
+    sessionData: Record<string, any> = {},
+  ): Promise<AnonymousSessionHeartbeatResponse> {
+    debugLog(`Updating heartbeat for anonymous session: ${sessionId}`)
+    try {
+      const response = await this.directRequest<AnonymousSessionHeartbeatResponse>(
+        `/api/sessions/anonymous/${sessionId}/heartbeat`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            active_time_seconds: activeTimeSeconds,
+            session_data: sessionData,
+          }),
+        },
+      )
+      // Update local expiry if server sends new one
+      if (response.time_remaining !== undefined && this.sessionStartTime) {
+        const newExpiresAt = new Date(
+          new Date(this.sessionStartTime).getTime() + response.time_remaining * 1000 + activeTimeSeconds * 1000,
+        ) // Approximate
+        this.sessionExpiresAt = newExpiresAt.toISOString()
+        localStorage.setItem("seq1_session_expires_at", this.sessionExpiresAt)
+      }
+      this.emit("anonymous-session-heartbeat", response)
+      return response
+    } catch (error) {
+      console.error("Failed to update anonymous session heartbeat:", error)
+      this.emit("api-error", { context: "updateAnonymousSessionHeartbeat", error })
+      throw error
+    }
+  }
+
+  async convertToRegisteredUser(sessionId: string, npub: string): Promise<ConvertToRegisteredUserResponse> {
+    debugLog(`Converting anonymous session ${sessionId} to registered user ${npub}`)
+    try {
+      const response = await this.directRequest<ConvertToRegisteredUserResponse>(
+        `/api/sessions/anonymous/${sessionId}/convert`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            npub: npub,
+            preserve_data: true,
+          }),
+        },
+      )
+      if (response.success) {
+        this.clearAnonymousSessionDetails() // Clear old anonymous session ID
+      }
+      this.emit("anonymous-session-converted", response)
+      return response
+    } catch (error) {
+      console.error("Failed to convert anonymous session:", error)
+      this.emit("api-error", { context: "convertToRegisteredUser", error })
+      throw error
+    }
+  }
+
+  // --- NOSTR Authentication API Method ---
+  async getAuthToken(npub: string): Promise<AuthTokenResponse> {
+    debugLog(`Getting auth token for npub: ${npub}`)
+    try {
+      // This request should NOT include the X-Session-ID header for anonymous sessions
+      const response = await this.directRequest<AuthTokenResponse>("/api/auth/nostr", {
+        method: "POST",
+        body: JSON.stringify({ npub }),
+      })
+      if (response.token) {
+        this.setToken(response.token)
+      }
+      this.emit("auth-token-received", response)
+      return response
+    } catch (error) {
+      console.error("Failed to get auth token:", error)
+      this.emit("api-error", { context: "getAuthToken", error })
+      throw error
+    }
+  }
+
+  // --- Session Helper Methods ---
   isSessionExpired(): boolean {
-    if (typeof window === "undefined" || !this.sessionStartTime) return true
-    return Date.now() - Number.parseInt(this.sessionStartTime, 10) > this.SESSION_DURATION
+    if (typeof window === "undefined") return true
+    if (this.token) return false // If JWT token exists, session is not "anonymous session" expired
+
+    if (!this.sessionExpiresAt) {
+      // If no explicit expiry, rely on SESSION_DURATION from client start
+      if (!this.sessionStartTime) return true // No start time, assume expired
+      return Date.now() - new Date(this.sessionStartTime).getTime() > this.SESSION_DURATION
+    }
+    return Date.now() > new Date(this.sessionExpiresAt).getTime()
   }
 
   getTimeRemaining(): number {
-    if (typeof window === "undefined" || !this.sessionStartTime) return 0
-    const elapsed = Date.now() - Number.parseInt(this.sessionStartTime, 10)
-    return Math.max(0, this.SESSION_DURATION - elapsed)
+    // Returns time remaining in milliseconds
+    if (typeof window === "undefined") return 0
+    if (this.token) return Number.POSITIVE_INFINITY // Authenticated users don't have a trial time limit
+
+    if (!this.sessionExpiresAt) {
+      if (!this.sessionStartTime) return 0
+      const elapsed = Date.now() - new Date(this.sessionStartTime).getTime()
+      return Math.max(0, this.SESSION_DURATION - elapsed)
+    }
+    return Math.max(0, new Date(this.sessionExpiresAt).getTime() - Date.now())
   }
 
   setToken(token: string): void {
     if (typeof window === "undefined") return
     this.token = token
     localStorage.setItem("seq1_jwt_token", token)
+    // When a token is set, anonymous session details are no longer primary
+    this.clearAnonymousSessionDetails(false) // false to not clear localStorage items if user might log out back to anonymous
     debugLog("JWT token set.")
     this.emit("token-set", { token })
   }
@@ -169,14 +361,19 @@ export class SEQ1APIClient {
     this.emit("token-cleared", {})
   }
 
-  clearSession(): void {
-    if (typeof window === "undefined") return
+  clearAnonymousSessionDetails(removeFromStorage = true): void {
+    if (typeof window === "undefined" && removeFromStorage) return
+
     this.sessionId = null
     this.sessionStartTime = null
-    localStorage.removeItem("seq1_session_id")
-    localStorage.removeItem("seq1_session_start")
-    debugLog("Anonymous session data cleared.")
-    this.emit("session-cleared", {})
+    this.sessionExpiresAt = null
+    if (removeFromStorage) {
+      localStorage.removeItem("seq1_anonymous_session_id")
+      localStorage.removeItem("seq1_session_start_time")
+      localStorage.removeItem("seq1_session_expires_at")
+    }
+    debugLog("Anonymous session details cleared from apiClient state.")
+    if (removeFromStorage) this.emit("anonymous-session-cleared", {})
   }
 
   // Basic event emitter
@@ -200,161 +397,92 @@ export class SEQ1APIClient {
 
 export const apiClient = new SEQ1APIClient()
 
-// --- Functions to satisfy the deployment error ---
-
-/**
- * Fetches the system status.
- * This now delegates to SystemAPI.getSystemStatus or SystemAPI.testApiConnectivity.
- */
+// --- Bridge Functions (Kept for compatibility, should eventually be phased out or updated) ---
 export async function getSystemStatus(): Promise<SystemStatus | { success: boolean; message: string; data?: any }> {
-  debugLog("Legacy getSystemStatus called, delegating to SystemAPI...")
-  // Option 1: Use testApiConnectivity if that's what TransportStatusIndicator uses
-  // return SystemAPI.testApiConnectivity();
-
-  // Option 2: Use a more generic getSystemStatus if available and it fits SystemStatus type
-  // For now, let's assume testApiConnectivity is preferred for a simple status check.
+  debugLog("Legacy getSystemStatus called, delegating to SystemAPI or /api/health...")
   try {
-    // Adapting to return a SystemStatus-like object or the test connectivity result
-    const result = await SystemAPI.testApiConnectivity()
+    // Prefer new /api/health endpoint if SystemAPI is not fully implemented for it yet
+    // return apiClient.directRequest<SystemStatus>("/api/health"); // Example
+    const result = await SystemAPI.testApiConnectivity() // Assumes this hits /api/health or similar
     if (result.success && result.data) {
-      // Attempt to map to SystemStatus if possible, otherwise return a simplified status
       return {
-        status: result.data.status || "online", // Assuming health-check returns a status field
-        version: result.data.version || "N/A", // Assuming health-check returns a version
-        message: result.message, // Include the message from testApiConnectivity
-        raw: result.data, // Include raw data for more context
-      } as SystemStatus // Cast, ensure your SystemStatus type matches
+        status: result.data.status || "online",
+        version: result.data.version || process.env.NEXT_PUBLIC_API_VERSION || "N/A",
+        message: result.message,
+        raw: result.data,
+      } as SystemStatus
     }
     return {
-      // Fallback if data is not as expected
       status: result.success ? "online" : "offline",
-      version: "N/A",
+      version: process.env.NEXT_PUBLIC_API_VERSION || "N/A",
       message: result.message,
     } as SystemStatus
   } catch (error: any) {
-    console.error("Error in getSystemStatus via SystemAPI:", error)
+    console.error("Error in getSystemStatus:", error)
     return {
       status: "error",
-      version: "N/A",
+      version: process.env.NEXT_PUBLIC_API_VERSION || "N/A",
       message: error.message || "Failed to get system status",
     } as SystemStatus
   }
 }
 
-/**
- * Checks the current session status.
- * This now delegates to authManager.checkAuthStatus() or checks apiClient properties.
- */
-export async function checkSession(): Promise<{ isAuthenticated: boolean; user: any | null; error?: string }> {
-  debugLog("Legacy checkSession called, delegating to authManager or apiClient state...")
+export async function checkSession(): Promise<{
+  isAuthenticated: boolean
+  user: any | null
+  error?: string
+  isAnonymous?: boolean
+  sessionId?: string | null
+}> {
+  debugLog("Legacy checkSession called...")
   if (typeof window === "undefined") {
-    return { isAuthenticated: false, user: null, error: "Session check unavailable server-side" }
+    return { isAuthenticated: false, user: null, error: "Session check unavailable server-side", isAnonymous: false }
   }
-  // Option 1: Use authManager (more comprehensive, involves async)
-  // try {
-  //   const authStatus = await authManager.checkAuthStatus();
-  //   return { isAuthenticated: authStatus.isAuthenticated, user: authStatus.user };
-  // } catch (error: any) {
-  //   return { isAuthenticated: false, user: null, error: error.message };
-  // }
-
-  // Option 2: Simpler check based on apiClient token/session (less comprehensive)
   if (apiClient.token) {
-    // Ideally, you'd verify the token or get user info associated with it
-    return { isAuthenticated: true, user: { npub: "User (JWT)" } } // Placeholder user
+    // Ideally, decode token to get user details or make a /me request
+    return { isAuthenticated: true, user: { npub: "User (JWT)" }, isAnonymous: false }
   }
   if (apiClient.sessionId && !apiClient.isSessionExpired()) {
-    return { isAuthenticated: false, user: { id: "Anonymous Session" } } // Indicate anonymous session
+    return {
+      isAuthenticated: false,
+      user: { id: apiClient.sessionId },
+      isAnonymous: true,
+      sessionId: apiClient.sessionId,
+    }
   }
-  return { isAuthenticated: false, user: null }
+  return { isAuthenticated: false, user: null, isAnonymous: false }
 }
 
-/**
- * Fetches the current transport state.
- * This now delegates to TransportAPI.getState().
- */
 export async function getTransportState(): Promise<TransportState> {
   debugLog("Legacy getTransportState called, delegating to TransportAPI.getState()...")
-  return TransportAPI.getState()
+  return TransportAPI.getState() // Assumes TransportAPI.getState() calls /api/transport/status or similar
 }
 
-/**
- * Fetches the public transport state.
- * This now delegates to TransportAPI.getPublicTransportState().
- */
 export async function getPublicTransportState(): Promise<Partial<TransportState>> {
   debugLog("Legacy getPublicTransportState called, delegating to TransportAPI.getPublicTransportState()...")
   return TransportAPI.getPublicTransportState()
 }
 
-// Legacy WebSocket creation, if still needed by any part of the old code.
-// Consider removing if SEQ1WebSocket from phase 03 is fully adopted.
+// Legacy WebSocket creation
 function wsDebugLog(...args: any[]) {
-  if (DEBUG) {
-    console.log("[Legacy WebSocket]", ...args)
-  }
+  if (DEBUG) console.log("[Legacy WebSocket]", ...args)
 }
 export function createWebSocket(onMessageCallback: (event: MessageEvent) => void): WebSocket {
+  // ... (Implementation from previous response, seems fine)
   if (typeof window === "undefined" || typeof WebSocket === "undefined") {
     wsDebugLog("WebSocket not supported in this environment.")
-    // Return a mock WebSocket that adheres to the interface but does nothing.
-    return {
-      CONNECTING: 0,
-      OPEN: 1,
-      CLOSING: 2,
-      CLOSED: 3,
-      readyState: 3, // CLOSED
-      binaryType: "blob",
-      bufferedAmount: 0,
-      extensions: "",
-      protocol: "",
-      url: "",
-      onopen: null,
-      onmessage: null,
-      onerror: null,
-      onclose: null,
-      close: () => wsDebugLog("Mock WS close called"),
-      send: (data: any) => wsDebugLog("Mock WS send called with:", data),
-      addEventListener: <K extends keyof WebSocketEventMap>(
-        type: K,
-        listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
-        options?: boolean | AddEventListenerOptions,
-      ): void => wsDebugLog(`Mock WS addEventListener for ${type} called`),
-      removeEventListener: <K extends keyof WebSocketEventMap>(
-        type: K,
-        listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
-        options?: boolean | EventListenerOptions,
-      ): void => wsDebugLog(`Mock WS removeEventListener for ${type} called`),
-      dispatchEvent: (event: Event): boolean => {
-        wsDebugLog("Mock WS dispatchEvent called with:", event)
-        return true
-      },
-    } as WebSocket
+    return { readyState: 3, close: () => {}, send: () => {} } as any
   }
-
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  // Assuming your WebSocket proxy is at /api/ws-proxy
   const wsProxyUrl = `${protocol}//${window.location.host}/api/ws-proxy`
   wsDebugLog("Creating legacy WebSocket connection to proxy:", wsProxyUrl)
-
   const socket = new WebSocket(wsProxyUrl)
-
-  socket.onopen = () => {
-    wsDebugLog("Legacy WebSocket connection established.")
-  }
-
+  socket.onopen = () => wsDebugLog("Legacy WebSocket connection established.")
   socket.onmessage = (event) => {
     wsDebugLog("Legacy WebSocket message received:", event.data)
-    onMessageCallback(event) // Call the provided callback
+    onMessageCallback(event)
   }
-
-  socket.onerror = (error) => {
-    wsDebugLog("Legacy WebSocket error:", error)
-  }
-
-  socket.onclose = (event) => {
-    wsDebugLog("Legacy WebSocket connection closed:", event.code, event.reason)
-  }
-
+  socket.onerror = (error) => wsDebugLog("Legacy WebSocket error:", error)
+  socket.onclose = (event) => wsDebugLog("Legacy WebSocket connection closed:", event.code, event.reason)
   return socket
 }
