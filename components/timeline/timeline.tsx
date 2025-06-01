@@ -523,7 +523,7 @@ export default function Timeline({
   return (
     <div
       className={cn(
-        "timeline-container bg-[#1a1015] border-t border-[#3a2a30] flex flex-col",
+        "timeline-container w-[800px] bg-[#1a1015] border-t border-[#3a2a30] flex flex-col",
         className,
         isDraggingTimeline ? "dragging-cursor" : "",
       )}

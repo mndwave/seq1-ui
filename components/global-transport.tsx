@@ -302,9 +302,6 @@ export default function GlobalTransport({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [onToggleEmptyDeviceRack])
 
-  const [bpmModalOpen, setBpmModalOpen] = useState(false)
-  const [timeSignatureModalOpen, setTimeSignatureModalOpen] = useState(false)
-
   return (
     <div className="h-16 border-b border-[#3a2a30] flex items-center px-4 bg-[#2a1a20] relative z-20" ref={modalRef}>
       <div className="flex-1 flex items-center justify-between relative z-10">
@@ -398,7 +395,7 @@ export default function GlobalTransport({
           {/* Update the BPM and time signature buttons to be disabled when hardware isn't connected */}
           <div className="ml-6 flex space-x-2">
             <button
-              onClick={() => setBpmModalOpen(true)}
+              onClick={() => openModal("bpm")}
               className={`segmented-display rounded-sm text-sm tracking-wide px-3 py-1 hover:bg-[#e0d6b8] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30] ${!isHardwareConnected ? "opacity-50 cursor-not-allowed" : ""}`}
               aria-label="Change BPM"
               disabled={!isHardwareConnected}
@@ -407,7 +404,7 @@ export default function GlobalTransport({
             </button>
 
             <button
-              onClick={() => setTimeSignatureModalOpen(true)}
+              onClick={() => openModal("timeSignature")}
               className={`segmented-display rounded-sm text-sm tracking-wide px-3 py-1 hover:bg-[#e0d6b8] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30] ${!isHardwareConnected ? "opacity-50 cursor-not-allowed" : ""}`}
               aria-label="Change Time Signature"
               disabled={!isHardwareConnected}
