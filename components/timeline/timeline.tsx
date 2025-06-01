@@ -102,6 +102,9 @@ export default function Timeline({
   const DEFAULT_SECTION_LENGTH = 4 // Default section length is 4 bars (in beats)
   const BEATS_PER_BAR = 4 // 4 beats per bar
   const DRAG_THRESHOLD = 1 // Minimum number of bars to move before considering it a drag
+  
+  // UI/UX CONVERGENCE FIX: Timeline Width Stability (800px fixed)
+  const TIMELINE_FIXED_WIDTH = 800 // Fixed width prevents jumping when content loads
 
   // Calculate actual bar width based on zoom level
   const BAR_WIDTH = BASE_BAR_WIDTH * zoomLevel
