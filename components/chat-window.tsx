@@ -311,7 +311,7 @@ export default function ChatWindow({
               className="relative flex items-center justify-center text-xs font-bold tracking-wide"
               style={{ textShadow: "0 1px 0 rgba(255, 255, 255, 0.4)" }}
             >
-              SEND <Send size={14} className="ml-1.5" />
+              TRANSMIT <Send size={14} className="ml-1.5" />
             </span>
 
             {/* Button press effect */}

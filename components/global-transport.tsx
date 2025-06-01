@@ -191,7 +191,7 @@ export default function GlobalTransport({
   /**
    * Handles project menu actions
    */
-  const handleMenuAction = (action: ProjectAction) => {
+  const handleMenuAction = (action: string) => {
     console.log(`Menu action triggered: ${action}`)
 
     switch (action) {
@@ -304,17 +304,10 @@ export default function GlobalTransport({
 
   return (
     <div className="h-16 border-b border-[#3a2a30] flex items-center px-4 bg-[#2a1a20] relative z-20" ref={modalRef}>
-      <div className="flex-1 flex items-center justify-between relative z-10">
+      <div className="flex-1 flex items-center justify-between">
         <div className="flex items-center">
-          {/* Logo container with explicit pointer-events and cursor styles */}
-          <div
-            className="mr-8 relative"
-            style={{
-              pointerEvents: "auto",
-              cursor: "default",
-            }}
-          >
-            {/* Ensure the AnimatedLogo component is using the skipAnimation prop correctly */}
+          {/* Logo container - simplified */}
+          <div className="mr-8 relative shrink-0">
             <AnimatedLogo
               className="seq1-logo-glow"
               onAnimationComplete={handleLogoAnimationComplete}
@@ -322,81 +315,62 @@ export default function GlobalTransport({
             />
           </div>
 
-          {/* Update the play and loop buttons to be disabled when hardware isn't connected */}
-          <div className="flex space-x-3">
-            {/* Play button - more tactile version */}
+          {/* Transport controls - simplified button structure */}
+          <div className="flex items-center gap-4 shrink-0">
+            {/* Play button - clean structure */}
             <button
               onClick={togglePlayback}
               className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none button-tactile",
+                "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none relative",
                 isPlaying
-                  ? "bg-[#1a1015] border border-[#3a2a30]"
+                  ? "bg-[#1a1015] border border-[#3a2a30] shadow-inner"
                   : "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]",
-                !isHardwareConnected ? "opacity-50 cursor-not-allowed" : "",
+                !isHardwareConnected && "opacity-50 cursor-not-allowed"
               )}
               aria-label={isPlaying ? "Pause" : "Play"}
-              aria-pressed={isPlaying}
               disabled={!isHardwareConnected}
             >
-              {/* Button inset effect when active */}
-              <div
-                className={cn(
-                  "absolute inset-0 rounded-full",
-                  isPlaying ? "bg-[#1a1015] border border-[#3a2a30] shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)]" : "",
-                )}
-              />
-
-              {/* Subtle glow effect when active */}
-              {isPlaying && (
-                <div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    boxShadow: "0 0 8px rgba(80, 220, 100, 0.4), inset 0 0 4px rgba(80, 220, 100, 0.3)",
-                    pointerEvents: "none",
-                    zIndex: 5,
-                  }}
-                />
-              )}
-
-              {/* Icon */}
               <Play
-                size={20}
+                size={18}
                 className={cn(
-                  "relative z-10 transition-all duration-300",
-                  isPlaying ? "text-[#50dc64] transform scale-[0.95] animate-play-pulse" : "text-gray-400",
+                  "transition-colors duration-200",
+                  isPlaying ? "text-[#50dc64]" : "text-gray-400"
                 )}
               />
             </button>
 
-            {/* Loop button - more tactile version */}
+            {/* Loop button - clean structure */}
             <button
               onClick={handleLoopToggle}
               className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 focus:outline-none button-tactile",
-                "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]",
-                !isHardwareConnected ? "opacity-50 cursor-not-allowed" : "",
+                "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none relative",
+                isLooping
+                  ? "bg-[#1a1015] border border-[#3a2a30] shadow-inner"
+                  : "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]",
+                !isHardwareConnected && "opacity-50 cursor-not-allowed"
               )}
               aria-label="Toggle Loop"
-              aria-pressed={isLooping}
               disabled={!isHardwareConnected}
             >
-              {/* Icon */}
               <Repeat
-                size={20}
+                size={18}
                 className={cn(
-                  "relative z-10 transition-colors duration-300",
-                  isLooping ? "text-[#4287f5] transform scale-[0.95]" : "text-gray-400",
+                  "transition-colors duration-200",
+                  isLooping ? "text-[#4287f5]" : "text-gray-400"
                 )}
               />
             </button>
           </div>
 
-          {/* Interactive BPM and time signature display */}
-          {/* Update the BPM and time signature buttons to be disabled when hardware isn't connected */}
-          <div className="ml-6 flex space-x-2">
+          {/* BPM and time signature - proper spacing */}
+          <div className="ml-8 flex items-center gap-3 shrink-0">
             <button
               onClick={() => openModal("bpm")}
-              className={`segmented-display rounded-sm text-sm tracking-wide px-3 py-1 hover:bg-[#e0d6b8] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30] ${!isHardwareConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={cn(
+                "segmented-display rounded-sm text-sm tracking-wide px-4 py-2 min-h-[44px] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30]",
+                "hover:bg-[#e0d6b8]",
+                !isHardwareConnected && "opacity-50 cursor-not-allowed"
+              )}
               aria-label="Change BPM"
               disabled={!isHardwareConnected}
             >
@@ -405,7 +379,11 @@ export default function GlobalTransport({
 
             <button
               onClick={() => openModal("timeSignature")}
-              className={`segmented-display rounded-sm text-sm tracking-wide px-3 py-1 hover:bg-[#e0d6b8] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30] ${!isHardwareConnected ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={cn(
+                "segmented-display rounded-sm text-sm tracking-wide px-4 py-2 min-h-[44px] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30]",
+                "hover:bg-[#e0d6b8]",
+                !isHardwareConnected && "opacity-50 cursor-not-allowed"
+              )}
               aria-label="Change Time Signature"
               disabled={!isHardwareConnected}
             >
@@ -414,30 +392,29 @@ export default function GlobalTransport({
           </div>
         </div>
 
-        {/* Right side controls: Undo/Redo and Project menu */}
-        <div className="flex items-center space-x-4">
-          {/* Undo/Redo buttons - just the icons that light up */}
-          <div className="flex items-center space-x-3 mr-1">
-            {/* Undo button - Bauhaus/brutalist style */}
+        {/* Right side controls - proper spacing and hit targets */}
+        <div className="flex items-center gap-6 shrink-0">
+          {/* Undo/Redo buttons - proper hit targets */}
+          <div className="flex items-center gap-4">
+            {/* Undo button - 44px minimum hit target */}
             <button
               onClick={handleUndo}
-              className="transition-all duration-300 p-1 focus:outline-none focus-visible:outline-none"
+              className={cn(
+                "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none rounded",
+                history.canUndo && isHardwareConnected 
+                  ? "text-[#4287f5] hover:bg-[#3a2a30]" 
+                  : "text-gray-400 opacity-50 cursor-not-allowed"
+              )}
               disabled={!history.canUndo || !isHardwareConnected}
               aria-label="Undo"
               title="Undo"
-              style={{ WebkitTapHighlightColor: "transparent" }}
             >
-              {/* Custom geometric undo icon */}
               <svg
                 width="20"
                 height="20"
                 viewBox="0 0 24 24"
                 fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className={cn(
-                  "transition-colors duration-300",
-                  history.canUndo && isHardwareConnected ? "text-[#4287f5]" : "text-gray-400 opacity-50",
-                )}
+                className="transition-colors duration-200"
               >
                 <path
                   d="M9 14L4 9L9 4"
@@ -456,26 +433,25 @@ export default function GlobalTransport({
               </svg>
             </button>
 
-            {/* Redo button - Bauhaus/brutalist style */}
+            {/* Redo button - 44px minimum hit target */}
             <button
               onClick={handleRedo}
-              className="transition-all duration-300 p-1 focus:outline-none focus-visible:outline-none"
+              className={cn(
+                "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none rounded",
+                history.canRedo && isHardwareConnected 
+                  ? "text-[#4287f5] hover:bg-[#3a2a30]" 
+                  : "text-gray-400 opacity-50 cursor-not-allowed"
+              )}
               disabled={!history.canRedo || !isHardwareConnected}
               aria-label="Redo"
               title="Redo"
-              style={{ WebkitTapHighlightColor: "transparent" }}
             >
-              {/* Custom geometric redo icon */}
               <svg
                 width="20"
                 height="20"
                 viewBox="0 0 24 24"
                 fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className={cn(
-                  "transition-colors duration-300",
-                  history.canRedo && isHardwareConnected ? "text-[#4287f5]" : "text-gray-400 opacity-50",
-                )}
+                className="transition-colors duration-200"
               >
                 <path
                   d="M15 14L20 9L15 4"
@@ -495,14 +471,14 @@ export default function GlobalTransport({
             </button>
           </div>
 
-          {/* Project menu button with save success indicator */}
-          <div className="flex items-center">
+          {/* Project menu container - clean spacing */}
+          <div className="flex items-center gap-3 relative">
             <MndwaveButton />
             <DirectProjectMenu onAction={handleMenuAction} />
 
-            {/* Save success indicator */}
+            {/* Save success indicator - positioned relative to container */}
             {projectState.showSaveSuccess && (
-              <div className="absolute -top-1 -right-1 bg-[#50dc64] rounded-full p-1 animate-fadeOut">
+              <div className="absolute -top-2 -right-2 bg-[#50dc64] rounded-full p-1.5 animate-fadeOut z-10">
                 <Check size={12} className="text-[#1a1015]" />
               </div>
             )}
