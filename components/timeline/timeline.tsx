@@ -103,9 +103,6 @@ export default function Timeline({
   const BEATS_PER_BAR = 4 // 4 beats per bar
   const DRAG_THRESHOLD = 1 // Minimum number of bars to move before considering it a drag
   
-  // UI/UX CONVERGENCE FIX: Timeline Width Stability (800px fixed)
-  const TIMELINE_FIXED_WIDTH = 800 // Fixed width prevents jumping when content loads
-
   // Calculate actual bar width based on zoom level
   const BAR_WIDTH = BASE_BAR_WIDTH * zoomLevel
 
@@ -124,23 +121,8 @@ export default function Timeline({
       } catch (err) {
         console.error("Failed to fetch timeline clips:", err)
         setError("Failed to load timeline data")
-        // Use mock data as fallback when API fails
-        setSections([
-          {
-            id: "mock-1",
-            name: "Demo Section 01",
-            start: 0,
-            length: 16,
-            color: "#FF5555",
-          },
-          {
-            id: "mock-2",
-            name: "Demo Section 02",
-            start: 16,
-            length: 16,
-            color: "#55FF55",
-          },
-        ])
+        // No fallback data - keep timeline empty if API fails
+        setSections([])
       } finally {
         setIsLoading(false)
       }
@@ -249,11 +231,13 @@ export default function Timeline({
         // Select the newly created section
         setSelectedSection(newSection.id)
 
-        // Reset the button animation
-        setAnimatingButtons({
-          ...animatingButtons,
-          "add-button": undefined,
+        // Reset the button animation and adding state
+        setAnimatingButtons((prev) => {
+          const newState = { ...prev }
+          delete newState["add-button"]
+          return newState
         })
+        setIsAddingSection(false)
 
         // Scroll to the new section
         setTimeout(() => {
@@ -263,11 +247,6 @@ export default function Timeline({
               DEFAULT_SECTION_LENGTH * barWidth
             timelineRef.current.scrollLeft = totalWidth - timelineRef.current.clientWidth + 50
           }
-
-          // Reset the adding state after animation completes
-          setTimeout(() => {
-            setIsAddingSection(false)
-          }, 200)
         }, 10)
       } catch (error) {
         console.error("Failed to create new section:", error)
@@ -526,7 +505,7 @@ export default function Timeline({
   return (
     <div
       className={cn(
-        "timeline-container w-[800px] bg-[#1a1015] border-t border-[#3a2a30] flex flex-col",
+        "timeline-container w-full bg-[#1a1015] border-t border-[#3a2a30] flex flex-col",
         className,
         isDraggingTimeline ? "dragging-cursor" : "",
       )}

@@ -18,15 +18,19 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
       width="w-96"
     >
       <div className="space-y-3">
-        <p className="text-sm text-[#f0e6c8]">
-          SEQ1 is a new type of DAW that connects to your hardware synths and drum machines, harnessing the power of AI
-          with human emotion.
-        </p>
+        <div className="text-sm text-[#f0e6c8]">
+          <p className="font-medium">SEQ1 v1.0</p>
+          <p className="text-xs text-[#a09080] mt-1">Precision instrument for sound design</p>
+        </div>
 
-        <p className="text-sm text-[#a09080]">
-          Adaptive and responsive to your creative direction, SEQ1 helps you create sequences, design patches, and
-          explore new musical territories.
-        </p>
+        <div className="text-xs text-[#a09080] leading-relaxed space-y-2">
+          <p>
+            Sovereign music creation through Nostr protocol.
+          </p>
+          <p>
+            Bitcoin-native. Hardware-first. Artist-owned.
+          </p>
+        </div>
       </div>
       <div className="mt-6 pt-4 border-t border-[#3a3a3a]">
         <div className="text-sm text-[#8fbc8f] mb-3">

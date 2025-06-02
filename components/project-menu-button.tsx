@@ -1,11 +1,11 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Menu, FilePlus, FolderOpen, Save, FileText, Upload, X, Info } from "lucide-react"
+import { Menu, FilePlus, FolderOpen, Save, FileText, Upload, X, Info, Share } from "lucide-react"
 import { useMenu } from "@/lib/menu-context"
 import AboutModal from "./about-modal"
 
-type ProjectAction = "new" | "open" | "save" | "saveAs" | "export" | "close"
+type ProjectAction = "new" | "open" | "save" | "saveAs" | "export" | "shareTrack" | "close"
 
 interface ProjectMenuButtonProps {
   onAction: (action: ProjectAction) => void
@@ -98,6 +98,17 @@ export default function ProjectMenuButton({ onAction }: ProjectMenuButtonProps) 
         },
         disabled: true,
         comingSoon: true,
+      },
+      {
+        id: "shareTrack",
+        label: "SHARE TRACK",
+        icon: <Share size={14} />,
+        action: () => {
+          onAction("shareTrack")
+          closeMenu()
+        },
+        disabled: false,
+        comingSoon: false,
         dividerAfter: true,
       },
       {
@@ -133,15 +144,17 @@ export default function ProjectMenuButton({ onAction }: ProjectMenuButtonProps) 
   }
 
   return (
-    <button
-      ref={buttonRef}
-      onClick={handleOpenMenu}
-      className={`channel-button flex items-center px-3 py-1.5 ${isMenuOpen ? "active" : ""}`}
-      style={{ position: "relative", zIndex: 100, pointerEvents: "auto" }}
-    >
-      <Menu size={14} className="mr-1.5" />
-      <span className="text-xs tracking-wide">PROJECT</span>
-    </button>
+    <>
+      <button
+        ref={buttonRef}
+        onClick={handleOpenMenu}
+        className={`channel-button flex items-center px-3 py-1.5 ${isMenuOpen ? "active" : ""}`}
+        style={{ position: "relative", zIndex: 100, pointerEvents: "auto" }}
+      >
+        <Menu size={14} className="mr-1.5" />
+        <span className="text-xs tracking-wide">PROJECT</span>
+      </button>
+      {showAboutModal && <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />}
+    </>
   )
-  showAboutModal && <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />
 }

@@ -9,9 +9,15 @@ interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
   onSignupClick: () => void
+  onAuthComplete?: () => void | Promise<void>  // Add optional auth completion callback
 }
 
-export default function LoginModal({ isOpen, onClose, onSignupClick }: LoginModalProps) {
+export default function LoginModal({ 
+  isOpen, 
+  onClose, 
+  onSignupClick,
+  onAuthComplete 
+}: LoginModalProps) {
   const { loginWithNsec, loginWithExtension, isLoading, isAuthenticated, user } = useAuth()
   const [nsecKey, setNsecKey] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +56,10 @@ export default function LoginModal({ isOpen, onClose, onSignupClick }: LoginModa
     if (result.success) {
       setNsecKey("")
       onClose()
+      // Call auth completion callback if provided
+      if (onAuthComplete) {
+        await onAuthComplete()
+      }
     } else {
       setError(result.error || "Login failed. Please check your NSEC key.")
     }
@@ -66,6 +76,10 @@ export default function LoginModal({ isOpen, onClose, onSignupClick }: LoginModa
     const result = await loginWithExtension()
     if (result.success) {
       onClose()
+      // Call auth completion callback if provided
+      if (onAuthComplete) {
+        await onAuthComplete()
+      }
     } else {
       setError(result.error || "Extension login failed.")
     }
@@ -127,52 +141,55 @@ export default function LoginModal({ isOpen, onClose, onSignupClick }: LoginModa
               <div className="flex-grow h-px bg-[#3a2a30]"></div>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label htmlFor="nsec-input" className="text-xs text-[#a09080] tracking-wide">
-                  NOSTR PRIVATE KEY (NSEC)
-                </label>
-                <div className="w-5 h-5 rounded-full bg-[#3a2a30] flex items-center justify-center">
-                  <Key size={12} className="text-[#a09080]" />
-                </div>
-              </div>
-              <input
-                id="nsec-input"
-                type="password"
-                value={nsecKey}
-                onChange={(e) => setNsecKey(e.target.value)}
-                placeholder="nsec1..."
-                className="w-full bg-[#1a1015] border border-[#3a2a30] rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4287f5] text-[#f0e6c8] tracking-wide"
-                disabled={currentLoading}
-              />
-              <p className="text-[10px] text-[#a09080] mt-1">
-                Paste your <span className="text-[#f0e6c8]">nsec</span> key. It should be kept secret.
+            <div className="space-y-4">
+              <p className="text-sm text-[#a09080]">
+                Enter your private key to access SEQ1.
               </p>
-            </div>
 
-            {error && (
-              <div className="flex items-start space-x-2 text-[#dc5050] text-xs p-2 bg-[#2a1a20] border border-[#dc5050] rounded-sm">
-                <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
-                <span>{error}</span>
+              <div className="space-y-2">
+                <label className="text-xs text-[#a09080] tracking-wide">PRIVATE KEY</label>
+                <input
+                  type="password"
+                  value={nsecKey}
+                  onChange={(e) => setNsecKey(e.target.value)}
+                  placeholder="nsec1..."
+                  className="w-full bg-[#1a1015] border border-[#3a2a30] rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4287f5] text-[#f0e6c8] tracking-wide font-mono"
+                />
               </div>
-            )}
 
-            <div className="flex justify-between pt-2">
-              <button
-                className="channel-button flex items-center px-3 py-1.5 disabled:opacity-50"
-                onClick={onSignupClick}
-                disabled={currentLoading}
-              >
-                <span className="text-xs tracking-wide">CREATE ACCOUNT</span>
-              </button>
+              {error && (
+                <div className="p-2 bg-red-900/20 border border-red-500/30 rounded-sm">
+                  <p className="text-xs text-red-400">{error}</p>
+                </div>
+              )}
 
-              <button
-                className="channel-button active flex items-center px-3 py-1.5 disabled:opacity-50"
-                onClick={handleNsecLogin}
-                disabled={currentLoading || !nsecKey.trim()}
-              >
-                <span className="text-xs tracking-wide">{isNsecLoading ? "LOGGING IN..." : "LOGIN WITH NSEC"}</span>
-              </button>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button className="channel-button flex items-center px-3 py-1.5" onClick={onClose}>
+                  <span className="text-xs tracking-wide">CANCEL</span>
+                </button>
+
+                <button
+                  className={`channel-button flex items-center px-3 py-1.5 ${
+                    nsecKey.trim() && !isLoading ? "active" : "opacity-50"
+                  }`}
+                  onClick={handleNsecLogin}
+                  disabled={!nsecKey.trim() || isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin mr-1.5">
+                        <LogIn size={14} />
+                      </div>
+                      <span className="text-xs tracking-wide">ACCESSING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogIn size={14} className="mr-1.5" />
+                      <span className="text-xs tracking-wide">ACCESS</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </>
         )}

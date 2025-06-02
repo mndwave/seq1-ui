@@ -14,17 +14,20 @@ import {
   LogOut,
   Info,
   User,
+  Brain,
 } from "lucide-react"
 // Assuming AuthManagerModal is your JWT/email-password auth modal component
 // For now, we'll use the existing AuthManager (Nostr) as a placeholder if not available.
 import AuthManagerModal from "./auth/auth-manager" // Placeholder, adjust if you have a specific JWT auth modal
 import AboutModal from "./about-modal"
 import AccountModal from "./account-modal"
+import ConsciousnessInterface from "./consciousness/consciousness-interface"
 import { authManager } from "@/lib/auth-manager"
 import { sessionManager } from "@/lib/session-manager"
 import { ProjectMenuHandlers } from "@/lib/project-menu-handlers"
 import { FREE_OPERATIONS, AUTH_REQUIRED_OPERATIONS } from "@/lib/project-menu-constants"
 import { useToast } from "@/hooks/use-toast"
+import { useConsciousnessAccess } from "@/hooks/use-consciousness-access"
 
 interface MenuItem {
   id: string
@@ -50,11 +53,13 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [showAboutModal, setShowAboutModal] = useState(false)
+  const [showConsciousnessInterface, setShowConsciousnessInterface] = useState(false)
 
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const { toast } = useToast()
+  const { hasAccess: hasConsciousnessAccess } = useConsciousnessAccess()
 
   const updateAuthState = useCallback(async () => {
     await authManager.checkAuthStatus()
@@ -113,7 +118,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const menuItems: MenuItem[] = [
     {
       id: "new",
-      label: "NEW PROJECT",
+      label: "NEW",
       icon: <FilePlus size={14} />,
       actionId: "new",
       disabled: false,
@@ -121,7 +126,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     },
     {
       id: "open",
-      label: "OPEN PROJECT",
+      label: "OPEN",
       icon: <FolderOpen size={14} />,
       actionId: "open",
       disabled: false,
@@ -131,7 +136,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     { id: "save", label: "SAVE", icon: <Save size={14} />, actionId: "save", disabled: false, comingSoon: false },
     {
       id: "saveAs",
-      label: "SAVE AS...",
+      label: "SAVE AS",
       icon: <FileText size={14} />,
       actionId: "saveAs",
       disabled: false,
@@ -140,7 +145,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     },
     {
       id: "export",
-      label: "EXPORT ALS",
+      label: "EXPORT",
       icon: <Upload size={14} />,
       actionId: "export",
       disabled: true,
@@ -148,7 +153,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     },
     {
       id: "import",
-      label: "IMPORT ALS",
+      label: "IMPORT",
       icon: <Download size={14} />,
       actionId: "import",
       disabled: true,
@@ -156,7 +161,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     },
     {
       id: "about",
-      label: "ABOUT SEQ1",
+      label: "ABOUT",
       icon: <Info size={14} />,
       actionId: "about",
       disabled: false,
@@ -165,6 +170,20 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     },
     ...(isJwtAuthenticated
       ? [
+          // Add consciousness interface for admin users
+          ...(hasConsciousnessAccess
+            ? [
+                {
+                  id: "consciousness",
+                  label: "CONSCIOUSNESS",
+                  icon: <Brain size={14} />,
+                  actionId: "consciousness",
+                  disabled: false,
+                  comingSoon: false,
+                  dividerBefore: true,
+                },
+              ]
+            : []),
           {
             id: "account",
             label: "ACCOUNT",
@@ -172,7 +191,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
             actionId: "account",
             disabled: false,
             comingSoon: false,
-            dividerBefore: true,
+            dividerBefore: hasConsciousnessAccess ? false : true, // Only add divider if consciousness not shown
           },
         ]
       : []),
@@ -216,6 +235,10 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
 
     if (actionId === "about") {
       setShowAboutModal(true)
+      return
+    }
+    if (actionId === "consciousness") {
+      setShowConsciousnessInterface(true)
       return
     }
     if (actionId === "account") {
@@ -320,7 +343,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       >
         <div className="p-2">
           {menuItems.map((item) =>
-            item.id === "account" ? null : (
+            item.id === "account" || item.id === "consciousness" ? null : (
               // Handled separately
               <React.Fragment key={item.id}>
                 {item.dividerBefore && <div className="border-t border-[#3a2a30] my-2"></div>}
@@ -343,6 +366,16 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
             ),
           )}
           <div className="border-t border-[#3a2a30] my-2"></div>
+          {isJwtAuthenticated && hasConsciousnessAccess && menuItems.find((item) => item.id === "consciousness") && (
+            <button
+              className="w-full text-left px-4 py-2 text-xs text-[#4287f5] hover:bg-[#3a2a30] flex items-center rounded-sm"
+              onClick={() => handleMenuActionClick("consciousness")}
+              role="menuitem"
+            >
+              <Brain size={14} className="mr-3 text-[#4287f5]" />
+              <span>CONSCIOUSNESS</span>
+            </button>
+          )}
           {isJwtAuthenticated && menuItems.find((item) => item.id === "account") && (
             <button
               className="w-full text-left px-4 py-2 text-xs text-[#4ade80] hover:bg-[#3a2a30] flex items-center rounded-sm"
@@ -404,6 +437,10 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       />
       <AccountModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} />
       {showAboutModal && <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />}
+      <ConsciousnessInterface 
+        isVisible={showConsciousnessInterface} 
+        onClose={() => setShowConsciousnessInterface(false)} 
+      />
     </div>
   )
 }

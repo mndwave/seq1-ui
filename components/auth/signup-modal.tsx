@@ -22,9 +22,10 @@ interface SignupModalProps {
   isOpen: boolean
   onClose: () => void
   onLoginClick: () => void
+  onAuthComplete?: () => void | Promise<void>  // Add optional auth completion callback
 }
 
-export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupModalProps) {
+export default function SignupModal({ isOpen, onClose, onLoginClick, onAuthComplete }: SignupModalProps) {
   const { generateAndStoreKeys, registerIdentity, isLoading: authIsLoading } = useAuth()
   const [step, setStep] = useState(1)
   const [generatedKeys, setGeneratedKeys] = useState<NostrKeypair | null>(null)
@@ -164,6 +165,10 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
       // AuthProvider's generateAndStoreKeys already set the user in context
       resetLocalState()
       onClose() // Close modal on successful registration
+      // Call auth completion callback if provided
+      if (onAuthComplete) {
+        await onAuthComplete()
+      }
     } else {
       setError(registrationResult.error || "Failed to register identity with the server. Your keys are saved locally.")
     }
@@ -181,7 +186,7 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
         return (
           <div className="space-y-4">
             <p className="text-sm text-[#a09080]">
-              SEQ1 uses Nostr for authentication. This gives you full control with a cryptographic key pair.
+              SEQ1 uses Nostr for sovereignty. Full control through cryptographic keys.
             </p>
             <div className="bg-[#1a1015] border border-[#3a2a30] p-2.5 rounded-sm space-y-2">
               <div className="flex items-start space-x-2.5">
@@ -189,10 +194,10 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
                   <Key size={14} className="text-[#1a1015]" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-[#f0e6c8]">Your Nostr Keys</h4>
+                  <h4 className="text-sm font-medium text-[#f0e6c8]">Your Keys</h4>
                   <p className="text-xs text-[#a09080] mt-0.5">
-                    A <span className="text-[#f5a623]">private key (nsec)</span> is your secret for access.
-                    <br />A <span className="text-[#4287f5]">public key (npub)</span> is your shareable ID.
+                    <span className="text-[#f5a623]">Private key (nsec)</span> — your access.
+                    <br /><span className="text-[#4287f5]">Public key (npub)</span> — your identity.
                   </p>
                 </div>
               </div>
@@ -200,12 +205,11 @@ export default function SignupModal({ isOpen, onClose, onLoginClick }: SignupMod
             <div className="bg-[#1a1015] border border-[#f5a623] p-2.5 rounded-sm">
               <p className="text-xs text-[#f5a623] font-medium">CRITICAL: SAVE YOUR PRIVATE KEY</p>
               <p className="text-xs text-[#f0e6c8] mt-0.5">
-                In the next step, we'll generate your unique private key. You{" "}
-                <span className="underline">MUST save this key</span> somewhere secure.
+                We'll generate your unique private key. You{" "}
+                <span className="underline">must save this key</span> securely.
               </p>
               <p className="text-xs text-[#a09080] mt-0.5">
-                If you lose your private key, you'll lose access to your SEQ1 account permanently. We cannot recover it
-                for you.
+                Loss means permanent account loss. We cannot recover it.
               </p>
             </div>
             <div className="flex justify-between pt-1">

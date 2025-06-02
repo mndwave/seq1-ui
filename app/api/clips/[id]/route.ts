@@ -3,12 +3,11 @@ import type { TimelineClip } from "@/lib/timeline-clip-schema"
 
 // Reference to the in-memory store (would be a database query in production)
 // This is just for the example - in a real app, you'd use a proper database
-declare global {
-  var timelineClips: TimelineClip[]
-}
+let timelineClips: TimelineClip[] = []
 
-if (!global.timelineClips) {
-  global.timelineClips = []
+// Initialize if needed (this would be done differently in production)
+if (!timelineClips.length) {
+  timelineClips = []
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -17,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const updates = await request.json()
 
     // Find the clip
-    const clipIndex = global.timelineClips.findIndex((clip) => clip.id === id)
+    const clipIndex = timelineClips.findIndex((clip) => clip.id === id)
 
     if (clipIndex === -1) {
       return NextResponse.json({ error: "Clip not found" }, { status: 404 })
@@ -25,11 +24,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // Update the clip
     const updatedClip = {
-      ...global.timelineClips[clipIndex],
+      ...timelineClips[clipIndex],
       ...updates,
     }
 
-    global.timelineClips[clipIndex] = updatedClip
+    timelineClips[clipIndex] = updatedClip
 
     return NextResponse.json(updatedClip)
   } catch (error) {
@@ -43,10 +42,10 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const { id } = params
 
     // Find and remove the clip
-    const initialLength = global.timelineClips.length
-    global.timelineClips = global.timelineClips.filter((clip) => clip.id !== id)
+    const initialLength = timelineClips.length
+    timelineClips = timelineClips.filter((clip) => clip.id !== id)
 
-    if (global.timelineClips.length === initialLength) {
+    if (timelineClips.length === initialLength) {
       return NextResponse.json({ error: "Clip not found" }, { status: 404 })
     }
 

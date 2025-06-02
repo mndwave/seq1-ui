@@ -11,6 +11,7 @@ import BpmModal from "./bpm-modal"
 import TimeSignatureModal from "./time-signature-modal"
 import NewProjectModal from "./new-project-modal"
 import CloseProjectModal from "./close-project-modal"
+import ShareTrackModal from "./share-track-modal"
 import AnimatedLogo from "./animated-logo"
 import DirectProjectMenu from "./direct-project-menu"
 import type { ProjectAction } from "@/lib/types"
@@ -57,6 +58,7 @@ export default function GlobalTransport({
     timeSignature: false,
     newProject: false,
     closeProject: false,
+    shareTrack: false,
   })
 
   // History state for undo/redo
@@ -162,6 +164,7 @@ export default function GlobalTransport({
       timeSignature: false,
       newProject: false,
       closeProject: false,
+      shareTrack: false,
     })
   }
 
@@ -181,6 +184,7 @@ export default function GlobalTransport({
       timeSignature: false,
       newProject: false,
       closeProject: false,
+      shareTrack: false,
     }
 
     // Then open the requested one
@@ -215,6 +219,9 @@ export default function GlobalTransport({
         break
       case "export":
         openModal("export")
+        break
+      case "shareTrack":
+        openModal("shareTrack")
         break
       case "close":
         openModal("closeProject")
@@ -266,7 +273,7 @@ export default function GlobalTransport({
    * Handles undo action
    */
   const handleUndo = () => {
-    if (!history.canUndo || !isHardwareConnected) return
+    if (!history.canUndo) return
 
     // In a real implementation, this would perform the actual undo
     console.log("Undo action")
@@ -279,7 +286,7 @@ export default function GlobalTransport({
    * Handles redo action
    */
   const handleRedo = () => {
-    if (!history.canRedo || !isHardwareConnected) return
+    if (!history.canRedo) return
 
     // In a real implementation, this would perform the actual redo
     console.log("Redo action")
@@ -324,11 +331,9 @@ export default function GlobalTransport({
                 "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none relative",
                 isPlaying
                   ? "bg-[#1a1015] border border-[#3a2a30] shadow-inner"
-                  : "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]",
-                !isHardwareConnected && "opacity-50 cursor-not-allowed"
+                  : "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]"
               )}
               aria-label={isPlaying ? "Pause" : "Play"}
-              disabled={!isHardwareConnected}
             >
               <Play
                 size={18}
@@ -346,11 +351,9 @@ export default function GlobalTransport({
                 "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none relative",
                 isLooping
                   ? "bg-[#1a1015] border border-[#3a2a30] shadow-inner"
-                  : "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]",
-                !isHardwareConnected && "opacity-50 cursor-not-allowed"
+                  : "bg-[#2a1a20] hover:bg-[#3a2a30] border border-[#3a2a30]"
               )}
               aria-label="Toggle Loop"
-              disabled={!isHardwareConnected}
             >
               <Repeat
                 size={18}
@@ -368,11 +371,9 @@ export default function GlobalTransport({
               onClick={() => openModal("bpm")}
               className={cn(
                 "segmented-display rounded-sm text-sm tracking-wide px-4 py-2 min-h-[44px] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30]",
-                "hover:bg-[#e0d6b8]",
-                !isHardwareConnected && "opacity-50 cursor-not-allowed"
+                "hover:bg-[#e0d6b8]"
               )}
               aria-label="Change BPM"
-              disabled={!isHardwareConnected}
             >
               <span className="text-[#2a1a20]">{bpm} BPM</span>
             </button>
@@ -381,11 +382,9 @@ export default function GlobalTransport({
               onClick={() => openModal("timeSignature")}
               className={cn(
                 "segmented-display rounded-sm text-sm tracking-wide px-4 py-2 min-h-[44px] transition-colors duration-200 focus:outline-none focus:ring-1 focus:ring-[#3a2a30]",
-                "hover:bg-[#e0d6b8]",
-                !isHardwareConnected && "opacity-50 cursor-not-allowed"
+                "hover:bg-[#e0d6b8]"
               )}
               aria-label="Change Time Signature"
-              disabled={!isHardwareConnected}
             >
               <span className="text-[#2a1a20]">{timeSignature}</span>
             </button>
@@ -401,11 +400,11 @@ export default function GlobalTransport({
               onClick={handleUndo}
               className={cn(
                 "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none rounded",
-                history.canUndo && isHardwareConnected 
+                history.canUndo 
                   ? "text-[#4287f5] hover:bg-[#3a2a30]" 
                   : "text-gray-400 opacity-50 cursor-not-allowed"
               )}
-              disabled={!history.canUndo || !isHardwareConnected}
+              disabled={!history.canUndo}
               aria-label="Undo"
               title="Undo"
             >
@@ -438,11 +437,11 @@ export default function GlobalTransport({
               onClick={handleRedo}
               className={cn(
                 "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none rounded",
-                history.canRedo && isHardwareConnected 
+                history.canRedo 
                   ? "text-[#4287f5] hover:bg-[#3a2a30]" 
                   : "text-gray-400 opacity-50 cursor-not-allowed"
               )}
-              disabled={!history.canRedo || !isHardwareConnected}
+              disabled={!history.canRedo}
               aria-label="Redo"
               title="Redo"
             >
@@ -505,6 +504,7 @@ export default function GlobalTransport({
       />
       <NewProjectModal isOpen={modals.newProject} onClose={closeAllModals} />
       <CloseProjectModal isOpen={modals.closeProject} onClose={closeAllModals} />
+      <ShareTrackModal isOpen={modals.shareTrack} onClose={closeAllModals} />
     </div>
   )
 }

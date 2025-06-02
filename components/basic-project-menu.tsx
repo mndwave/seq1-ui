@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Menu, FilePlus, FolderOpen, Save, FileText, Upload, Download } from "lucide-react"
+import { Menu, FilePlus, FolderOpen, Save, FileText, Upload, Download, Share } from "lucide-react"
 
 interface BasicProjectMenuProps {
   onAction: (action: string) => void
@@ -114,6 +114,15 @@ export default function BasicProjectMenu({ onAction }: BasicProjectMenuProps) {
               <Upload size={14} className="mr-3 text-[#a09080] opacity-50" />
               <span className="text-[#a09080]">EXPORT ALS</span>
             </div>
+
+            {/* SHARE TRACK - enabled */}
+            <button
+              onClick={() => handleClick("shareTrack")}
+              className="w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm relative group"
+            >
+              <Share size={14} className="mr-3 text-[#a09080]" />
+              <span>SHARE TRACK</span>
+            </button>
 
             {/* IMPORT ALS - disabled */}
             <div className="w-full text-left px-4 py-2 text-xs flex items-center rounded-sm relative group">

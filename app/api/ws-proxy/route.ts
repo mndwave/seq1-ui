@@ -33,6 +33,7 @@ export async function GET(request: Request) {
 
   try {
     const { socket, response } = await new Promise<any>((resolve) => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore - This is a hack to get the WebSocket working in Edge Runtime
       const { socket, response } = upgradeWebSocket(request)
       resolve({ socket, response })

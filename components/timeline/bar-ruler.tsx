@@ -66,8 +66,11 @@ export default function BarRuler({
   // State to track completed loop region for persistence
   const [completedLoopRegion, setCompletedLoopRegion] = useState<LoopRegion | null>(null)
 
-  // Ensure we have a minimum width that's large enough
-  const minWidth = totalBars * barWidth
+  // Ensure we have a minimum width that's large enough for full viewport
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200
+  const minBarsForViewport = Math.ceil(viewportWidth / barWidth) + 10 // Extra bars for scrolling
+  const effectiveTotalBars = Math.max(totalBars, minBarsForViewport)
+  const minWidth = effectiveTotalBars * barWidth
 
   // Use the larger of calculated width or minimum width
   const effectiveWidth = Math.max(totalWidth, minWidth)
@@ -396,8 +399,8 @@ export default function BarRuler({
           height: "calc(100% - 1px)", // Leave space for the border at the bottom
         }}
       >
-        {/* Force render all bars up to totalBars */}
-        {Array.from({ length: totalBars }).map((_, i) => {
+        {/* Force render all bars up to effectiveTotalBars */}
+        {Array.from({ length: effectiveTotalBars }).map((_, i) => {
           // Show numbers for every 4th bar (1, 5, 9, 13, etc.)
           const showNumber = i === 0 || (i + 1) % 4 === 1
 

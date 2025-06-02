@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 
 // Reference to the in-memory store
 declare global {
+  // eslint-disable-next-line no-var
   var transportState: {
     playheadPosition: number
     isPlaying: boolean

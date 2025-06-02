@@ -81,6 +81,12 @@ export default function ChatWindow({
     e.preventDefault()
     if (!input.trim()) return
 
+    // Store the current input before clearing it
+    const currentInput = input.trim()
+    
+    // Clear the input immediately for responsive UI
+    setInput("")
+
     // Check if both device and clip are selected
     if (!selectedDeviceId || !selectedClipId) {
       // Show a temporary error message in the chat
@@ -90,24 +96,23 @@ export default function ChatWindow({
         sender: "assistant",
         type: "config",
       }
-      setMessages([...messages, errorMessage])
+      setMessages(prev => [...prev, errorMessage])
       return
     }
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content: currentInput,
       sender: "user",
     }
 
-    setMessages([...messages, newMessage])
-    setInput("")
+    setMessages(prev => [...prev, newMessage])
 
     // Simulate AI thinking
     setIsThinking(true)
 
     // Check if the user is requesting a synth preset
-    if (input.toLowerCase().includes("synth-preset") || input.toLowerCase().includes("synth preset")) {
+    if (currentInput.toLowerCase().includes("synth-preset") || currentInput.toLowerCase().includes("synth preset")) {
       // Wait a moment to simulate processing
       setTimeout(() => {
         setIsThinking(false)
@@ -121,51 +126,27 @@ export default function ChatWindow({
           presetName: "70s Violin Lead",
         }
 
-        setMessages((prev) => [...prev, presetMessage])
+        setMessages(prev => [...prev, presetMessage])
       }, 1500)
 
       return
     }
 
     try {
-      // Send the message to the API with device and clip context
-      const { response, midiClip, responseData } = await ChatAPI.sendMessage(input)
-
-      // Process the MIDI if hardware is connected
-      if (isHardwareConnected && midiClip) {
-        try {
-          await TransportAPI.playMidiClip(midiClip.id, selectedDeviceId) // Assuming midiClip has an id property
-        } catch (midiError) {
-          console.error("Error playing MIDI clip:", midiError)
-        }
-      }
+      // Send the message to the API
+      const response = await ChatAPI.sendMessage(currentInput)
 
       // Add the response to the chat
       setIsThinking(false)
       const responseMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
+        id: response.id || (Date.now() + 1).toString(),
+        content: response.content,
         sender: "assistant",
         type: "patch", // You might want to determine this based on the response
       }
 
-      setMessages((prev) => [...prev, responseMessage])
+      setMessages(prev => [...prev, responseMessage])
 
-      // Inside your handleSubmit function or wherever you process API responses
-
-      // When receiving a synth preset from the API
-      if (responseData?.type === "synth-preset" && responseData.preset) {
-        // The preset data comes from the API as a SynthPresetSchema object
-        const presetMessage: Message = {
-          id: Date.now().toString(),
-          content: "Here's a synth preset for your device:",
-          sender: "assistant",
-          type: "synth-preset",
-          presetData: responseData.preset, // Store the preset data in the message
-        }
-
-        setMessages((prev) => [...prev, presetMessage])
-      }
     } catch (error) {
       console.error("Error processing chat:", error)
       setIsThinking(false)
@@ -177,7 +158,7 @@ export default function ChatWindow({
         sender: "assistant",
       }
 
-      setMessages((prev) => [...prev, errorMessage])
+      setMessages(prev => [...prev, errorMessage])
     }
   }
 
@@ -290,7 +271,7 @@ export default function ChatWindow({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="TYPE A COMMAND OR MESSAGE..."
+            placeholder="COMPOSE OR COMMAND..."
             className="flex-1 bg-[#1a1015] border border-[#3a2a30] rounded-sm px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#4287f5] text-[#f0e6c8] tracking-wide transition-all duration-200 focus:border-[#4287f5]"
           />
           <button

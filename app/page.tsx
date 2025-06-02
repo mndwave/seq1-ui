@@ -5,7 +5,6 @@ import DeviceRack from "@/components/device-rack"
 import GlobalTransport from "@/components/global-transport"
 import ChatWindow from "@/components/chat-window"
 import SmallScreenMessage from "@/components/small-screen-message"
-import EarlyAccessAnnouncement from "@/components/early-access-announcement"
 import AppLoader from "@/components/app-loader"
 import TimelineContainer from "@/components/timeline/timeline-container"
 
@@ -16,8 +15,6 @@ export default function Home() {
   const [isSmallScreen, setIsSmallScreen] = useState(false)
   // Track if hardware is connected - this would be determined by your MIDI state in a real implementation
   const [isHardwareConnected, setIsHardwareConnected] = useState(false) // Changed to false - will be set by API
-  // State for the early access announcement
-  const [showAnnouncement, setShowAnnouncement] = useState(true)
   // State to track if the app is mounted
   const [isMounted, setIsMounted] = useState(false)
   // State to track if timeline is visible
@@ -54,12 +51,7 @@ export default function Home() {
   }
 
   if (isSmallScreen) {
-    return (
-      <>
-        <SmallScreenMessage />
-        <EarlyAccessAnnouncement isOpen={showAnnouncement} onClose={() => setShowAnnouncement(false)} />
-      </>
-    )
+    return <SmallScreenMessage />
   }
 
   return (
@@ -94,9 +86,6 @@ export default function Home() {
               onLoopChange={setIsLooping}
             />
           )}
-
-          {/* Early Access Announcement - visible on all screen sizes */}
-          <EarlyAccessAnnouncement isOpen={showAnnouncement} onClose={() => setShowAnnouncement(false)} />
         </main>
       </div>
     </>

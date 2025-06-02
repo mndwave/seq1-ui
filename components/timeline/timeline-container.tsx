@@ -23,12 +23,12 @@ const createContentAPI = (
 ) => {
   return {
     // Add a clip at the specified position with default settings
-    addClip: (startBar: number, lengthInBars = 4, name?: string) => {
+    addClip: (startBar: number, lengthInBars = 4, name?: string, color?: string) => {
       const clipId = `clip-${Date.now()}`
       const clipName = name || `Clip ${String(nextClipNumber.current).padStart(2, "0")}` // Use nextClipNumber
       nextClipNumber.current++ // Increment the clip number
 
-      // Generate a random color from a set of vibrant options
+      // Use provided color or generate a random one from a set of vibrant options
       const colors = [
         "#FF5E5B",
         "#D8D8F6",
@@ -41,14 +41,14 @@ const createContentAPI = (
         "#6DECAF",
         "#E84855",
       ]
-      const color = colors[Math.floor(Math.random() * colors.length)]
+      const finalColor = color || colors[Math.floor(Math.random() * colors.length)]
 
       const newClip: TimelineClip = {
         id: clipId,
         name: clipName,
         start: startBar * 4, // Convert bars to beats (assuming 4 beats per bar)
         length: lengthInBars * 4, // Convert bars to beats
-        color: color,
+        color: finalColor,
       }
 
       setSections((prev) => [...prev, newClip])
@@ -56,17 +56,15 @@ const createContentAPI = (
       return clipId
     },
 
-    // Add a default demo clip at bar 1
+    // Deprecated: No longer adds demo content - API-driven only
     addDefaultClip: () => {
-      return createContentAPI(setSections, setLoopRegion, setIsLooping, nextClipNumber).addClip(0, 4, "Clip 01")
+      console.warn("addDefaultClip is deprecated - timeline is now API-driven only")
+      return ""
     },
 
-    // Set a demo loop from bar 1 to 5
+    // Deprecated: No longer sets demo loops - API-driven only  
     setDemoLoop: () => {
-      const demoLoop: LoopRegion = { startBar: 0, endBar: 4 }
-      setLoopRegion(demoLoop)
-      setIsLooping(true)
-      console.log("Set demo loop from bar 1 to 5")
+      console.warn("setDemoLoop is deprecated - timeline is now API-driven only")
     },
 
     // Clear all content
@@ -87,11 +85,8 @@ export default function TimelineContainer({
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [initialSections, setInitialSections] = useState<TimelineClip[]>([])
   const [loopRegion, setLoopRegion] = useState<LoopRegion | null>(null)
-  const [isLooping, setIsLooping] = useState(true)
+  const [isLooping, setIsLooping] = useState(false)
   const [sections, setSections] = useState<TimelineClip[]>([])
-
-  // Track if demo content has been initialized
-  const demoInitialized = useRef(false)
 
   // Track the next clip number
   const nextClipNumber = useRef(1) // Initialize to 1
@@ -102,25 +97,28 @@ export default function TimelineContainer({
     [setSections, setLoopRegion, setIsLooping],
   )
 
-  // Initialize demo content on load
+  // Initialize timeline content from API only - no demo data
   useEffect(() => {
-    // Only initialize once
-    if (demoInitialized.current) return
+    const fetchTimelineData = async () => {
+      try {
+        // Fetch clips from API
+        const response = await fetch('/api/timeline/clips')
+        if (response.ok) {
+          const clips = await response.json()
+          setSections(clips)
+        } else {
+          // If API fails, keep timeline empty (no fallback demo data)
+          setSections([])
+        }
+      } catch (error) {
+        console.error("Failed to fetch timeline data:", error)
+        // Keep timeline empty on error (no fallback demo data)
+        setSections([])
+      }
+    }
 
-    // Create the demo content using the proper APIs
-    const api = contentAPI()
-
-    // Add a demo clip starting at bar 1
-    api.addDefaultClip()
-
-    // Set a loop region from bar 1 to 5
-    api.setDemoLoop()
-
-    // Mark as initialized
-    demoInitialized.current = true
-
-    console.log("Demo content initialized")
-  }, [contentAPI])
+    fetchTimelineData()
+  }, [])
 
   useEffect(() => {
     // Call onLoopChange when isLooping changes
