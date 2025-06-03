@@ -195,16 +195,17 @@ export class SEQ1APIClient {
     if (typeof window === "undefined") throw new Error("Cannot create anonymous session on server.")
     debugLog("Creating anonymous session.")
     try {
+      // Use simpler request body to avoid backend JSON serialization bug
       const response = await this.directRequest<AnonymousSessionCreateResponse>("/api/sessions/anonymous/create", {
         method: "POST",
         body: JSON.stringify({
           user_agent: navigator.userAgent,
           ip_address: null, // Backend will detect
-          session_data: {
-            // Example session data, can be expanded
-            theme: localStorage.getItem("theme") || "dark",
-            client_app_version: process.env.NEXT_PUBLIC_APP_VERSION || "unknown",
-          },
+          // Temporarily remove session_data due to backend JSONB serialization bug
+          // session_data: {
+          //   theme: localStorage.getItem("theme") || "dark",
+          //   client_app_version: process.env.NEXT_PUBLIC_APP_VERSION || "unknown",
+          // },
         }),
       })
 
