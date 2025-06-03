@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
-import { createWebSocket } from "@/lib/api-client"
+import { SEQ1WebSocket } from "@/lib/websocket-manager"
 
 // Define the WebSocket context type
 interface WebSocketContextType {
@@ -19,52 +19,41 @@ const WebSocketContext = createContext<WebSocketContextType>({
 
 // Provider component that manages the WebSocket connection
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const [socket, setSocket] = useState<WebSocket | null>(null)
+  const [wsClient] = useState(() => new SEQ1WebSocket())
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<any | null>(null)
 
   // Initialize the WebSocket connection
   useEffect(() => {
-    // Handler for WebSocket messages
-    const handleMessage = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data)
-        setLastMessage(data)
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error)
-        setLastMessage(event.data)
-      }
-    }
+    // Set up event handlers for the WebSocket client
+    const unsubscribeStatus = wsClient.subscribe("status", (data: any) => {
+      setIsConnected(data.status === "connected")
+    })
 
-    // Create the WebSocket connection
-    const ws = createWebSocket(handleMessage)
+    // Subscribe to all messages
+    const unsubscribeMessage = wsClient.subscribe("*", (data: any) => {
+      setLastMessage(data)
+    })
 
-    // Set up event handlers
-    ws.onopen = () => {
-      console.log("WebSocket connected")
-      setIsConnected(true)
-    }
-
-    ws.onclose = () => {
-      console.log("WebSocket disconnected")
-      setIsConnected(false)
-    }
-
-    // Store the WebSocket instance
-    setSocket(ws)
+    // Connect the WebSocket
+    wsClient.connect()
 
     // Clean up on unmount
     return () => {
-      ws.close()
+      unsubscribeStatus()
+      unsubscribeMessage()
+      wsClient.disconnect()
     }
-  }, [])
+  }, [wsClient])
 
   // Function to send a message through the WebSocket
   const sendMessage = (message: any) => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(typeof message === "string" ? message : JSON.stringify(message))
+    // If message is already an object with type and payload, use it directly
+    if (typeof message === 'object' && message.type) {
+      wsClient.send(message.type, message.payload || {})
     } else {
-      console.error("WebSocket is not connected")
+      // For simple messages, wrap them with a generic type
+      wsClient.send('message', message)
     }
   }
 
