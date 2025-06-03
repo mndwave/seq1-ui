@@ -49,8 +49,8 @@ export class AuthManager {
     }
 
     try {
-      // Endpoint as per document: /api/auth/me
-      const user = await apiClient.directRequest<User>("/api/auth/me")
+      // Use the correct endpoint: /api/account (not /api/auth/me)
+      const user = await apiClient.directRequest<User>("/api/account")
       this.currentUser = user
       this.isAuthenticated = true
       this.isAnonymous = false

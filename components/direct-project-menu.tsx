@@ -104,22 +104,42 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   }, [])
 
   const updateAuthState = useCallback(async () => {
+    console.log("🔍 [DEBUG] Starting auth state check...")
+    console.log("🔍 [DEBUG] Current token:", !!apiClient.token)
+    
     await authManager.checkAuthStatus()
     setIsJwtAuthenticated(authManager.isAuthenticated)
+    
     console.log("🔍 [DEBUG] Auth State Updated:", {
       isAuthenticated: authManager.isAuthenticated,
       hasToken: !!apiClient.token,
-      sessionId: apiClient.sessionId
+      user: authManager.currentUser
     })
+    
+    // Update debug info
+    setDebugInfo((prev: any) => ({
+      ...prev,
+      authManagerState: authManager.isAuthenticated,
+      currentUser: authManager.currentUser,
+      tokenExists: !!apiClient.token,
+      lastAuthCheck: new Date().toISOString()
+    }))
   }, [])
 
   useEffect(() => {
     updateAuthState()
     testApiConnection() // 🚨 DEBUG - Test API on mount
 
-    const handleLoggedIn = () => {
-      setIsJwtAuthenticated(true)
+    const handleLoggedIn = async () => {
+      console.log("🔍 [DEBUG] Login event received, updating auth state...")
+      
+      // Force a fresh auth state check
+      await updateAuthState()
+      
+      setIsJwtAuthenticated(authManager.isAuthenticated)
+      
       if (pendingAction) {
+        console.log("🔍 [DEBUG] Executing pending action:", pendingAction)
         onAction(pendingAction)
         setPendingAction(null)
       }
@@ -128,6 +148,12 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         title: "Studio Session Secured!",
         description: "You're all set to create. Full access granted.",
         variant: "default",
+      })
+      
+      console.log("🔍 [DEBUG] Login flow complete. Auth state:", {
+        isAuthenticated: authManager.isAuthenticated,
+        hasToken: !!apiClient.token,
+        user: authManager.currentUser
       })
     }
     const handleLoggedOut = () => {
