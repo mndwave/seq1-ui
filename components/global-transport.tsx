@@ -399,9 +399,9 @@ export default function GlobalTransport({
             <button
               onClick={handleUndo}
               className={cn(
-                "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none rounded",
+                "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none",
                 history.canUndo 
-                  ? "text-[#4287f5] hover:bg-[#3a2a30]" 
+                  ? "text-[#4287f5] hover:text-[#5a97ff]" 
                   : "text-gray-400 opacity-50 cursor-not-allowed"
               )}
               disabled={!history.canUndo}
@@ -436,9 +436,9 @@ export default function GlobalTransport({
             <button
               onClick={handleRedo}
               className={cn(
-                "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none rounded",
+                "w-11 h-11 flex items-center justify-center transition-colors duration-200 focus:outline-none",
                 history.canRedo 
-                  ? "text-[#4287f5] hover:bg-[#3a2a30]" 
+                  ? "text-[#4287f5] hover:text-[#5a97ff]" 
                   : "text-gray-400 opacity-50 cursor-not-allowed"
               )}
               disabled={!history.canRedo}

@@ -15,10 +15,11 @@ import {
   Info,
   User,
   Brain,
+  Share,
 } from "lucide-react"
 // Assuming AuthManagerModal is your JWT/email-password auth modal component
 // For now, we'll use the existing AuthManager (Nostr) as a placeholder if not available.
-import AuthManagerModal from "./auth/auth-manager" // Placeholder, adjust if you have a specific JWT auth modal
+import AuthManager from "./auth/auth-manager" // Use AuthManager to provide both login and signup options
 import AboutModal from "./about-modal"
 import AccountModal from "./account-modal"
 import ConsciousnessInterface from "./consciousness/consciousness-interface"
@@ -141,8 +142,22 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       actionId: "saveAs",
       disabled: false,
       comingSoon: false,
-      dividerAfter: true,
+      dividerAfter: !isJwtAuthenticated, // Add divider for unauthenticated users
     },
+    // Add Share Track for authenticated users only
+    ...(isJwtAuthenticated
+      ? [
+          {
+            id: "shareTrack",
+            label: "SHARE TRACK",
+            icon: <Share size={14} />,
+            actionId: "shareTrack",
+            disabled: false,
+            comingSoon: false,
+            dividerAfter: true,
+          },
+        ]
+      : []),
     {
       id: "export",
       label: "EXPORT",
@@ -318,7 +333,9 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
           className="w-full text-left px-4 py-2 text-xs text-[#4287f5] hover:bg-[#3a2a30] flex items-center rounded-sm"
           onClick={() => {
             setIsOpen(false)
-            sessionManager.showAuthRequired("LOGIN_SIGNUP_BUTTON", "Please log in or sign up.")
+            // Show AuthManager with both login and signup options
+            setAuthModalMessage("Sign in to your account or create a new one to continue.")
+            setShowAuthModal(true)
           }}
           role="menuitem"
         >
@@ -423,18 +440,15 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         <span className="text-xs tracking-wide">PROJECT</span>
       </button>
       {renderMenu()}
-      {/* This AuthManagerModal is a placeholder. You'll need a modal that handles JWT/email-password auth
-      and calls authManager.upgradeToAuthenticated() or similar.
-      The `authModalMessage` can be passed to it.
-      The `onAuthComplete` should be wired to the modal's success action.
-  */}
-      <AuthManagerModal
-        isOpen={showAuthModal}
-        onClose={handleAuthModalClose}
-        onAuthComplete={handleAuthComplete} // This modal needs to call this upon successful auth
-        // You might need to pass `authModalMessage` or `pendingAction` to this modal
-        // For example: initialMessage={authModalMessage} operationToUnlock={pendingAction}
-      />
+      {/* AuthManager Modal - provides both login and signup options */}
+      {showAuthModal && (
+        <AuthManager
+          isOpen={showAuthModal}
+          initialMode="login" // Start with login but allow switching to signup
+          onClose={handleAuthModalClose}
+          onAuthComplete={handleAuthComplete}
+        />
+      )}
       <AccountModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} />
       {showAboutModal && <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />}
       <ConsciousnessInterface 

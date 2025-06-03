@@ -174,12 +174,12 @@ export default function DeviceRack({
         ) : isInitializing ? (
           <DeviceInitializingMIDI />
         ) : devices.length > 0 || initializingDevices.length > 0 ? (
-          <div className="divide-y divide-[#3a2a30] relative z-10">
+          <div className="relative z-10">
             {/* Initializing devices */}
             {initializingDevices.map((device, index) => (
               <div
                 key={device.id}
-                className="transition-all duration-500 animate-slideIn relative z-10"
+                className="transition-all duration-500 animate-slideIn relative z-10 border-b border-[#3a2a30]/60"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <DeviceInitializing
@@ -194,7 +194,9 @@ export default function DeviceRack({
             {devices.map((device, index) => (
               <div
                 key={device.id}
-                className={`transition-all duration-300 animate-slideIn relative z-10`}
+                className={`transition-all duration-300 animate-slideIn relative z-10 ${
+                  index !== devices.length - 1 ? 'border-b border-[#3a2a30]/60' : ''
+                }`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <DeviceCard
