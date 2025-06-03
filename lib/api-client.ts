@@ -515,7 +515,10 @@ export function createWebSocket(onMessageCallback: (event: MessageEvent) => void
     return { readyState: 3, close: () => {}, send: () => {} } as any
   }
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  const wsProxyUrl = `${protocol}//${window.location.host}/api/ws-proxy`
+  // Use API base URL for WebSocket connection instead of window.location.host
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.seq1.net"
+  const apiHost = new URL(apiBaseUrl).host
+  const wsProxyUrl = `${protocol}//${apiHost}/ws/session`
   wsDebugLog("Creating legacy WebSocket connection to proxy:", wsProxyUrl)
   const socket = new WebSocket(wsProxyUrl)
   socket.onopen = () => wsDebugLog("Legacy WebSocket connection established.")

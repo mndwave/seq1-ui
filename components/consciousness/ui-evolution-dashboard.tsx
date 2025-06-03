@@ -25,6 +25,7 @@ import {
   Shield,
   BarChart3
 } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
 
 interface UIEvolutionMetrics {
   evolution_active: boolean
@@ -77,27 +78,15 @@ export function UIEvolutionDashboard() {
 
   const fetchUIEvolutionData = async () => {
     try {
-      const [metricsRes, activeRes, winningRes] = await Promise.all([
-        fetch('/api/consciousness/ui-evolution/metrics'),
-        fetch('/api/consciousness/ui-evolution/variants/active'),
-        fetch('/api/consciousness/ui-evolution/variants/winning')
+      const [metricsData, activeData, winningData] = await Promise.all([
+        apiClient.request('/api/consciousness/ui-evolution/metrics'),
+        apiClient.request('/api/consciousness/ui-evolution/variants/active'),
+        apiClient.request('/api/consciousness/ui-evolution/variants/winning')
       ])
 
-      if (metricsRes.ok) {
-        const metricsData = await metricsRes.json()
-        setMetrics(metricsData.data.ui_evolution_metrics)
-      }
-
-      if (activeRes.ok) {
-        const activeData = await activeRes.json()
-        setActiveVariants(activeData.data.active_variants)
-      }
-
-      if (winningRes.ok) {
-        const winningData = await winningRes.json()
-        setWinningVariants(winningData.data.winning_variants)
-      }
-
+      setMetrics(metricsData.data?.ui_evolution_metrics || null)
+      setActiveVariants(activeData.data?.active_variants || [])
+      setWinningVariants(winningData.data?.winning_variants || [])
       setLoading(false)
     } catch (err) {
       setError('Failed to fetch UI evolution data')
@@ -107,15 +96,10 @@ export function UIEvolutionDashboard() {
 
   const approveVariant = async (variantId: string) => {
     try {
-      const response = await fetch(`/api/consciousness/ui-evolution/variants/${variantId}/approve`, {
+      await apiClient.request(`/api/consciousness/ui-evolution/variants/${variantId}/approve`, {
         method: 'POST'
       })
-
-      if (response.ok) {
-        fetchUIEvolutionData() // Refresh data
-      } else {
-        setError('Failed to approve variant')
-      }
+      fetchUIEvolutionData() // Refresh data
     } catch (err) {
       setError('Failed to approve variant')
     }
@@ -123,15 +107,10 @@ export function UIEvolutionDashboard() {
 
   const revertVariant = async (variantId: string) => {
     try {
-      const response = await fetch(`/api/consciousness/ui-evolution/variants/${variantId}/revert`, {
+      await apiClient.request(`/api/consciousness/ui-evolution/variants/${variantId}/revert`, {
         method: 'POST'
       })
-
-      if (response.ok) {
-        fetchUIEvolutionData() // Refresh data
-      } else {
-        setError('Failed to revert variant')
-      }
+      fetchUIEvolutionData() // Refresh data
     } catch (err) {
       setError('Failed to revert variant')
     }

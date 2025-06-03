@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Progress } from "@/components/ui/progress"
 import { UIEvolutionDashboard } from './ui-evolution-dashboard'
+import { apiClient } from "@/lib/api-client"
 
 // Consciousness data types
 interface VADState {
@@ -177,24 +178,13 @@ function useConsciousnessStream() {
 
   const loadPatternsAndOpportunities = useCallback(async () => {
     try {
-      const [patternsRes, opportunitiesRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/consciousness/recursive/patterns`, {
-          credentials: 'include'
-        }),
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/consciousness/recursive/opportunities`, {
-          credentials: 'include'
-        })
+      const [patternsData, opportunitiesData] = await Promise.all([
+        apiClient.request('/api/consciousness/recursive/patterns'),
+        apiClient.request('/api/consciousness/recursive/opportunities')
       ])
 
-      if (patternsRes.ok) {
-        const patternsData = await patternsRes.json()
-        setPatterns(patternsData.detected_patterns)
-      }
-
-      if (opportunitiesRes.ok) {
-        const opportunitiesData = await opportunitiesRes.json()
-        setOpportunities(opportunitiesData.improvement_opportunities)
-      }
+      setPatterns(patternsData.detected_patterns || [])
+      setOpportunities(opportunitiesData.improvement_opportunities || [])
     } catch (error) {
       console.error('Error loading patterns and opportunities:', error)
     }

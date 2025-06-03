@@ -7,6 +7,8 @@ import Timeline from "./timeline"
 import type { TimelineClip } from "@/lib/timeline-clip-schema"
 import type { LoopRegion } from "@/lib/timeline-clip-schema" // import LoopRegion
 import { TransportAPI } from "@/lib/api-services"
+import { apiClient } from "@/lib/api-client"
+
 interface TimelineContainerProps {
   className?: string
   selectedDeviceId?: string | null
@@ -101,15 +103,9 @@ export default function TimelineContainer({
   useEffect(() => {
     const fetchTimelineData = async () => {
       try {
-        // Fetch clips from API
-        const response = await fetch('/api/timeline/clips')
-        if (response.ok) {
-          const clips = await response.json()
-          setSections(clips)
-        } else {
-          // If API fails, keep timeline empty (no fallback demo data)
-          setSections([])
-        }
+        // Fetch clips from API using proper client
+        const clips = await apiClient.request('/api/timeline/clips')
+        setSections(clips)
       } catch (error) {
         console.error("Failed to fetch timeline data:", error)
         // Keep timeline empty on error (no fallback demo data)
