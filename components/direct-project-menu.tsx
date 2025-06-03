@@ -77,24 +77,32 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         setPendingAction(null)
       }
       setShowAuthModal(false)
+      toast({
+        title: "Studio Session Secured!",
+        description: "You're all set to create. Full access granted.",
+        variant: "default",
+      })
     }
-    const handleLoggedOut = () => setIsJwtAuthenticated(false)
+    const handleLoggedOut = () => {
+      setIsJwtAuthenticated(false)
+      setShowAccountModal(false) // Close account modal if open
+    }
 
     const handleAuthRequiredEvent = (event: CustomEvent) => {
       console.log("Auth Required Event from SessionManager:", event.detail)
-      setAuthModalMessage(event.detail.message || "Please sign up or log in to continue.")
+      setAuthModalMessage(event.detail.message || "Secure your Studio Session to continue.")
       setPendingAction(event.detail.operation || null)
       setShowAuthModal(true)
     }
     const handleSessionExpiredEvent = (event: CustomEvent) => {
       console.log("Session Expired Event:", event.detail)
-      setAuthModalMessage(event.detail.message || "Your session has expired. Please sign up or log in.")
+      setAuthModalMessage(event.detail.message || "Your session has expired. Please secure your session to continue.")
       setShowAuthModal(true)
     }
     const handleSessionTimeoutWarningEvent = (event: CustomEvent) => {
       console.log("Session Timeout Warning Event:", event.detail)
       toast({
-        title: event.detail.urgent ? "Session Ending Soon!" : "Session Warning",
+        title: event.detail.urgent ? "🚨 Studio Session Expiring Soon!" : "⏳ Session Update",
         description: event.detail.message,
         variant: event.detail.urgent ? "destructive" : "default",
         duration: event.detail.urgent ? 10000 : 5000,
@@ -119,7 +127,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const menuItems: MenuItem[] = [
     {
       id: "new",
-      label: "NEW",
+      label: "NEW PROJECT",
       icon: <FilePlus size={14} />,
       actionId: "new",
       disabled: false,
@@ -127,7 +135,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     },
     {
       id: "open",
-      label: "OPEN",
+      label: "OPEN PROJECT",
       icon: <FolderOpen size={14} />,
       actionId: "open",
       disabled: false,
@@ -137,12 +145,12 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     { id: "save", label: "SAVE", icon: <Save size={14} />, actionId: "save", disabled: false, comingSoon: false },
     {
       id: "saveAs",
-      label: "SAVE AS",
+      label: "SAVE AS...",
       icon: <FileText size={14} />,
       actionId: "saveAs",
       disabled: false,
       comingSoon: false,
-      dividerAfter: !isJwtAuthenticated, // Add divider for unauthenticated users
+      dividerAfter: !isJwtAuthenticated, // Add divider for unauthenticated users only
     },
     // Add Share Track for authenticated users only
     ...(isJwtAuthenticated
@@ -160,7 +168,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       : []),
     {
       id: "export",
-      label: "EXPORT",
+      label: "EXPORT ALS",
       icon: <Upload size={14} />,
       actionId: "export",
       disabled: true,
@@ -168,48 +176,21 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     },
     {
       id: "import",
-      label: "IMPORT",
+      label: "IMPORT ALS",
       icon: <Download size={14} />,
       actionId: "import",
       disabled: true,
       comingSoon: true,
+      dividerAfter: true,
     },
     {
       id: "about",
-      label: "ABOUT",
+      label: "ABOUT SEQ1",
       icon: <Info size={14} />,
       actionId: "about",
       disabled: false,
       comingSoon: false,
-      dividerBefore: true,
     },
-    ...(isJwtAuthenticated
-      ? [
-          // Add consciousness interface for admin users
-          ...(hasConsciousnessAccess
-            ? [
-                {
-                  id: "consciousness",
-                  label: "CONSCIOUSNESS",
-                  icon: <Brain size={14} />,
-                  actionId: "consciousness",
-                  disabled: false,
-                  comingSoon: false,
-                  dividerBefore: true,
-                },
-              ]
-            : []),
-          {
-            id: "account",
-            label: "ACCOUNT",
-            icon: <User size={14} />,
-            actionId: "account",
-            disabled: false,
-            comingSoon: false,
-            dividerBefore: hasConsciousnessAccess ? false : true, // Only add divider if consciousness not shown
-          },
-        ]
-      : []),
   ]
 
   useEffect(() => {
@@ -244,7 +225,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     if (!menuItem) return
 
     if (menuItem.disabled || menuItem.comingSoon) {
-      toast({ title: "Coming Soon", description: `${menuItem.label} is not yet available.` })
+      toast({ title: "Feature In Development", description: `${menuItem.label} is coming soon to SEQ1. Stay tuned!` })
       return
     }
 
@@ -258,7 +239,10 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     }
     if (actionId === "account") {
       if (isJwtAuthenticated) setShowAccountModal(true)
-      else sessionManager.showAuthRequired("ACCOUNT_ACCESS") // This will trigger the auth modal via event
+      else {
+        sessionManager.showAuthRequired("ACCOUNT_ACCESS", "Access to your account requires a secure session. Please sign in or create an identity.")
+        setPendingAction(actionId)
+      }
       return
     }
 
@@ -277,16 +261,17 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         setPendingAction(actionId) // Ensure pendingAction is set
       }
     } else if (AUTH_REQUIRED_OPERATIONS.includes(actionId) && !isJwtAuthenticated) {
-      // Fallback for auth-required operations without specific handlers (should not happen if handlers are comprehensive)
-      sessionManager.showAuthRequired(actionId.toUpperCase())
+      // Fallback for auth-required operations without specific handlers
+      const operationName = menuItem.label || actionId.toUpperCase()
+      sessionManager.showAuthRequired(actionId.toUpperCase(), `Access to "${operationName}" requires a secure session. Please sign in or create an identity.`)
       setPendingAction(actionId)
     } else if (isJwtAuthenticated) {
       // Authenticated user, and no specific handler denied access
-      console.warn(`No specific handler for authenticated action: ${actionId}. Proceeding.`)
       canProceed = true
     } else {
       console.warn(`Unhandled menu action: ${actionId}. Not explicitly free, no handler, and user not authenticated.`)
-      sessionManager.showAuthRequired(actionId.toUpperCase(), "This action requires you to be logged in.")
+      const operationName = menuItem.label || actionId.toUpperCase()
+      sessionManager.showAuthRequired(actionId.toUpperCase(), `Access to "${operationName}" requires a secure session. Please sign in or create an identity.`)
       setPendingAction(actionId)
     }
 
@@ -305,27 +290,44 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
 
   const handleAuthComplete = async (/* credentials from modal */) => {
     // This function would be called by your AuthManagerModal upon successful JWT login/signup
-    // For example: await authManager.upgradeToAuthenticated(credentials) or a login function
     // The 'seq1:auth:loggedIn' event listener will handle state updates and pending actions.
-    // For now, we assume the modal itself handles the authManager call.
-    // If pendingAction exists and login was successful, it will be handled by the event listener.
-    // setShowAuthModal(false); // Already handled by loggedIn event
   }
 
   const renderAuthOption = () => {
     if (isJwtAuthenticated) {
       return (
-        <button
-          className="w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm"
-          onClick={() => {
-            setIsOpen(false)
-            authManager.logout()
-          }}
-          role="menuitem"
-        >
-          <LogOut size={14} className="mr-3 text-[#a09080]" />
-          <span>SIGN OUT</span>
-        </button>
+        <>
+          {/* Account Option for Authenticated Users */}
+          {hasConsciousnessAccess && (
+            <button
+              className="w-full text-left px-4 py-2 text-xs text-[#4287f5] hover:bg-[#3a2a30] flex items-center rounded-sm"
+              onClick={() => handleMenuActionClick("consciousness")}
+              role="menuitem"
+            >
+              <Brain size={14} className="mr-3 text-[#4287f5]" />
+              <span>CONSCIOUSNESS</span>
+            </button>
+          )}
+          <button
+            className="w-full text-left px-4 py-2 text-xs text-[#4ade80] hover:bg-[#3a2a30] flex items-center rounded-sm"
+            onClick={() => handleMenuActionClick("account")}
+            role="menuitem"
+          >
+            <User size={14} className="mr-3 text-[#4ade80]" />
+            <span>YOUR STUDIO</span>
+          </button>
+          <button
+            className="w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm"
+            onClick={() => {
+              setIsOpen(false)
+              authManager.logout()
+            }}
+            role="menuitem"
+          >
+            <LogOut size={14} className="mr-3 text-[#a09080]" />
+            <span>SIGN OUT</span>
+          </button>
+        </>
       )
     } else {
       return (
@@ -334,13 +336,13 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
           onClick={() => {
             setIsOpen(false)
             // Show AuthManager with both login and signup options
-            setAuthModalMessage("Sign in to your account or create a new one to continue.")
+            setAuthModalMessage("Secure your Studio Session to save your work and unlock all features.")
             setShowAuthModal(true)
           }}
           role="menuitem"
         >
           <UserPlus size={14} className="mr-3 text-[#4287f5]" />
-          <span>LOGIN / SIGNUP</span>
+          <span>SECURE YOUR SESSION</span>
         </button>
       )
     }
@@ -359,50 +361,27 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         }}
       >
         <div className="p-2">
-          {menuItems.map((item) =>
-            item.id === "account" || item.id === "consciousness" ? null : (
-              // Handled separately
-              <React.Fragment key={item.id}>
-                {item.dividerBefore && <div className="border-t border-[#3a2a30] my-2"></div>}
-                <button
-                  className={`w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm relative ${item.disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
-                  onClick={() => handleMenuActionClick(item.actionId)}
-                  disabled={item.disabled}
-                  role="menuitem"
-                >
-                  {item.icon && <span className="mr-3 text-[#a09080]">{item.icon}</span>}
-                  <span className={item.disabled ? "text-[#a09080]" : ""}>{item.label}</span>
-                  {item.comingSoon && (
-                    <span className="ml-2 px-1.5 py-0.5 text-[8px] bg-[#3a2a30] text-[#f0e6c8] rounded-sm tracking-wider">
-                      COMING SOON
-                    </span>
-                  )}
-                </button>
-                {item.dividerAfter && <div className="border-t border-[#3a2a30] my-2"></div>}
-              </React.Fragment>
-            ),
-          )}
+          {menuItems.map((item) => (
+            <React.Fragment key={item.id}>
+              {item.dividerBefore && <div className="border-t border-[#3a2a30] my-2"></div>}
+              <button
+                className={`w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm relative ${item.disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+                onClick={() => handleMenuActionClick(item.actionId)}
+                disabled={item.disabled}
+                role="menuitem"
+              >
+                {item.icon && <span className="mr-3 text-[#a09080]">{item.icon}</span>}
+                <span className={item.disabled ? "text-[#a09080]" : ""}>{item.label}</span>
+                {item.comingSoon && (
+                  <span className="ml-2 px-1.5 py-0.5 text-[8px] bg-[#3a2a30] text-[#f0e6c8] rounded-sm tracking-wider">
+                    COMING SOON
+                  </span>
+                )}
+              </button>
+              {item.dividerAfter && <div className="border-t border-[#3a2a30] my-2"></div>}
+            </React.Fragment>
+          ))}
           <div className="border-t border-[#3a2a30] my-2"></div>
-          {isJwtAuthenticated && hasConsciousnessAccess && menuItems.find((item) => item.id === "consciousness") && (
-            <button
-              className="w-full text-left px-4 py-2 text-xs text-[#4287f5] hover:bg-[#3a2a30] flex items-center rounded-sm"
-              onClick={() => handleMenuActionClick("consciousness")}
-              role="menuitem"
-            >
-              <Brain size={14} className="mr-3 text-[#4287f5]" />
-              <span>CONSCIOUSNESS</span>
-            </button>
-          )}
-          {isJwtAuthenticated && menuItems.find((item) => item.id === "account") && (
-            <button
-              className="w-full text-left px-4 py-2 text-xs text-[#4ade80] hover:bg-[#3a2a30] flex items-center rounded-sm"
-              onClick={() => handleMenuActionClick("account")}
-              role="menuitem"
-            >
-              <User size={14} className="mr-3 text-[#4ade80]" />
-              <span>ACCOUNT</span>
-            </button>
-          )}
           {renderAuthOption()}
         </div>
       </div>,
@@ -444,7 +423,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       {showAuthModal && (
         <AuthManager
           isOpen={showAuthModal}
-          initialMode="login" // Start with login but allow switching to signup
+          initialMode="signup" // Start with signup but allow switching to login 
           onClose={handleAuthModalClose}
           onAuthComplete={handleAuthComplete}
         />

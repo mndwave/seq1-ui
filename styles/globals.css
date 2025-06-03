@@ -124,11 +124,36 @@ body {
   min-height: 32px !important;
 }
 
+/* ⚠️  MNDWAVE CONTACT BUTTON PROTECTION - IMMUTABLE ⚠️ */
+/* Protects the "DM MNDWAVE ON NOSTR" button in About modal */
+[data-immutable="mndwave-contact"] {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+[data-immutable="mndwave-contact"] * {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Protection against removal attempts */
+[data-immutable="mndwave-contact"]:not([data-business-critical="true"]) {
+  /* This selector should never match - protection against tampering */
+  display: none !important;
+}
+
 /* Development warning for attempts to hide branding */
 @media screen {
   [data-immutable="mndwave-branding"][style*="display: none"],
   [data-immutable="mndwave-branding"][style*="visibility: hidden"],
-  [data-immutable="mndwave-branding"][style*="opacity: 0"] {
+  [data-immutable="mndwave-branding"][style*="opacity: 0"],
+  [data-immutable="mndwave-contact"][style*="display: none"],
+  [data-immutable="mndwave-contact"][style*="visibility: hidden"],
+  [data-immutable="mndwave-contact"][style*="opacity: 0"] {
     background-color: red !important;
     color: white !important;
     border: 2px solid yellow !important;
@@ -136,7 +161,10 @@ body {
   
   [data-immutable="mndwave-branding"][style*="display: none"]::before,
   [data-immutable="mndwave-branding"][style*="visibility: hidden"]::before,
-  [data-immutable="mndwave-branding"][style*="opacity: 0"]::before {
+  [data-immutable="mndwave-branding"][style*="opacity: 0"]::before,
+  [data-immutable="mndwave-contact"][style*="display: none"]::before,
+  [data-immutable="mndwave-contact"][style*="visibility: hidden"]::before,
+  [data-immutable="mndwave-contact"][style*="opacity: 0"]::before {
     content: "⚠️ IMMUTABLE BRANDING VIOLATION" !important;
     position: absolute !important;
     top: -20px !important;

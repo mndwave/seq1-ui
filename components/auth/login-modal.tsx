@@ -42,7 +42,7 @@ export default function LoginModal({
 
   const handleNsecLogin = async () => {
     if (!nsecKey.trim()) {
-      setError("NSEC private key is required.")
+      setError("Private Creative Key (nsec) is required.")
       return
     }
     if (!nsecKey.startsWith("nsec1")) {
@@ -61,14 +61,14 @@ export default function LoginModal({
         await onAuthComplete()
       }
     } else {
-      setError(result.error || "Login failed. Please check your NSEC key.")
+      setError(result.error || "Login failed. Please check your Creative Key or network connection.")
     }
     setIsNsecLoading(false)
   }
 
   const handleExtensionLogin = async () => {
     if (!hasExtension) {
-      setError("Nostr browser extension (e.g., Alby, nos2x) not found.")
+      setError("Nostr browser extension (e.g., Alby, nos2x) not found. Please install one or use your Creative Key.")
       return
     }
     setError(null)
@@ -81,7 +81,7 @@ export default function LoginModal({
         await onAuthComplete()
       }
     } else {
-      setError(result.error || "Extension login failed.")
+      setError(result.error || "Extension login failed. Ensure it's unlocked and permissions are granted for SEQ1.")
     }
     setIsExtensionLoading(false)
   }
@@ -92,23 +92,23 @@ export default function LoginModal({
     <DraggableModal
       isOpen={isOpen}
       onClose={onClose}
-      title="LOGIN TO SEQ1"
+      title="Access Your Studio"
       icon={<LogIn size={16} className="text-[#a09080]" />}
       width="w-[450px]"
     >
       <div className="space-y-6">
         <div className="space-y-2">
-          <h3 className="text-lg font-medium text-[#f0e6c8]">Welcome Back</h3>
+          <h3 className="text-lg font-medium text-[#f0e6c8]">Welcome Back, Creator!</h3>
           <p className="text-sm text-[#a09080]">
             {isAuthenticated && user
-              ? `Logged in as ${user.npub.slice(0, 10)}...`
-              : "Login to access your SEQ1 account using Nostr."}
+              ? `Authenticated as ${user.npub.slice(0, 10)}...${user.npub.slice(-4)}`
+              : "Use your Creative Identity to unlock your SEQ1 studio."}
           </p>
         </div>
 
         {isAuthenticated ? (
           <div className="text-center py-4">
-            <p className="text-green-400">You are already logged in.</p>
+            <p className="text-green-400">You are already signed in to your Studio.</p>
             <button onClick={onClose} className="mt-4 channel-button active px-4 py-2">
               Close
             </button>
@@ -117,7 +117,7 @@ export default function LoginModal({
           <>
             {hasExtension && (
               <div className="space-y-1">
-                <label className="text-xs text-[#a09080] tracking-wide">RECOMMENDED</label>
+                <label className="text-xs text-[#a09080] tracking-wide">RECOMMENDED: USE EXTENSION</label>
                 <button
                   onClick={handleExtensionLogin}
                   disabled={currentLoading}
@@ -125,29 +125,29 @@ export default function LoginModal({
                 >
                   <Zap size={16} className="mr-2" />
                   <span className="text-sm font-medium">
-                    {isExtensionLoading ? "Connecting..." : "Login with Browser Extension"}
+                    {isExtensionLoading ? "Connecting Extension..." : "Access with Browser Extension"}
                   </span>
                 </button>
                 <p className="text-[10px] text-[#a09080] mt-1 text-center">
                   Uses a Nostr extension like <span className="text-[#f0e6c8]">Alby</span> or{" "}
-                  <span className="text-[#f0e6c8]">NOS2X</span>.
+                  <span className="text-[#f0e6c8]">NOS2X</span>. Secure and easy.
                 </p>
               </div>
             )}
 
             <div className="relative flex items-center justify-center">
               <div className="flex-grow h-px bg-[#3a2a30]"></div>
-              <span className="px-4 text-xs text-[#a09080]">{hasExtension ? "OR" : "Login with NSEC"}</span>
+              <span className="px-4 text-xs text-[#a09080]">{hasExtension ? "OR" : "Login with your Creative Key"}</span>
               <div className="flex-grow h-px bg-[#3a2a30]"></div>
             </div>
 
             <div className="space-y-4">
               <p className="text-sm text-[#a09080]">
-                Enter your private key to access SEQ1.
+                Paste your secret Private Creative Key. Keep this key confidential.
               </p>
 
               <div className="space-y-2">
-                <label className="text-xs text-[#a09080] tracking-wide">PRIVATE KEY</label>
+                <label className="text-xs text-[#a09080] tracking-wide">PRIVATE CREATIVE KEY (NSEC)</label>
                 <input
                   type="password"
                   value={nsecKey}
@@ -163,9 +163,13 @@ export default function LoginModal({
                 </div>
               )}
 
-              <div className="flex justify-end space-x-2 pt-2">
-                <button className="channel-button flex items-center px-3 py-1.5" onClick={onClose}>
-                  <span className="text-xs tracking-wide">CANCEL</span>
+              <div className="flex justify-between items-center pt-2">
+                <button 
+                  className="channel-button flex items-center px-3 py-1.5" 
+                  onClick={onSignupClick}
+                  disabled={currentLoading}
+                >
+                  <span className="text-xs tracking-wide">Create New Creative ID</span>
                 </button>
 
                 <button
@@ -185,7 +189,7 @@ export default function LoginModal({
                   ) : (
                     <>
                       <LogIn size={14} className="mr-1.5" />
-                      <span className="text-xs tracking-wide">ACCESS</span>
+                      <span className="text-xs tracking-wide">Access with Key</span>
                     </>
                   )}
                 </button>
