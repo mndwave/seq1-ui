@@ -22,7 +22,7 @@ export class SessionManager {
 
     debugLog("Initializing SessionManager...")
     if (!apiClient.token) {
-      await apiClient.startAnonymousSession()
+      await apiClient.createAnonymousSession()
       if (apiClient.sessionId && apiClient.sessionStartTime) {
         // Ensure session started
         this.startTimeoutWarnings()
@@ -87,7 +87,7 @@ export class SessionManager {
             detail: { message: "Your free session has ended. Please sign up to save your work and continue." },
           }),
         )
-        apiClient.clearSession() // Proactively clear session details
+        apiClient.clearAnonymousSessionDetails() // Proactively clear session details
       }, timeUntilExpiry)
       this.warningTimers.add(expiryTimerId)
     }
