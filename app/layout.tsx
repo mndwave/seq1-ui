@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
 import { Poppins, Space_Mono } from "next/font/google"
 import ApiErrorHandler from "@/components/api-error-handler"
-import AnonymousSessionTimer from "@/components/anonymous-session-timer"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -63,7 +62,6 @@ export default function RootLayout({
               </MIDIProvider>
             </LogoAnimationProvider>
           </EnvProvider>
-          <AnonymousSessionTimer />
         </ThemeProvider>
       </body>
     </html>
