@@ -92,3 +92,59 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* ⚠️  IMMUTABLE BRANDING PROTECTION - DO NOT MODIFY ⚠️ */
+/* These rules enforce MNDWAVE branding visibility requirements */
+/* Protected against themes, user configuration, and AI modification */
+
+[data-immutable="mndwave-branding"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+[data-immutable="mndwave-branding"] * {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: inline !important;
+}
+
+/* Prevent any CSS that might hide the MNDWAVE button */
+[data-immutable="mndwave-branding"]:not([data-business-critical="true"]) {
+  /* This selector should never match - protection against tampering */
+  display: none !important;
+}
+
+/* Additional protection layers */
+.channel-button[data-immutable="mndwave-branding"] {
+  min-width: 80px !important;
+  min-height: 32px !important;
+}
+
+/* Development warning for attempts to hide branding */
+@media screen {
+  [data-immutable="mndwave-branding"][style*="display: none"],
+  [data-immutable="mndwave-branding"][style*="visibility: hidden"],
+  [data-immutable="mndwave-branding"][style*="opacity: 0"] {
+    background-color: red !important;
+    color: white !important;
+    border: 2px solid yellow !important;
+  }
+  
+  [data-immutable="mndwave-branding"][style*="display: none"]::before,
+  [data-immutable="mndwave-branding"][style*="visibility: hidden"]::before,
+  [data-immutable="mndwave-branding"][style*="opacity: 0"]::before {
+    content: "⚠️ IMMUTABLE BRANDING VIOLATION" !important;
+    position: absolute !important;
+    top: -20px !important;
+    left: 0 !important;
+    font-size: 10px !important;
+    color: red !important;
+    background: yellow !important;
+    padding: 2px !important;
+    z-index: 9999 !important;
+  }
+}
