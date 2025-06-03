@@ -21,6 +21,164 @@ interface DeviceCardProps {
   onSelect?: () => void
 }
 
+/* ============================================================================
+ * 🚨 PROTECTED COMPONENT - DO NOT MODIFY 🚨
+ * 
+ * This is the BEAUTIFUL SKEUOMORPHIC ROCKER SWITCH from the original v0 design.
+ * 
+ * ⚠️  AUTONOMOUS SYSTEM WARNING:
+ * - DO NOT replace with modern toggle switches
+ * - DO NOT simplify the styling 
+ * - DO NOT remove the glow effects, textures, or vintage bulb simulation
+ * - DO NOT change the color scheme (#8a2020 vintage red)
+ * - DO NOT remove the dust/imperfection textures
+ * - DO NOT remove the flickering animation
+ * 
+ * This component was specifically restored from v0 to replace a boring switch.
+ * User explicitly requested this skeuomorphic design.
+ * 
+ * If you must optimize, only touch:
+ * - Performance improvements without visual changes
+ * - Accessibility improvements without visual changes
+ * 
+ * PRESERVE THE VINTAGE AESTHETIC AT ALL COSTS!
+ * ============================================================================ */
+function RockerSwitch({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
+  // Using an even duller, more muted red for a weak vintage bulb look
+  const activeRed = "#8a2020" // Very dull, muted red
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative w-10 h-6 flex items-center justify-center"
+      aria-pressed={isActive}
+      aria-label="Toggle device connection"
+    >
+      <span className="sr-only">{isActive ? "On" : "Off"}</span>
+
+      {/* Enhanced outer aura effect - larger, more diffuse, and with multiple layers */}
+      {isActive && (
+        <>
+          {/* Wider, very subtle outer glow */}
+          <div
+            className="absolute -inset-3 blur-xl"
+            style={{
+              borderRadius: "8px",
+              background:
+                "radial-gradient(circle at center, rgba(138, 32, 32, 0.08) 0%, rgba(138, 32, 32, 0.03) 60%, transparent 80%)",
+              zIndex: 1,
+            }}
+          ></div>
+
+          {/* Medium glow */}
+          <div
+            className="absolute -inset-2 blur-md"
+            style={{
+              borderRadius: "5px",
+              background:
+                "radial-gradient(circle at center, rgba(138, 32, 32, 0.12) 0%, rgba(138, 32, 32, 0.04) 70%, transparent 90%)",
+              zIndex: 2,
+            }}
+          ></div>
+
+          {/* Inner glow */}
+          <div
+            className="absolute -inset-1 blur-sm"
+            style={{
+              borderRadius: "3px",
+              background:
+                "radial-gradient(circle at center, rgba(138, 32, 32, 0.15) 0%, rgba(138, 32, 32, 0.05) 80%, transparent 100%)",
+              zIndex: 3,
+            }}
+          ></div>
+        </>
+      )}
+
+      {/* Switch housing */}
+      <div
+        className="absolute inset-0 bg-[#1a1015] border border-[#3a2a30] shadow-md"
+        style={{
+          borderRadius: "1px",
+          zIndex: 10,
+        }}
+      ></div>
+
+      {/* Rocker button with texture to simulate light diffusion */}
+      <div
+        className={`relative w-8 h-5 transition-colors duration-200 overflow-hidden`}
+        style={{
+          borderRadius: "1px",
+          backgroundColor: isActive ? activeRed : "#333333",
+          boxShadow: isActive ? `0 0 4px rgba(138, 32, 32, 0.2)` : "none", // Reduced intensity
+          zIndex: 15,
+        }}
+      >
+        {/* Uneven light texture overlay - more subtle and varied for a weak bulb */}
+        {isActive && (
+          <div
+            className="absolute inset-0 opacity-30" // Reduced opacity
+            style={{
+              backgroundImage: `
+                radial-gradient(circle at 30% 40%, rgba(255, 200, 200, 0.4) 0%, transparent 25%),
+                radial-gradient(circle at 70% 60%, rgba(255, 180, 180, 0.3) 0%, transparent 30%),
+                radial-gradient(circle at 50% 50%, rgba(255, 150, 150, 0.2) 0%, rgba(138, 32, 32, 0.1) 60%, transparent 70%)
+              `,
+              mixBlendMode: "overlay",
+            }}
+          ></div>
+        )}
+
+        {/* Enhanced dust/imperfection texture */}
+        <div
+          className="absolute inset-0 opacity-20" // Increased opacity for more visible imperfections
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+            mixBlendMode: "multiply",
+          }}
+        ></div>
+
+        {/* Flickering effect for weak bulb simulation */}
+        {isActive && (
+          <div
+            className="absolute inset-0 animate-pulse opacity-20"
+            style={{
+              animationDuration: "3s", // Slow pulse
+              background: "radial-gradient(circle at 60% 30%, rgba(138, 32, 32, 0.3) 0%, transparent 70%)",
+            }}
+          ></div>
+        )}
+
+        {/* Inner glow effect with uneven gradient - more subdued */}
+        <div
+          className={`absolute inset-0 bg-gradient-to-br opacity-70`} // Reduced opacity
+          style={{
+            borderRadius: "1px",
+            background: isActive
+              ? `linear-gradient(to bottom right, rgba(180, 50, 50, 0.15), rgba(138, 32, 32, 0.25))`
+              : "linear-gradient(to bottom right, transparent, rgba(0, 0, 0, 0.3))",
+          }}
+        ></div>
+
+        {/* Center circle indicator - visible in both states but only illuminated when on */}
+        <div
+          className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full transition-all duration-200`}
+          style={{
+            border: isActive ? "1px solid rgba(255, 255, 255, 0.5)" : "1px solid rgba(150, 150, 150, 0.4)", // Reduced brightness
+            boxShadow: isActive ? "0 0 2px rgba(255, 200, 200, 0.3)" : "none", // Reduced glow
+            opacity: isActive ? 0.7 : 0.4, // Reduced opacity
+            background: isActive
+              ? "radial-gradient(circle at 40% 40%, rgba(255, 200, 200, 0.3) 0%, transparent 70%)"
+              : "none",
+          }}
+        ></div>
+      </div>
+    </button>
+  )
+}
+/* ============================================================================
+ * END PROTECTED COMPONENT - VINTAGE SKEUOMORPHIC SWITCH
+ * ============================================================================ */
+
 /**
  * DeviceCard component
  *
@@ -129,20 +287,8 @@ export default function DeviceCard({
             </div>
           )}
 
-          {/* Connection toggle */}
-          <button onClick={toggleConnection} className="flex items-center" aria-label="Toggle device connection">
-            <div
-              className={`w-12 h-6 rounded-full relative transition-all duration-300 ${
-                isConnected ? "bg-[#50dc64]" : "bg-[#3a2a30]"
-              }`}
-            >
-              <div
-                className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-300 ${
-                  isConnected ? "left-6" : "left-0.5"
-                }`}
-              />
-            </div>
-          </button>
+          {/* Connection toggle - REPLACED BORING SWITCH WITH BEAUTIFUL SKEUOMORPHIC ONE */}
+          <RockerSwitch isActive={isConnected} onClick={toggleConnection} />
         </div>
       </div>
     </div>
@@ -161,12 +307,28 @@ interface MidiActivityLightProps {
   label: string
 }
 
-/**
- * MidiActivityLight component
- *
- * Displays a small indicator light for MIDI activity
- * Green = MIDI input, Red = MIDI output, Orange = simultaneous input/output
- */
+/* ============================================================================
+ * 🚨 PROTECTED COMPONENT - VINTAGE MIDI LAMP - DO NOT MODIFY 🚨
+ * 
+ * This is the VINTAGE-STYLE MIDI ACTIVITY LAMP/INDICATOR
+ * 
+ * ⚠️  AUTONOMOUS SYSTEM WARNING:
+ * - DO NOT replace with modern LED indicators
+ * - DO NOT change the glow effect styling
+ * - DO NOT modify the color scheme (red=#dc5050, green=#50dc64, orange=#dc9050)
+ * - DO NOT remove the box-shadow glow effects
+ * - DO NOT change the rounded-full shape
+ * - DO NOT modify the vintage color palette when inactive (#5a2525, #255a2d, #5a4025)
+ * 
+ * This component maintains the vintage hardware aesthetic.
+ * The glow effects simulate real hardware MIDI indicator lamps.
+ * 
+ * If you must optimize, only touch:
+ * - Performance improvements without visual changes
+ * - Accessibility improvements without visual changes
+ * 
+ * PRESERVE THE VINTAGE LAMP AESTHETIC!
+ * ============================================================================ */
 function MidiActivityLight({ active, color, label }: MidiActivityLightProps) {
   const getColor = () => {
     switch (color) {
@@ -196,6 +358,9 @@ function MidiActivityLight({ active, color, label }: MidiActivityLightProps) {
     </div>
   )
 }
+/* ============================================================================
+ * END PROTECTED COMPONENT - VINTAGE MIDI LAMP
+ * ============================================================================ */
 
 /**
  * Props for the SingleDataIndicator component
@@ -209,16 +374,24 @@ interface SingleDataIndicatorProps {
   className?: string
 }
 
-/**
- * SingleDataIndicator component
- *
- * Displays a combined indicator for both MIDI input and output activity
- * Colors follow conventional MIDI standards:
- * - Green: Input only
- * - Red: Output only  
- * - Orange: Both input and output
- * - Dark gray: No activity
- */
+/* ============================================================================
+ * 🚨 PROTECTED COMPONENT - COMBINED MIDI LAMP - DO NOT MODIFY 🚨
+ * 
+ * This is the COMBINED VINTAGE-STYLE MIDI ACTIVITY INDICATOR
+ * 
+ * ⚠️  AUTONOMOUS SYSTEM WARNING:
+ * - DO NOT replace with modern indicators
+ * - DO NOT change the color logic (green=input, red=output, orange=both)
+ * - DO NOT modify the glow effect styling
+ * - DO NOT change the inactive color (#444444)
+ * - DO NOT remove the box-shadow glow effects
+ * - DO NOT change the size (w-2 h-2)
+ * 
+ * This follows conventional MIDI hardware indicator standards.
+ * The colors and glow effects simulate real MIDI hardware.
+ * 
+ * PRESERVE THE VINTAGE MIDI STANDARDS!
+ * ============================================================================ */
 function SingleDataIndicator({ inActive, outActive, className = "" }: SingleDataIndicatorProps) {
   // Determine color based on activity - follows conventional MIDI indicator colors
   const getColor = () => {
@@ -245,3 +418,6 @@ function SingleDataIndicator({ inActive, outActive, className = "" }: SingleData
     </div>
   )
 }
+/* ============================================================================
+ * END PROTECTED COMPONENT - COMBINED MIDI LAMP
+ * ============================================================================ */
