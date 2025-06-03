@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { TransportAPI } from "@/lib/api-services" // Correct: Uses TransportAPI
 import { apiClient } from "@/lib/api-client"
 import { useAuth } from "@/lib/auth-context"
@@ -22,11 +22,23 @@ export const useTransport = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchTransportState = useCallback(async () => {
+  // Add refs to prevent infinite loops
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const retryCountRef = useRef(0)
+  const lastFetchTimeRef = useRef(0)
+  const mountedRef = useRef(true)
+
+  // Maximum retry attempts before giving up
+  const MAX_RETRIES = 3
+  const FETCH_DEBOUNCE_MS = 1000 // Minimum time between fetches
+  const RETRY_DELAY_MS = 5000 // Delay before retry on error
+
+  const fetchTransportState = useCallback(async (forceRefresh = false) => {
+    // Prevent fetch if not authenticated
     if (!isAuthenticated) {
       console.log("🔴 HOOK (useTransport): Skipping fetchTransportState, user not authenticated.")
       setTransportState({
-        // Reset to default if not authenticated
         playheadPosition: 0,
         isPlaying: false,
         isLooping: false,
@@ -36,17 +48,42 @@ export const useTransport = () => {
       })
       setError(null)
       setIsLoading(false)
+      retryCountRef.current = 0
+      return
+    }
+
+    // Debounce: prevent too frequent fetches
+    const now = Date.now()
+    if (!forceRefresh && (now - lastFetchTimeRef.current) < FETCH_DEBOUNCE_MS) {
+      return
+    }
+    lastFetchTimeRef.current = now
+
+    // Check if component is still mounted
+    if (!mountedRef.current) {
       return
     }
 
     setIsLoading(true)
     setError(null)
+
     try {
       console.log("🔴 HOOK (useTransport): Fetching transport state (User Authenticated)...")
-      const state = await TransportAPI.getState() // Correct: Uses TransportAPI.getState()
+      
+      // Add timeout to the API call
+      const fetchPromise = TransportAPI.getState()
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Request timeout")), 5000) // 5 second timeout
+      })
+      
+      const state = await Promise.race([fetchPromise, timeoutPromise])
+      
+      if (!mountedRef.current) return // Check if still mounted after async operation
+      
       if (state) {
         setTransportState(state)
         console.log("🔴 HOOK (useTransport): Transport state fetched successfully:", state)
+        retryCountRef.current = 0 // Reset retry count on success
       } else {
         console.warn("🔴 HOOK (useTransport): Fetched transport state is null/undefined, resetting to default.")
         setTransportState({
@@ -59,16 +96,37 @@ export const useTransport = () => {
         })
       }
     } catch (err: any) {
+      if (!mountedRef.current) return
+      
+      retryCountRef.current++
+      
       let errorMessage = "Failed to fetch transport state"
       if (err instanceof Error) errorMessage = `${errorMessage}: ${err.message}`
       else if (typeof err === "string") errorMessage = `${errorMessage}: ${err}`
       else if (err && err.message) errorMessage = `${errorMessage}: ${err.message}`
+      
       console.error("🔴 HOOK (useTransport): Transport state fetch failed:", errorMessage, err)
-      setError(errorMessage)
+      
+      // Only set error if we've exceeded max retries
+      if (retryCountRef.current >= MAX_RETRIES) {
+        setError(errorMessage)
+        console.error(`🔴 HOOK (useTransport): Max retries (${MAX_RETRIES}) exceeded, giving up`)
+      } else {
+        console.warn(`🔴 HOOK (useTransport): Retry attempt ${retryCountRef.current}/${MAX_RETRIES} in ${RETRY_DELAY_MS}ms`)
+        // Schedule a retry with exponential backoff
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current)
+        fetchTimeoutRef.current = setTimeout(() => {
+          if (mountedRef.current && isAuthenticated) {
+            fetchTransportState(true)
+          }
+        }, RETRY_DELAY_MS * retryCountRef.current)
+      }
     } finally {
-      setIsLoading(false)
+      if (mountedRef.current) {
+        setIsLoading(false)
+      }
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated]) // Only depend on isAuthenticated
 
   const createApiCaller = useCallback(
     async <TArgs extends any[], TResult extends TransportState | void>(
@@ -133,10 +191,29 @@ export const useTransport = () => {
   )
 
   useEffect(() => {
+    mountedRef.current = true // Set mounted on mount
+
+    // Clear any existing timeouts
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current)
+      fetchTimeoutRef.current = null
+    }
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+    }
+
+    // Only fetch if auth is not loading
     if (!isAuthLoading) {
       if (isAuthenticated) {
-        fetchTransportState()
+        // Initial fetch with a small delay to prevent rapid calls
+        fetchTimeoutRef.current = setTimeout(() => {
+          if (mountedRef.current) {
+            fetchTransportState(true)
+          }
+        }, 100)
       } else {
+        // Reset state when not authenticated
         setTransportState({
           playheadPosition: 0,
           isPlaying: false,
@@ -147,33 +224,51 @@ export const useTransport = () => {
         })
         setError(null)
         setIsLoading(false)
+        retryCountRef.current = 0
       }
     }
 
     const handleApiTransportUpdate = (newState: TransportState) => {
-      if (isAuthenticated) {
+      if (isAuthenticated && mountedRef.current) {
         setTransportState(newState)
       }
     }
 
+    // Set up event listener only if authenticated
     if (isAuthenticated) {
       apiClient.on("transport-update", handleApiTransportUpdate)
     }
 
-    const pollInterval = 1000
-    let intervalId: NodeJS.Timeout | null = null
-
+    // Set up polling only if playing and authenticated
+    const pollInterval = 5000 // Reduce polling frequency to 5 seconds
     if (isAuthenticated && transportState.isPlaying) {
-      intervalId = setInterval(() => {
-        fetchTransportState().catch((err) => console.error("🔴 HOOK (useTransport): Polling fetch failed:", err))
+      pollIntervalRef.current = setInterval(() => {
+        if (mountedRef.current && isAuthenticated) {
+          fetchTransportState(false).catch((err) => {
+            console.error("🔴 HOOK (useTransport): Polling fetch failed:", err)
+          })
+        }
       }, pollInterval)
     }
 
+    // Cleanup function
     return () => {
+      mountedRef.current = false // Mark as unmounted
+      
+      // Clean up timeouts and intervals
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current)
+        fetchTimeoutRef.current = null
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+      }
+      
+      // Remove event listener
       apiClient.off("transport-update", handleApiTransportUpdate)
-      if (intervalId) clearInterval(intervalId)
     }
-  }, [fetchTransportState, isAuthenticated, isAuthLoading, transportState.isPlaying])
+  }, [isAuthenticated, isAuthLoading, fetchTransportState]) // Stable dependencies
 
   return {
     transportState,
@@ -186,7 +281,7 @@ export const useTransport = () => {
     setBpm,
     setTimeSignature,
     refreshTransportState: isAuthenticated
-      ? fetchTransportState
+      ? () => fetchTransportState(true)
       : async () => {
           console.warn("🔴 HOOK (useTransport): Cannot refresh transport state - User not authenticated.")
           setError("Authentication required to refresh transport state.")

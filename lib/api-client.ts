@@ -101,41 +101,61 @@ export class SEQ1APIClient {
       }
     }
 
-    const response = await fetch(url, { ...options, headers })
+    // Add timeout to fetch call
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-    if (response.status === 401 && typeof window !== "undefined") {
-      this.clearToken() // Clear JWT
-      // Optionally clear session_id if 401 means anonymous session is also invalid
-      // this.clearAnonymousSessionDetails();
-      window.dispatchEvent(new CustomEvent("seq1:auth:required", { detail: { message: "Authentication required" } }))
-      this.emit("auth-required", { message: "Authentication required" })
-      // Do not throw here if specific handlers in AuthContext will manage UI
+    try {
+      const response = await fetch(url, { 
+        ...options, 
+        headers,
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (response.status === 401 && typeof window !== "undefined") {
+        this.clearToken() // Clear JWT
+        // Optionally clear session_id if 401 means anonymous session is also invalid
+        // this.clearAnonymousSessionDetails();
+        window.dispatchEvent(new CustomEvent("seq1:auth:required", { detail: { message: "Authentication required" } }))
+        this.emit("auth-required", { message: "Authentication required" })
+        // Do not throw here if specific handlers in AuthContext will manage UI
+      }
+
+      if (response.status === 410 && typeof window !== "undefined") {
+        // Trial expired
+        this.clearAnonymousSessionDetails()
+        window.dispatchEvent(new CustomEvent("seq1:trial:expired", { detail: { message: "Trial expired" } }))
+        this.emit("trial-expired", { message: "Trial expired" })
+      }
+
+      // 419 was previously used for session expiry, but 410 seems more specific for trial
+      if (response.status === 419 && typeof window !== "undefined") {
+        this.clearAnonymousSessionDetails()
+        window.dispatchEvent(new CustomEvent("seq1:session:expired", { detail: { message: "Session expired" } }))
+        this.emit("session-expired", { message: "Session expired - please sign up to continue" })
+      }
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: `API request failed: ${response.status} ${response.statusText}` }))
+        // Include status in the thrown error object
+        throw { status: response.status, ...errorData }
+      }
+
+      if (response.status === 204) return undefined as T // No content
+      return response.json()
+    } catch (error) {
+      clearTimeout(timeoutId)
+      
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timeout after 10 seconds for ${endpoint}`)
+      }
+      
+      throw error
     }
-
-    if (response.status === 410 && typeof window !== "undefined") {
-      // Trial expired
-      this.clearAnonymousSessionDetails()
-      window.dispatchEvent(new CustomEvent("seq1:trial:expired", { detail: { message: "Trial expired" } }))
-      this.emit("trial-expired", { message: "Trial expired" })
-    }
-
-    // 419 was previously used for session expiry, but 410 seems more specific for trial
-    if (response.status === 419 && typeof window !== "undefined") {
-      this.clearAnonymousSessionDetails()
-      window.dispatchEvent(new CustomEvent("seq1:session:expired", { detail: { message: "Session expired" } }))
-      this.emit("session-expired", { message: "Session expired - please sign up to continue" })
-    }
-
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: `API request failed: ${response.status} ${response.statusText}` }))
-      // Include status in the thrown error object
-      throw { status: response.status, ...errorData }
-    }
-
-    if (response.status === 204) return undefined as T // No content
-    return response.json()
   }
 
   // Generic request method (proxied) - for calls via Next.js /api/proxy
@@ -151,37 +171,57 @@ export class SEQ1APIClient {
     }
     // JWT token and Session ID are expected to be handled by the proxy or added by directRequest logic if it's called by proxy
 
-    const response = await fetch(proxiedUrl, { ...options, headers })
+    // Add timeout to fetch call
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-    // Error handling for 401/410/419 can also be centralized here if proxy returns these statuses directly
-    if (response.status === 401 && typeof window !== "undefined") {
-      this.clearToken()
-      window.dispatchEvent(
-        new CustomEvent("seq1:auth:required", { detail: { message: "Authentication required via proxy" } }),
-      )
-      this.emit("auth-required", { message: "Authentication required via proxy" })
-    }
-    if (response.status === 410 && typeof window !== "undefined") {
-      this.clearAnonymousSessionDetails()
-      window.dispatchEvent(new CustomEvent("seq1:trial:expired", { detail: { message: "Trial expired via proxy" } }))
-      this.emit("trial-expired", { message: "Trial expired via proxy" })
-    }
-    if (response.status === 419 && typeof window !== "undefined") {
-      this.clearAnonymousSessionDetails()
-      window.dispatchEvent(
-        new CustomEvent("seq1:session:expired", { detail: { message: "Session expired via proxy" } }),
-      )
-      this.emit("session-expired", { message: "Session expired via proxy" })
-    }
+    try {
+      const response = await fetch(proxiedUrl, { 
+        ...options, 
+        headers,
+        signal: controller.signal
+      })
 
-    if (!response.ok) {
-      const errorData = await response
-        .json()
-        .catch(() => ({ message: `API request failed via proxy: ${response.status} ${response.statusText}` }))
-      throw { status: response.status, ...errorData }
+      clearTimeout(timeoutId)
+
+      // Error handling for 401/410/419 can also be centralized here if proxy returns these statuses directly
+      if (response.status === 401 && typeof window !== "undefined") {
+        this.clearToken()
+        window.dispatchEvent(
+          new CustomEvent("seq1:auth:required", { detail: { message: "Authentication required via proxy" } }),
+        )
+        this.emit("auth-required", { message: "Authentication required via proxy" })
+      }
+      if (response.status === 410 && typeof window !== "undefined") {
+        this.clearAnonymousSessionDetails()
+        window.dispatchEvent(new CustomEvent("seq1:trial:expired", { detail: { message: "Trial expired via proxy" } }))
+        this.emit("trial-expired", { message: "Trial expired via proxy" })
+      }
+      if (response.status === 419 && typeof window !== "undefined") {
+        this.clearAnonymousSessionDetails()
+        window.dispatchEvent(
+          new CustomEvent("seq1:session:expired", { detail: { message: "Session expired via proxy" } }),
+        )
+        this.emit("session-expired", { message: "Session expired via proxy" })
+      }
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: `API request failed via proxy: ${response.status} ${response.statusText}` }))
+        throw { status: response.status, ...errorData }
+      }
+      if (response.status === 204) return undefined as T
+      return response.json()
+    } catch (error: any) {
+      clearTimeout(timeoutId)
+      
+      if (error.name === 'AbortError') {
+        throw new Error(`Proxied request timeout after 10 seconds for ${endpoint}`)
+      }
+      
+      throw error
     }
-    if (response.status === 204) return undefined as T
-    return response.json()
   }
 
   // Default request method for general API calls (e.g., /api/clips, /api/devices)

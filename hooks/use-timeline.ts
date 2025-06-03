@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import type { TimelineClip } from "@/lib/timeline-clip-schema"
 import {
   getTimelineClips,
@@ -18,37 +18,82 @@ export function useTimeline() {
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
 
+  // Add refs to prevent infinite loops and manage timeouts
+  const mountedRef = useRef(true)
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const retryCountRef = useRef(0)
+  const lastFetchTimeRef = useRef(0)
+
+  // Constants for debouncing and retry logic
+  const MAX_RETRIES = 3
+  const FETCH_DEBOUNCE_MS = 1000
+  const RETRY_DELAY_MS = 3000
+  const API_TIMEOUT_MS = 10000
+
   // Constants
   const DEFAULT_CLIP_LENGTH = 16 // 4 bars * 4 beats per bar
 
-  // Create a default clip
+  // Create a default clip with timeout and error handling
   const createDefaultClip = useCallback(async () => {
+    if (!mountedRef.current) return null
+
     try {
+      setError(null)
+      
       // Get a vibrant color for the default clip
       const colors = getBalancedVibrantColors(1)
 
-      // Create a default clip starting at bar 1 (beat 4) with length of 4 bars
-      const defaultClip = await createTimelineClip({
+      // Add timeout to the API call
+      const createPromise = createTimelineClip({
         name: "Section 01",
         start: 4, // Start at bar 1 (beat 4)
         length: DEFAULT_CLIP_LENGTH, // 4 bars (16 beats)
         color: colors[0],
       })
 
-      setClips([defaultClip])
-      return defaultClip
-    } catch (err) {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Create clip timeout")), API_TIMEOUT_MS)
+      })
+
+      const defaultClip = await Promise.race([createPromise, timeoutPromise])
+
+      if (mountedRef.current) {
+        setClips([defaultClip])
+        return defaultClip
+      }
+    } catch (err: any) {
       console.error("Failed to create default clip:", err)
-      setError("Failed to create default clip")
+      if (mountedRef.current) {
+        setError("Failed to create default clip")
+      }
       throw err
     }
   }, [])
 
-  // Fetch all clips
-  const fetchClips = useCallback(async () => {
+  // Fetch all clips with timeout and retry logic
+  const fetchClips = useCallback(async (forceRefresh = false) => {
+    // Debounce: prevent too frequent fetches
+    const now = Date.now()
+    if (!forceRefresh && (now - lastFetchTimeRef.current) < FETCH_DEBOUNCE_MS) {
+      return
+    }
+    lastFetchTimeRef.current = now
+
+    if (!mountedRef.current) return
+
     try {
       setIsLoading(true)
-      const fetchedClips = await getTimelineClips()
+      setError(null)
+
+      // Add timeout to the fetch
+      const fetchPromise = getTimelineClips()
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Fetch clips timeout")), API_TIMEOUT_MS)
+      })
+
+      const fetchedClips = await Promise.race([fetchPromise, timeoutPromise])
+
+      if (!mountedRef.current) return
 
       // If no clips exist and we haven't initialized yet, create a default clip
       if (fetchedClips.length === 0 && !isInitialized) {
@@ -59,19 +104,61 @@ export function useTimeline() {
         setIsInitialized(true)
       }
 
+      retryCountRef.current = 0 // Reset retry count on success
       setError(null)
-    } catch (err) {
+    } catch (err: any) {
+      if (!mountedRef.current) return
+
+      retryCountRef.current++
       console.error("Failed to fetch timeline clips:", err)
-      setError("Failed to load timeline data")
+
+      // Only set error if we've exceeded max retries
+      if (retryCountRef.current >= MAX_RETRIES) {
+        setError("Failed to load timeline data")
+        console.error(`Timeline fetch: Max retries (${MAX_RETRIES}) exceeded`)
+      } else {
+        console.warn(`Timeline fetch: Retry attempt ${retryCountRef.current}/${MAX_RETRIES} in ${RETRY_DELAY_MS}ms`)
+        // Schedule a retry
+        if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current)
+        fetchTimeoutRef.current = setTimeout(() => {
+          if (mountedRef.current) {
+            fetchClips(true)
+          }
+        }, RETRY_DELAY_MS * retryCountRef.current)
+      }
     } finally {
-      setIsLoading(false)
+      if (mountedRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [createDefaultClip, isInitialized])
 
-  // Load clips on mount
+  // Load clips on mount with controlled initialization
   useEffect(() => {
-    fetchClips()
-  }, [fetchClips])
+    mountedRef.current = true
+
+    // Clear any existing timeouts
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current)
+      fetchTimeoutRef.current = null
+    }
+
+    // Initial fetch with a small delay to prevent rapid calls
+    fetchTimeoutRef.current = setTimeout(() => {
+      if (mountedRef.current) {
+        fetchClips(true)
+      }
+    }, 100)
+
+    // Cleanup function
+    return () => {
+      mountedRef.current = false
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current)
+        fetchTimeoutRef.current = null
+      }
+    }
+  }, []) // Empty dependency array - only run on mount
 
   // Create a new clip
   const createClip = useCallback(
