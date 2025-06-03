@@ -29,6 +29,7 @@ import { ProjectMenuHandlers } from "@/lib/project-menu-handlers"
 import { FREE_OPERATIONS, AUTH_REQUIRED_OPERATIONS } from "@/lib/project-menu-constants"
 import { useToast } from "@/hooks/use-toast"
 import { useConsciousnessAccess } from "@/hooks/use-consciousness-access"
+import { apiClient } from "@/lib/api-client"
 
 interface MenuItem {
   id: string
@@ -55,6 +56,9 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [showAboutModal, setShowAboutModal] = useState(false)
   const [showConsciousnessInterface, setShowConsciousnessInterface] = useState(false)
+  
+  // 🚨 DEBUG STATE - TEMPORARY
+  const [debugInfo, setDebugInfo] = useState<any>({})
 
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -62,13 +66,56 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const { toast } = useToast()
   const { hasAccess: hasConsciousnessAccess } = useConsciousnessAccess()
 
+  // 🚨 DEBUG API CONNECTION - TEMPORARY
+  const testApiConnection = useCallback(async () => {
+    try {
+      console.log("🔍 [DEBUG] Testing API connection...")
+      console.log("🔍 [DEBUG] API Base URL:", process.env.NEXT_PUBLIC_API_BASE_URL)
+      console.log("🔍 [DEBUG] apiClient.baseURL:", apiClient.baseURL)
+      
+      const healthResponse = await fetch(`${apiClient.baseURL}/api/health`)
+      const healthData = await healthResponse.json()
+      console.log("🔍 [DEBUG] API Health Response:", healthData)
+      
+      const statusResponse = await fetch(`${apiClient.baseURL}/api/public/status`)
+      const statusData = await statusResponse.json()
+      console.log("🔍 [DEBUG] API Status Response:", statusData)
+      
+      setDebugInfo({
+        apiBaseUrl: apiClient.baseURL,
+        envVar: process.env.NEXT_PUBLIC_API_BASE_URL,
+        healthStatus: healthData,
+        publicStatus: statusData,
+        authToken: !!apiClient.token,
+        sessionId: apiClient.sessionId,
+        isAuthenticated: authManager.isAuthenticated,
+        timestamp: new Date().toISOString()
+      })
+      
+    } catch (error: any) {
+      console.error("🚨 [DEBUG] API Connection Failed:", error)
+      setDebugInfo({
+        error: error?.message || String(error),
+        apiBaseUrl: apiClient.baseURL,
+        envVar: process.env.NEXT_PUBLIC_API_BASE_URL,
+        timestamp: new Date().toISOString()
+      })
+    }
+  }, [])
+
   const updateAuthState = useCallback(async () => {
     await authManager.checkAuthStatus()
     setIsJwtAuthenticated(authManager.isAuthenticated)
+    console.log("🔍 [DEBUG] Auth State Updated:", {
+      isAuthenticated: authManager.isAuthenticated,
+      hasToken: !!apiClient.token,
+      sessionId: apiClient.sessionId
+    })
   }, [])
 
   useEffect(() => {
     updateAuthState()
+    testApiConnection() // 🚨 DEBUG - Test API on mount
 
     const handleLoggedIn = () => {
       setIsJwtAuthenticated(true)
@@ -122,7 +169,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       window.removeEventListener("seq1:session:expired", handleSessionExpiredEvent as EventListener)
       window.removeEventListener("session-timeout-warning", handleSessionTimeoutWarningEvent as EventListener)
     }
-  }, [updateAuthState, pendingAction, onAction, toast])
+  }, [updateAuthState, pendingAction, onAction, toast, testApiConnection])
 
   const menuItems: MenuItem[] = [
     {
@@ -191,6 +238,15 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       disabled: false,
       comingSoon: false,
     },
+    // 🚨 DEBUG MENU ITEM - TEMPORARY
+    {
+      id: "debug",
+      label: "🔍 DEBUG API",
+      icon: <Info size={14} />,
+      actionId: "debug",
+      disabled: false,
+      comingSoon: false,
+    },
   ]
 
   useEffect(() => {
@@ -233,6 +289,19 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       setShowAboutModal(true)
       return
     }
+    
+    // 🚨 DEBUG ACTION - TEMPORARY
+    if (actionId === "debug") {
+      console.log("🔍 [DEBUG] Current Debug Info:", debugInfo)
+      await testApiConnection()
+      toast({
+        title: "🔍 Debug Info",
+        description: `API: ${debugInfo.apiBaseUrl || 'Unknown'} | Auth: ${isJwtAuthenticated ? 'YES' : 'NO'} | Check console for details`,
+        duration: 5000,
+      })
+      return
+    }
+    
     if (actionId === "consciousness") {
       setShowConsciousnessInterface(true)
       return
@@ -396,6 +465,11 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         await sessionManager.initialize() // Starts anonymous session and warnings if applicable
         await authManager.checkAuthStatus() // Checks JWT auth status
         setIsJwtAuthenticated(authManager.isAuthenticated)
+        console.log("🔍 [DEBUG] App Auth Initialized:", {
+          isAuthenticated: authManager.isAuthenticated,
+          hasToken: !!apiClient.token,
+          sessionId: apiClient.sessionId
+        })
       }
     }
     initializeAppAuth()
