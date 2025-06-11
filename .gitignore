@@ -1,2 +1,19 @@
 node_modules/
 .next/
+
+# Additional build artifacts
+build/
+dist/
+out/
+
+# Environment files
+*.env
+.env*
+
+# Logs and cache
+*.log
+.DS_Store
+.vscode/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
