@@ -1,0 +1,16 @@
+{
+  "names": {
+    "mndwave": "2af00a5a89cab5c913ff461be86add21025ba6fe66dfd9d0e82b9488cb8d2f3d",
+    "kyle": "0fea00d84d4a62ec800c503714e25b7ddaf787b655d8d6875e01652b24721d4b"
+  },
+  "relays": {
+    "2af00a5a89cab5c913ff461be86add21025ba6fe66dfd9d0e82b9488cb8d2f3d": [
+      "wss://relay.seq1.net/outbox",
+      "wss://relay.seq1.net"
+    ],
+    "0fea00d84d4a62ec800c503714e25b7ddaf787b655d8d6875e01652b24721d4b": [
+      "wss://relay.seq1.net/outbox",
+      "wss://relay.seq1.net"
+    ]
+  }
+}

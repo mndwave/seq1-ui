@@ -1,0 +1,39 @@
+# Fly.io Configuration for SEQ1 UI
+app = 'seq1-ui'
+primary_region = 'lhr'
+
+[build]
+
+[env]
+  PORT = '8080'
+  NODE_ENV = 'production'
+  NEXT_PUBLIC_SEQ1_API_URL = 'https://api.seq1.net'
+  SEQ1_API_URL = 'https://api.seq1.net'
+  NEXT_PUBLIC_APP_URL = 'https://seq1.net'
+  NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT = '899250'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+[[vm]]
+  cpu_kind = 'performance'
+  cpus = 1
+  memory_mb = 2048
+
+[deploy]
+  release_command = 'echo "Starting SEQ1 UI deployment..."'
+
+[[http_service.checks]]
+  grace_period = '5s'
+  interval = '30s'
+  method = 'GET'
+  timeout = '10s'
+  path = '/api/health-check'
+
+[processes]
+  app = 'npm start' 
