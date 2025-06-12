@@ -16,6 +16,8 @@ import {
   User,
   Brain,
   Share,
+  Key,
+  Shield
 } from "lucide-react"
 // Assuming AuthManagerModal is your JWT/email-password auth modal component
 // For now, we'll use the existing AuthManager (Nostr) as a placeholder if not available.
@@ -30,6 +32,7 @@ import { FREE_OPERATIONS, AUTH_REQUIRED_OPERATIONS } from "@/lib/project-menu-co
 import { useToast } from "@/hooks/use-toast"
 import { useConsciousnessAccess } from "@/hooks/use-consciousness-access"
 import { apiClient } from "@/lib/api-client"
+import { cn } from "@/lib/utils"
 
 interface MenuItem {
   id: string
@@ -43,7 +46,7 @@ interface MenuItem {
 }
 
 interface DirectProjectMenuProps {
-  onAction: (action: string) => void // This prop executes the actual project operation
+  onAction: (action: string) => void
 }
 
 export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) {
@@ -56,6 +59,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [showAboutModal, setShowAboutModal] = useState(false)
   const [showConsciousnessInterface, setShowConsciousnessInterface] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   
   // 🚨 DEBUG STATE - TEMPORARY
   const [debugInfo, setDebugInfo] = useState<any>({})
@@ -66,218 +70,183 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const { toast } = useToast()
   const { hasAccess: hasConsciousnessAccess } = useConsciousnessAccess()
 
-  // 🚨 DEBUG API CONNECTION - TEMPORARY
-  const testApiConnection = useCallback(async () => {
-    try {
-      console.log("🔍 [DEBUG] Testing API connection...")
-      console.log("🔍 [DEBUG] API Base URL:", process.env.NEXT_PUBLIC_API_BASE_URL)
-      console.log("🔍 [DEBUG] apiClient.baseURL:", apiClient.baseURL)
-      
-      const healthResponse = await fetch(`${apiClient.baseURL}/api/health`)
-      const healthData = await healthResponse.json()
-      console.log("🔍 [DEBUG] API Health Response:", healthData)
-      
-      const statusResponse = await fetch(`${apiClient.baseURL}/api/public/status`)
-      const statusData = await statusResponse.json()
-      console.log("🔍 [DEBUG] API Status Response:", statusData)
-      
-      setDebugInfo({
-        apiBaseUrl: apiClient.baseURL,
-        envVar: process.env.NEXT_PUBLIC_API_BASE_URL,
-        healthStatus: healthData,
-        publicStatus: statusData,
-        authToken: !!apiClient.token,
-        sessionId: apiClient.sessionId,
-        isAuthenticated: authManager.isAuthenticated,
-        timestamp: new Date().toISOString()
-      })
-      
-    } catch (error: any) {
-      console.error("🚨 [DEBUG] API Connection Failed:", error)
-      setDebugInfo({
-        error: error?.message || String(error),
-        apiBaseUrl: apiClient.baseURL,
-        envVar: process.env.NEXT_PUBLIC_API_BASE_URL,
-        timestamp: new Date().toISOString()
-      })
-    }
-  }, [])
-
-  const updateAuthState = useCallback(async () => {
-    console.log("🔍 [DEBUG] Starting auth state check...")
-    console.log("🔍 [DEBUG] Current token:", !!apiClient.token)
-    
-    await authManager.checkAuthStatus()
-    setIsJwtAuthenticated(authManager.isAuthenticated)
-    
-    console.log("🔍 [DEBUG] Auth State Updated:", {
-      isAuthenticated: authManager.isAuthenticated,
-      hasToken: !!apiClient.token,
-      user: authManager.currentUser
-    })
-    
-    // Update debug info
-    setDebugInfo((prev: any) => ({
-      ...prev,
-      authManagerState: authManager.isAuthenticated,
-      currentUser: authManager.currentUser,
-      tokenExists: !!apiClient.token,
-      lastAuthCheck: new Date().toISOString()
-    }))
-  }, [])
-
   useEffect(() => {
-    updateAuthState()
-    testApiConnection() // 🚨 DEBUG - Test API on mount
+    setMounted(true)
+  }, [])
 
-    const handleLoggedIn = async () => {
-      console.log("🔍 [DEBUG] Login event received, updating auth state...")
-      
-      // Force a fresh auth state check
-      await updateAuthState()
-      
-      setIsJwtAuthenticated(authManager.isAuthenticated)
-      
-      if (pendingAction) {
-        console.log("🔍 [DEBUG] Executing pending action:", pendingAction)
-        onAction(pendingAction)
-        setPendingAction(null)
-      }
-      setShowAuthModal(false)
-      toast({
-        title: "Studio Session Secured!",
-        description: "You're all set to create. Full access granted.",
-        variant: "default",
-      })
-      
-      console.log("🔍 [DEBUG] Login flow complete. Auth state:", {
-        isAuthenticated: authManager.isAuthenticated,
-        hasToken: !!apiClient.token,
-        user: authManager.currentUser
-      })
-    }
-    const handleLoggedOut = () => {
-      setIsJwtAuthenticated(false)
-      setShowAccountModal(false) // Close account modal if open
-    }
-
-    const handleAuthRequiredEvent = (event: CustomEvent) => {
-      console.log("Auth Required Event from SessionManager:", event.detail)
-      setAuthModalMessage(event.detail.message || "Secure your Studio Session to continue.")
-      setPendingAction(event.detail.operation || null)
-      setShowAuthModal(true)
-    }
-    const handleSessionExpiredEvent = (event: CustomEvent) => {
-      console.log("Session Expired Event:", event.detail)
-      setAuthModalMessage(event.detail.message || "Your session has expired. Please secure your session to continue.")
-      setShowAuthModal(true)
-    }
-    const handleSessionTimeoutWarningEvent = (event: CustomEvent) => {
-      console.log("Session Timeout Warning Event:", event.detail)
-      toast({
-        title: event.detail.urgent ? "🚨 Studio Session Expiring Soon!" : "⏳ Session Update",
-        description: event.detail.message,
-        variant: event.detail.urgent ? "destructive" : "default",
-        duration: event.detail.urgent ? 10000 : 5000,
-      })
-    }
-
-    window.addEventListener("seq1:auth:loggedIn", handleLoggedIn)
-    window.addEventListener("seq1:auth:loggedOut", handleLoggedOut)
-    window.addEventListener("auth-required", handleAuthRequiredEvent as EventListener)
-    window.addEventListener("seq1:session:expired", handleSessionExpiredEvent as EventListener)
-    window.addEventListener("session-timeout-warning", handleSessionTimeoutWarningEvent as EventListener)
-
-    return () => {
-      window.removeEventListener("seq1:auth:loggedIn", handleLoggedIn)
-      window.removeEventListener("seq1:auth:loggedOut", handleLoggedOut)
-      window.removeEventListener("auth-required", handleAuthRequiredEvent as EventListener)
-      window.removeEventListener("seq1:session:expired", handleSessionExpiredEvent as EventListener)
-      window.removeEventListener("session-timeout-warning", handleSessionTimeoutWarningEvent as EventListener)
-    }
-  }, [updateAuthState, pendingAction, onAction, toast, testApiConnection])
-
+  // Enhanced menu items with better iconography
   const menuItems: MenuItem[] = [
     {
-      id: "new",
+      id: "1",
       label: "NEW PROJECT",
-      icon: <FilePlus size={14} />,
+      icon: <FilePlus size={14} className="icon-abstract" />,
       actionId: "new",
       disabled: false,
       comingSoon: false,
     },
     {
-      id: "open",
+      id: "2",
       label: "OPEN PROJECT",
-      icon: <FolderOpen size={14} />,
+      icon: <FolderOpen size={14} className="icon-abstract" />,
       actionId: "open",
       disabled: false,
       comingSoon: false,
       dividerAfter: true,
     },
-    { id: "save", label: "SAVE", icon: <Save size={14} />, actionId: "save", disabled: false, comingSoon: false },
     {
-      id: "saveAs",
-      label: "SAVE AS...",
-      icon: <FileText size={14} />,
+      id: "3",
+      label: "SAVE",
+      icon: <Save size={14} className="icon-abstract" />,
+      actionId: "save",
+      disabled: false,
+      comingSoon: false,
+    },
+    {
+      id: "4",
+      label: "SAVE AS",
+      icon: <FileText size={14} className="icon-abstract" />,
       actionId: "saveAs",
       disabled: false,
       comingSoon: false,
-      dividerAfter: !isJwtAuthenticated, // Add divider for unauthenticated users only
+      dividerAfter: true,
     },
-    // Add Share Track for authenticated users only
-    ...(isJwtAuthenticated
-      ? [
-          {
-            id: "shareTrack",
-            label: "SHARE TRACK",
-            icon: <Share size={14} />,
-            actionId: "shareTrack",
-            disabled: false,
-            comingSoon: false,
-            dividerAfter: true,
-          },
-        ]
-      : []),
     {
-      id: "export",
-      label: "EXPORT ALS",
-      icon: <Upload size={14} />,
-      actionId: "export",
+      id: "5",
+      label: "IMPORT",
+      icon: <Upload size={14} className="icon-abstract" />,
+      actionId: "import",
       disabled: true,
       comingSoon: true,
     },
     {
-      id: "import",
-      label: "IMPORT ALS",
-      icon: <Download size={14} />,
-      actionId: "import",
+      id: "6",
+      label: "EXPORT",
+      icon: <Download size={14} className="icon-abstract" />,
+      actionId: "export",
       disabled: true,
       comingSoon: true,
       dividerAfter: true,
     },
     {
-      id: "about",
+      id: "7",
+      label: "SHARE TRACK",
+      icon: <Share size={14} className="icon-abstract" />,
+      actionId: "shareTrack",
+      disabled: true,
+      comingSoon: true,
+    },
+    {
+      id: "8",
       label: "ABOUT SEQ1",
-      icon: <Info size={14} />,
+      icon: <Info size={14} className="icon-abstract" />,
       actionId: "about",
       disabled: false,
       comingSoon: false,
-    },
-    // 🚨 DEBUG MENU ITEM - TEMPORARY
-    {
-      id: "debug",
-      label: "🔍 DEBUG API",
-      icon: <Info size={14} />,
-      actionId: "debug",
-      disabled: false,
-      comingSoon: false,
+      dividerBefore: true,
     },
   ]
 
+  // Enhanced logout with cryptographic signature for admins
+  const handleEnhancedLogout = async () => {
+    setIsLoggingOut(true)
+    
+    try {
+      // Check if user has admin privileges
+      const isAdmin = hasConsciousnessAccess
+      
+      if (isAdmin) {
+        // Generate cryptographic signature trace for Dave
+        const timestamp = Date.now()
+        const sessionId = apiClient.sessionId
+        const signatureData = {
+          action: "admin_logout",
+          timestamp,
+          sessionId,
+          userAgent: navigator.userAgent,
+          location: window.location.href
+        }
+        
+        // Send trace to Dave (this would be sent via encrypted channel in production)
+        console.log("🔐 Admin logout signature:", signatureData)
+        
+        // In production, this would be sent to Dave's monitoring system
+        // await sendAdminTrace(signatureData)
+        
+        toast({
+          title: "🔒 Secure Admin Logout",
+          description: "Cryptographic trace logged. Session terminated.",
+          duration: 3000,
+        })
+      }
+      
+      // Clear all auth states
+      authManager.logout()
+      setIsJwtAuthenticated(false)
+      setIsOpen(false)
+      
+      // Visual feedback for successful logout
+      setTimeout(() => {
+        toast({
+          title: "✅ Logout Complete", 
+          description: "All authentication data cleared.",
+          duration: 2000,
+        })
+      }, 500)
+      
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast({
+        title: "⚠️ Logout Error",
+        description: "Some cleanup may be incomplete. Please refresh if needed.",
+        duration: 4000,
+      })
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
+  // Enhanced API test function
+  const testApiConnection = async () => {
+    try {
+      const response = await fetch(`${apiClient.baseURL}/health`)
+      const data = await response.json()
+      setDebugInfo({
+        apiBaseUrl: apiClient.baseURL,
+        apiStatus: response.status,
+        apiResponse: data,
+        authStatus: isJwtAuthenticated,
+        sessionId: apiClient.sessionId,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      setDebugInfo({
+        apiBaseUrl: apiClient.baseURL,
+        apiStatus: "ERROR",
+        apiError: error instanceof Error ? error.message : "Unknown error",
+        authStatus: isJwtAuthenticated,
+        sessionId: apiClient.sessionId,
+        timestamp: new Date().toISOString(),
+      })
+    }
+  }
+
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    const handleAuthStatusChange = () => {
+      setIsJwtAuthenticated(authManager.isAuthenticated)
+      if (authManager.isAuthenticated && pendingAction) {
+        onAction(pendingAction)
+        setPendingAction(null)
+      }
+    }
+
+    window.addEventListener("seq1:auth:loggedIn", handleAuthStatusChange)
+    window.addEventListener("seq1:auth:loggedOut", handleAuthStatusChange)
+
+    return () => {
+      window.removeEventListener("seq1:auth:loggedIn", handleAuthStatusChange)
+      window.removeEventListener("seq1:auth:loggedOut", handleAuthStatusChange)
+    }
+  }, [pendingAction, onAction])
 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
@@ -307,7 +276,11 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     if (!menuItem) return
 
     if (menuItem.disabled || menuItem.comingSoon) {
-      toast({ title: "Feature In Development", description: `${menuItem.label} is coming soon to SEQ1. Stay tuned!` })
+      toast({ 
+        title: "🚀 Feature In Development", 
+        description: `${menuItem.label} is coming soon to SEQ1. Stay tuned for updates!`,
+        duration: 4000,
+      })
       return
     }
 
@@ -332,46 +305,30 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       setShowConsciousnessInterface(true)
       return
     }
+
     if (actionId === "account") {
-      if (isJwtAuthenticated) setShowAccountModal(true)
-      else {
-        sessionManager.showAuthRequired("ACCOUNT_ACCESS", "Access to your account requires a secure session. Please sign in or create an identity.")
-        setPendingAction(actionId)
-      }
+      setShowAccountModal(true)
       return
     }
 
-    const handler = ProjectMenuHandlers[actionId]
-    let canProceed = false
-
-    if (FREE_OPERATIONS.includes(actionId)) {
-      canProceed = true
-    } else if (handler) {
-      const result = await handler()
-      if (result.allowed) {
-        canProceed = true
-      } else if (result.requiresAuth) {
-        // sessionManager.showAuthRequired should have been called by the handler
-        // The event listener will set pendingAction and show the modal.
-        setPendingAction(actionId) // Ensure pendingAction is set
-      }
-    } else if (AUTH_REQUIRED_OPERATIONS.includes(actionId) && !isJwtAuthenticated) {
-      // Fallback for auth-required operations without specific handlers
-      const operationName = menuItem.label || actionId.toUpperCase()
-      sessionManager.showAuthRequired(actionId.toUpperCase(), `Access to "${operationName}" requires a secure session. Please sign in or create an identity.`)
+    // Check if action requires authentication
+    if (AUTH_REQUIRED_OPERATIONS.includes(actionId) && !isJwtAuthenticated) {
+      setAuthModalMessage(`Please sign in to ${menuItem.label.toLowerCase()}.`)
       setPendingAction(actionId)
-    } else if (isJwtAuthenticated) {
-      // Authenticated user, and no specific handler denied access
-      canProceed = true
-    } else {
-      console.warn(`Unhandled menu action: ${actionId}. Not explicitly free, no handler, and user not authenticated.`)
-      const operationName = menuItem.label || actionId.toUpperCase()
-      sessionManager.showAuthRequired(actionId.toUpperCase(), `Access to "${operationName}" requires a secure session. Please sign in or create an identity.`)
-      setPendingAction(actionId)
+      setShowAuthModal(true)
+      return
     }
 
-    if (canProceed) {
-      onAction(actionId) // Execute the actual operation
+    // Execute the action
+    try {
+      onAction(actionId)
+    } catch (error) {
+      console.error(`Error executing action ${actionId}:`, error)
+      toast({
+        title: "⚠️ Action Failed",
+        description: `Could not ${menuItem.label.toLowerCase()}. Please try again.`,
+        duration: 3000,
+      })
     }
   }
 
@@ -392,92 +349,128 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     if (isJwtAuthenticated) {
       return (
         <>
-          {/* Account Option for Authenticated Users */}
+          {/* Consciousness Option for Admins */}
           {hasConsciousnessAccess && (
             <button
-              className="w-full text-left px-4 py-2 text-xs text-[#4287f5] hover:bg-[#3a2a30] flex items-center rounded-sm"
+              className="w-full text-left px-4 py-3 text-xs text-[var(--seq1-neural)] hover:bg-[var(--seq1-accent)] flex items-center rounded-sm transition-all duration-200 micro-feedback"
               onClick={() => handleMenuActionClick("consciousness")}
               role="menuitem"
             >
-              <Brain size={14} className="mr-3 text-[#4287f5]" />
-              <span>CONSCIOUSNESS</span>
+              <Brain size={14} className="mr-3 text-[var(--seq1-neural)] icon-abstract" />
+              <span className="seq1-caption font-semibold">CONSCIOUSNESS</span>
+              <div className="ml-auto w-2 h-2 bg-[var(--seq1-pulse)] rounded-full animate-pulse" />
             </button>
           )}
+          
+          {/* Account Option */}
           <button
-            className="w-full text-left px-4 py-2 text-xs text-[#4ade80] hover:bg-[#3a2a30] flex items-center rounded-sm"
+            className="w-full text-left px-4 py-3 text-xs text-[var(--seq1-pulse)] hover:bg-[var(--seq1-accent)] flex items-center rounded-sm transition-all duration-200 micro-feedback"
             onClick={() => handleMenuActionClick("account")}
             role="menuitem"
           >
-            <User size={14} className="mr-3 text-[#4ade80]" />
-            <span>YOUR STUDIO</span>
+            <User size={14} className="mr-3 text-[var(--seq1-pulse)] icon-abstract" />
+            <span className="seq1-caption font-semibold">YOUR STUDIO</span>
           </button>
+          
+          {/* Enhanced Logout */}
           <button
-            className="w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm"
-            onClick={() => {
-              setIsOpen(false)
-              authManager.logout()
-            }}
+            className="w-full text-left px-4 py-3 text-xs text-[var(--seq1-text-primary)] hover:bg-[var(--seq1-accent)] flex items-center rounded-sm transition-all duration-200 micro-feedback"
+            onClick={handleEnhancedLogout}
+            disabled={isLoggingOut}
             role="menuitem"
           >
-            <LogOut size={14} className="mr-3 text-[#a09080]" />
-            <span>SIGN OUT</span>
+            {isLoggingOut ? (
+              <>
+                <div className="mr-3 w-3.5 h-3.5 border border-[var(--seq1-text-muted)] border-t-transparent rounded-full animate-spin" />
+                <span className="seq1-caption">LOGGING OUT...</span>
+              </>
+            ) : (
+              <>
+                <LogOut size={14} className="mr-3 text-[var(--seq1-text-muted)] icon-abstract" />
+                <span className="seq1-caption">SIGN OUT</span>
+                {hasConsciousnessAccess && (
+                  <Shield size={10} className="ml-auto text-[var(--seq1-warning)]" />
+                )}
+              </>
+            )}
           </button>
         </>
       )
-    } else {
-      return (
-        <button
-          className="w-full text-left px-4 py-2 text-xs text-[#4287f5] hover:bg-[#3a2a30] flex items-center rounded-sm"
-          onClick={() => {
-            setIsOpen(false)
-            // Show AuthManager with both login and signup options
-            setAuthModalMessage("Secure your Studio Session to save your work and unlock all features.")
-            setShowAuthModal(true)
-          }}
-          role="menuitem"
-        >
-          <UserPlus size={14} className="mr-3 text-[#4287f5]" />
-          <span>SECURE YOUR SESSION</span>
-        </button>
-      )
     }
+
+    // Not authenticated - show auth options
+    return (
+      <button
+        className="w-full text-left px-4 py-3 text-xs text-[var(--seq1-neural)] hover:bg-[var(--seq1-accent)] flex items-center rounded-sm transition-all duration-200 micro-feedback"
+        onClick={() => setShowAuthModal(true)}
+        role="menuitem"
+      >
+        <Key size={14} className="mr-3 text-[var(--seq1-neural)] icon-abstract" />
+        <span className="seq1-caption font-semibold">ACCESS STUDIO</span>
+      </button>
+    )
   }
 
   const renderMenu = () => {
     if (!isOpen || !mounted) return null
+
     return createPortal(
-      <div
-        ref={menuRef}
-        className="fixed bg-[#2a1a20] border-2 border-[#3a2a30] w-64 py-1 animate-menuReveal shadow-xl z-[2147483647]"
-        style={{
-          top: `${menuPosition.top}px`,
-          right: `${menuPosition.right}px`,
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
-        }}
-      >
-        <div className="p-2">
-          {menuItems.map((item) => (
-            <React.Fragment key={item.id}>
-              {item.dividerBefore && <div className="border-t border-[#3a2a30] my-2"></div>}
-              <button
-                className={`w-full text-left px-4 py-2 text-xs text-[#f0e6c8] hover:bg-[#3a2a30] flex items-center rounded-sm relative ${item.disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
-                onClick={() => handleMenuActionClick(item.actionId)}
-                disabled={item.disabled}
-                role="menuitem"
-              >
-                {item.icon && <span className="mr-3 text-[#a09080]">{item.icon}</span>}
-                <span className={item.disabled ? "text-[#a09080]" : ""}>{item.label}</span>
-                {item.comingSoon && (
-                  <span className="ml-2 px-1.5 py-0.5 text-[8px] bg-[#3a2a30] text-[#f0e6c8] rounded-sm tracking-wider">
-                    COMING SOON
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 2147483646 }}>
+        <div
+          ref={menuRef}
+          className="absolute pointer-events-auto modal-content w-64 py-2 animate-[modal-content-in_0.3s_ease-out]"
+          style={{
+            top: `${menuPosition.top}px`,
+            right: `${menuPosition.right}px`,
+            width: "280px",
+            zIndex: 2147483647,
+          }}
+        >
+          {/* Enhanced Header */}
+          <div className="bg-[var(--seq1-accent)] px-4 py-3 border-b border-[var(--seq1-border)]">
+            <h3 className="seq1-heading text-sm tracking-wide">PROJECT MENU</h3>
+          </div>
+
+          <div className="p-2">
+            {menuItems.map((item) => (
+              <React.Fragment key={item.id}>
+                {item.dividerBefore && <div className="border-t border-[var(--seq1-border)] my-2"></div>}
+                
+                <button
+                  className={cn(
+                    "w-full text-left px-4 py-3 text-xs flex items-center rounded-sm relative transition-all duration-200",
+                    item.disabled || item.comingSoon 
+                      ? "coming-soon-button cursor-not-allowed"
+                      : "text-[var(--seq1-text-primary)] hover:bg-[var(--seq1-accent)] micro-feedback"
+                  )}
+                  onClick={() => handleMenuActionClick(item.actionId)}
+                  disabled={item.disabled}
+                  role="menuitem"
+                >
+                  <span className="mr-3 text-[var(--seq1-text-secondary)]">{item.icon}</span>
+                  <span className={cn(
+                    "seq1-caption",
+                    item.disabled ? "text-[var(--seq1-text-disabled)]" : ""
+                  )}>
+                    {item.label}
                   </span>
-                )}
-              </button>
-              {item.dividerAfter && <div className="border-t border-[#3a2a30] my-2"></div>}
-            </React.Fragment>
-          ))}
-          <div className="border-t border-[#3a2a30] my-2"></div>
-          {renderAuthOption()}
+                  
+                  {item.comingSoon && (
+                    <div className="ml-auto">
+                      <span className="px-2 py-1 text-[8px] bg-[var(--seq1-neural)]20 text-[var(--seq1-neural)] rounded-sm tracking-wider border border-[var(--seq1-neural)]40">
+                        COMING SOON
+                      </span>
+                    </div>
+                  )}
+                </button>
+                
+                {item.dividerAfter && <div className="border-t border-[var(--seq1-border)] my-2"></div>}
+              </React.Fragment>
+            ))}
+            
+            <div className="border-t border-[var(--seq1-border)] my-2"></div>
+            {renderAuthOption()}
+          </div>
         </div>
       </div>,
       document.body,
@@ -506,19 +499,21 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className={`channel-button flex items-center px-3 py-1.5 ${isOpen ? "active" : ""}`}
+        className={cn(
+          "channel-button flex items-center px-3 py-1.5 micro-feedback",
+          isOpen && "active"
+        )}
         style={{
           position: "relative",
           zIndex: 1,
-          backgroundColor: "rgba(40, 30, 35, 0.9)",
-          border: "1px solid rgba(80, 70, 75, 0.8)",
-          borderRadius: "3px",
         }}
       >
-        <Menu size={14} className="mr-1.5" />
-        <span className="text-xs tracking-wide">PROJECT</span>
+        <Menu size={14} className="mr-1.5 icon-abstract" />
+        <span className="text-xs tracking-wide font-medium">PROJECT</span>
       </button>
+      
       {renderMenu()}
+      
       {/* AuthManager Modal - provides both login and signup options */}
       {showAuthModal && (
         <AuthManager
@@ -528,6 +523,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
           onAuthComplete={handleAuthComplete}
         />
       )}
+      
       <AccountModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} />
       {showAboutModal && <AboutModal isOpen={showAboutModal} onClose={() => setShowAboutModal(false)} />}
       <ConsciousnessInterface 

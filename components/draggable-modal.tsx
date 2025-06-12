@@ -1,10 +1,9 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
-import { X } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
+import { X } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface DraggableModalProps {
   isOpen: boolean
@@ -14,6 +13,7 @@ interface DraggableModalProps {
   children: React.ReactNode
   minimal?: boolean
   width?: string
+  disableClose?: boolean
 }
 
 export default function DraggableModal({
@@ -24,11 +24,13 @@ export default function DraggableModal({
   children,
   minimal = false,
   width = "w-md",
+  disableClose = false,
 }: DraggableModalProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [position, setPosition] = useState({ x: -1000, y: -1000 }) // Start off-screen until positioned
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [hasBeenPositioned, setHasBeenPositioned] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
   const [mounted, setMounted] = useState(false)
 
@@ -41,6 +43,7 @@ export default function DraggableModal({
   useEffect(() => {
     if (isOpen) {
       setHasBeenPositioned(false)
+      setIsClosing(false)
     }
   }, [isOpen])
 
@@ -55,10 +58,10 @@ export default function DraggableModal({
           const windowWidth = window.innerWidth
           const windowHeight = window.innerHeight
 
-          // Center the modal
+          // Center the modal with slight upward bias for better visual balance
           setPosition({
             x: Math.max(0, (windowWidth - modalWidth) / 2),
-            y: Math.max(0, (windowHeight - modalHeight) / 2),
+            y: Math.max(0, (windowHeight - modalHeight) / 2 - 50),
           })
           setHasBeenPositioned(true)
         }
@@ -70,23 +73,24 @@ export default function DraggableModal({
 
   // Handle mouse down on the header (start dragging)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (modalRef.current) {
+    if (modalRef.current && !disableClose) {
       setIsDragging(true)
       setDragOffset({
         x: e.clientX - position.x,
         y: e.clientY - position.y,
       })
     }
+    e.preventDefault()
   }
 
   // Handle mouse move (dragging)
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        setPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y,
-        })
+      if (isDragging && modalRef.current) {
+        const newX = Math.max(0, Math.min(window.innerWidth - modalRef.current.offsetWidth, e.clientX - dragOffset.x))
+        const newY = Math.max(0, Math.min(window.innerHeight - modalRef.current.offsetHeight, e.clientY - dragOffset.y))
+        
+        setPosition({ x: newX, y: newY })
       }
     }
 
@@ -105,41 +109,34 @@ export default function DraggableModal({
     }
   }, [isDragging, dragOffset])
 
-  // Close on escape key
+  // Enhanced close handler with exit animation
+  const handleClose = () => {
+    if (disableClose) return
+    
+    setIsClosing(true)
+    // Wait for exit animation before actually closing
+    setTimeout(() => {
+      onClose()
+      setIsClosing(false)
+    }, 300)
+  }
+
+  // Handle escape key
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen && !disableClose) {
         handleClose()
       }
     }
 
     if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown)
+      document.addEventListener("keydown", handleEscape)
     }
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown)
+      document.removeEventListener("keydown", handleEscape)
     }
-  }, [isOpen])
-
-  // Add this new function to handle closing with animation
-  const handleClose = () => {
-    if (modalRef.current) {
-      // Apply closing animations
-      const backdrop = modalRef.current.parentElement
-      if (backdrop) {
-        backdrop.style.animation = "backdropFadeOut 200ms forwards ease-in"
-      }
-      modalRef.current.style.animation = "modalFadeOut 200ms forwards ease-in"
-
-      // Delay actual closing to allow animation to complete
-      setTimeout(() => {
-        onClose()
-      }, 200)
-    } else {
-      onClose()
-    }
-  }
+  }, [isOpen, disableClose])
 
   // Render the modal using a portal
   const renderModal = () => {
@@ -147,47 +144,86 @@ export default function DraggableModal({
 
     return createPortal(
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/0 transition-all duration-300 ease-in-out"
-        onClick={handleClose} // Changed from onClose to handleClose
+        className={cn(
+          "fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ease-out",
+          "modal-backdrop",
+          isClosing && "animate-backdrop-out"
+        )}
+        onClick={handleClose}
         style={{
-          backdropFilter: "blur(0px)",
-          animation: "backdropFadeIn 300ms forwards ease-out",
+          cursor: isDragging ? "grabbing" : "default",
         }}
       >
         <div
           ref={modalRef}
-          className={`bg-[#2a1a20] border-2 border-[#3a2a30] shadow-xl ${minimal ? "w-auto" : width}`}
+          className={cn(
+            "modal-content shadow-2xl",
+            minimal ? "w-auto" : width,
+            isClosing && "animate-modal-out"
+          )}
           style={{
             position: "absolute",
             left: `${position.x}px`,
             top: `${position.y}px`,
-            visibility: hasBeenPositioned ? "visible" : "hidden", // Hide until positioned
+            visibility: hasBeenPositioned ? "visible" : "hidden",
             cursor: isDragging ? "grabbing" : "auto",
             zIndex: 9999,
-            opacity: 0,
-            transform: "scale(0.95)",
-            animation: "modalFadeIn 300ms forwards ease-out",
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Modal header - draggable */}
+          {/* Enhanced Modal Header */}
           <div
-            className="bg-[#3a2a30] px-4 py-2 flex justify-between items-center cursor-grab"
+            className={cn(
+              "flex justify-between items-center relative",
+              "bg-gradient-to-r from-[#3a2a30] to-[#4a3a40]",
+              "border-b border-[#4a3a40]",
+              "px-6 py-4",
+              !disableClose && "cursor-grab active:cursor-grabbing"
+            )}
             onMouseDown={handleMouseDown}
           >
-            <div className="flex items-center">
-              {icon && <span className="mr-2">{icon}</span>}
-              <h3 className="text-[#f0e6c8] text-sm tracking-wide">{title}</h3>
+            {/* Subtle header glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(66,135,245,0.05)] to-transparent opacity-60 pointer-events-none" />
+            
+            <div className="flex items-center space-x-3 relative z-10">
+              {icon && (
+                <div className="icon-abstract flex-shrink-0">
+                  {icon}
+                </div>
+              )}
+              <h3 className="seq1-heading text-lg font-semibold tracking-wide">
+                {title}
+              </h3>
             </div>
-            {!minimal && (
-              <button onClick={handleClose} className="text-[#a09080] hover:text-[#f0e6c8]">
-                <X size={16} />
+            
+            {!minimal && !disableClose && (
+              <button 
+                onClick={handleClose} 
+                className="micro-feedback p-2 rounded-full hover:bg-[rgba(66,135,245,0.1)] transition-all duration-200 relative z-10 group"
+                aria-label="Close modal"
+              >
+                <X size={18} className="text-[#a09080] group-hover:text-[#f0e6c8]" />
               </button>
             )}
           </div>
 
-          {/* Modal content */}
-          <div className={minimal ? "p-0" : "p-4"}>{children}</div>
+          {/* Enhanced Modal Content */}
+          <div className={cn(
+            "relative overflow-hidden",
+            minimal ? "p-0" : "p-6"
+          )}>
+            {/* Subtle content background pattern */}
+            <div className="absolute inset-0 opacity-[0.02] pointer-events-none">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.3)_1px,_transparent_0)] bg-[length:20px_20px]" />
+            </div>
+            
+            <div className="relative z-10">
+              {children}
+            </div>
+          </div>
+
+          {/* Enhanced focus ring for accessibility */}
+          <div className="absolute inset-0 rounded-lg ring-2 ring-transparent transition-all duration-200 pointer-events-none" />
         </div>
       </div>,
       document.body,

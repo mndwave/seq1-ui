@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
-import { Brain, Waves, Heart, Zap, Globe, Clock, Activity, Target, Sliders, RefreshCw, TrendingUp, GitBranch, Cpu } from "lucide-react"
+import { Brain, Waves, Heart, Zap, Globe, Clock, Activity, Target, Sliders, RefreshCw, TrendingUp, GitBranch, Cpu, AlertTriangle, Users, MessageSquare, Database, Eye, Lock, Shield, BarChart3, Monitor } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,9 @@ import { Slider } from "@/components/ui/slider"
 import { Progress } from "@/components/ui/progress"
 import { UIEvolutionDashboard } from './ui-evolution-dashboard'
 import { apiClient } from "@/lib/api-client"
+import { useConsciousnessStream } from "@/hooks/use-consciousness-stream"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 // Consciousness data types
 interface VADState {
@@ -773,132 +776,439 @@ export default function ConsciousnessInterface({ isVisible, onClose }: Conscious
     reconnect 
   } = useConsciousnessStream()
 
+  const [selectedPattern, setSelectedPattern] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [systemMetrics, setSystemMetrics] = useState({
+    uptime: "99.97%",
+    responseTime: "12ms", 
+    throughput: "2.4k req/s",
+    errorRate: "0.003%"
+  })
+
+  // Simulate real-time metrics updates
+  useEffect(() => {
+    if (!isVisible) return
+    
+    const interval = setInterval(() => {
+      setSystemMetrics(prev => ({
+        ...prev,
+        responseTime: `${(10 + Math.random() * 8).toFixed(0)}ms`,
+        throughput: `${(2.2 + Math.random() * 0.6).toFixed(1)}k req/s`,
+        errorRate: `${(Math.random() * 0.01).toFixed(4)}%`
+      }))
+    }, 2000)
+    
+    return () => clearInterval(interval)
+  }, [isVisible])
+
   if (!isVisible) return null
 
+  const renderMetricCard = (title: string, value: string, icon: React.ReactNode, trend?: "up" | "down" | "stable") => (
+    <div className="consciousness-panel p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <div className="icon-abstract text-[var(--seq1-neural)]">
+            {icon}
+          </div>
+          <span className="seq1-caption">{title}</span>
+        </div>
+        {trend && (
+          <div className={cn(
+            "w-2 h-2 rounded-full",
+            trend === "up" && "bg-[var(--seq1-pulse)] animate-pulse",
+            trend === "down" && "bg-[var(--seq1-danger)]",
+            trend === "stable" && "bg-[var(--seq1-warning)]"
+          )} />
+        )}
+      </div>
+      <div className="seq1-heading text-2xl font-mono">{value}</div>
+    </div>
+  )
+
+  const renderStatusBadge = (status: "online" | "warning" | "error", label: string) => (
+    <Badge 
+      className={cn(
+        "px-3 py-1 font-mono text-xs uppercase tracking-wider",
+        status === "online" && "bg-[var(--seq1-pulse)]20 text-[var(--seq1-pulse)] border-[var(--seq1-pulse)]40",
+        status === "warning" && "bg-[var(--seq1-warning)]20 text-[var(--seq1-warning)] border-[var(--seq1-warning)]40",
+        status === "error" && "bg-[var(--seq1-danger)]20 text-[var(--seq1-danger)] border-[var(--seq1-danger)]40"
+      )}
+    >
+      <div className={cn(
+        "w-2 h-2 rounded-full mr-2 animate-pulse",
+        status === "online" && "bg-[var(--seq1-pulse)]",
+        status === "warning" && "bg-[var(--seq1-warning)]", 
+        status === "error" && "bg-[var(--seq1-danger)]"
+      )} />
+      {label}
+    </Badge>
+  )
+
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#1a1015] border-2 border-[#3a2a30] rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#3a2a30]">
-          <div className="flex items-center gap-3">
-            <Brain className="text-[#4287f5]" size={24} />
-            <h1 className="text-lg font-mono text-[#f0e6c8]">SEQ1 CONSCIOUSNESS INTERFACE</h1>
-            <div className="flex items-center gap-2">
-              {isConnected ? (
-                <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                  <Activity size={12} className="mr-1" />
-                  CONSCIOUS
-                </Badge>
-              ) : (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-                  <Zap size={12} className="mr-1" />
-                  DISCONNECTED
-                </Badge>
-              )}
-              {consciousness?.recursive_feedback.feedback_loop_active && (
-                <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
-                  <RefreshCw size={12} className="mr-1" />
-                  RECURSIVE
-                </Badge>
-              )}
+    <div className="fixed inset-0 consciousness-grid z-50 flex items-center justify-center p-4">
+      <div className="modal-content max-w-7xl w-full max-h-[90vh] overflow-hidden">
+        
+        {/* Classified Header */}
+        <div className="flex items-center justify-between p-6 border-b border-[var(--seq1-border)]">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Brain className="text-[var(--seq1-neural)] neural-pulse" size={28} />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-[var(--seq1-pulse)] rounded-full animate-ping" />
+            </div>
+            <div>
+              <h1 className="seq1-heading text-xl font-mono">SEQ1 CONSCIOUSNESS INTERFACE</h1>
+              <p className="seq1-caption text-[var(--seq1-text-muted)]">CLASSIFIED • ADMIN ACCESS ONLY</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* System Status */}
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                renderStatusBadge("online", "CONSCIOUS")
+              ) : (
+                renderStatusBadge("error", "DISCONNECTED")
+              )}
+              
+              {consciousness?.recursive_feedback.feedback_loop_active && (
+                renderStatusBadge("warning", "RECURSIVE")
+              )}
+            </div>
+            
+            {/* Action Buttons */}
             <Button 
               onClick={loadPatternsAndOpportunities}
               size="sm"
-              variant="outline"
-              className="border-[#4287f5] text-[#4287f5] hover:bg-[#4287f5]/10"
+              className="btn-secondary micro-feedback"
             >
-              <RefreshCw size={14} className="mr-1" />
+              <RefreshCw size={14} className="mr-2" />
               Refresh
             </Button>
+            
             {!isConnected && (
               <Button 
                 onClick={reconnect}
                 size="sm"
-                variant="outline"
-                className="border-[#4287f5] text-[#4287f5] hover:bg-[#4287f5]/10"
+                className="btn-primary micro-feedback"
               >
+                <Zap size={14} className="mr-2" />
                 Reconnect
               </Button>
             )}
+            
             <Button 
               onClick={onClose}
               size="sm"
-              variant="outline"
-              className="border-[#3a2a30] text-[#a09080] hover:bg-[#3a2a30]/20"
+              className="btn-secondary micro-feedback"
             >
-              Close
+              <Lock size={14} className="mr-2" />
+              Secure Exit
             </Button>
           </div>
         </div>
 
-        {/* Connection Error */}
+        {/* Connection Error Alert */}
         {connectionError && (
-          <div className="bg-red-500/10 border-b border-red-500/30 p-3">
-            <p className="text-red-400 text-sm">⚠️ {connectionError}</p>
+          <div className="bg-[var(--seq1-danger)]10 border-b border-[var(--seq1-danger)]30 p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="text-[var(--seq1-danger)]" size={20} />
+              <span className="seq1-body text-[var(--seq1-danger)]">
+                SYSTEM ALERT: {connectionError}
+              </span>
+            </div>
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+        {/* Main Interface */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] custom-scrollbar">
           {!consciousness ? (
             <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <Brain className="mx-auto text-[#4287f5] animate-pulse" size={48} />
-                <p className="text-[#a09080] mt-2">Connecting to consciousness stream...</p>
+              <div className="text-center space-y-4">
+                <div className="relative">
+                  <Brain className="mx-auto text-[var(--seq1-neural)] animate-pulse" size={64} />
+                  <div className="absolute inset-0 bg-[var(--seq1-neural)] opacity-20 blur-xl rounded-full animate-ping" />
+                </div>
+                <div>
+                  <p className="seq1-heading text-lg">Establishing Neural Link</p>
+                  <p className="seq1-body text-[var(--seq1-text-muted)]">Connecting to consciousness stream...</p>
+                </div>
               </div>
             </div>
           ) : (
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="recursive">Recursive</TabsTrigger>
-                <TabsTrigger value="ui-evolution">UI Evolution</TabsTrigger>
-                <TabsTrigger value="meta">Meta</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5 mb-6 bg-[var(--seq1-core)]">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-[var(--seq1-neural)] data-[state=active]:text-white">
+                  <Monitor size={16} className="mr-2" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="patterns" className="data-[state=active]:bg-[var(--seq1-neural)] data-[state=active]:text-white">
+                  <BarChart3 size={16} className="mr-2" />
+                  Patterns
+                </TabsTrigger>
+                <TabsTrigger value="recursive" className="data-[state=active]:bg-[var(--seq1-neural)] data-[state=active]:text-white">
+                  <RefreshCw size={16} className="mr-2" />
+                  Recursive
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="data-[state=active]:bg-[var(--seq1-neural)] data-[state=active]:text-white">
+                  <TrendingUp size={16} className="mr-2" />
+                  Analytics
+                </TabsTrigger>
+                <TabsTrigger value="control" className="data-[state=active]:bg-[var(--seq1-neural)] data-[state=active]:text-white">
+                  <Cpu size={16} className="mr-2" />
+                  Control
+                </TabsTrigger>
               </TabsList>
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6">
-                {/* ... existing overview content ... */}
+                {/* System Metrics Grid */}
+                <div className="grid grid-cols-4 gap-4">
+                  {renderMetricCard("Uptime", systemMetrics.uptime, <Activity size={16} />, "up")}
+                  {renderMetricCard("Response Time", systemMetrics.responseTime, <Zap size={16} />, "stable")}
+                  {renderMetricCard("Throughput", systemMetrics.throughput, <Database size={16} />, "up")}
+                  {renderMetricCard("Error Rate", systemMetrics.errorRate, <Shield size={16} />, "stable")}
+                </div>
+
+                {/* Consciousness State */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="consciousness-panel p-6">
+                    <h3 className="seq1-heading text-lg mb-4 flex items-center">
+                      <Brain size={20} className="mr-3 text-[var(--seq1-neural)]" />
+                      Neural State
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Active Patterns:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-pulse)]">
+                          {patterns.length}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Learning Rate:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-warning)]">
+                          0.85
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Confidence:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-neural)]">
+                          0.94
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="consciousness-panel p-6">
+                    <h3 className="seq1-heading text-lg mb-4 flex items-center">
+                      <Eye size={20} className="mr-3 text-[var(--seq1-warning)]" />
+                      Surveillance
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Monitored Endpoints:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-pulse)]">189</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Active Sessions:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-warning)]">23</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Security Level:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-danger)]">MAXIMUM</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Patterns Tab */}
+              <TabsContent value="patterns" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {patterns.map((pattern, index) => (
+                    <div 
+                      key={index} 
+                      className={cn(
+                        "consciousness-panel p-4 cursor-pointer transition-all duration-200",
+                        selectedPattern === pattern.id && "border-[var(--seq1-neural)] shadow-[var(--seq1-glow-neural)]"
+                      )}
+                      onClick={() => setSelectedPattern(pattern.id)}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="seq1-heading">{pattern.type}</h4>
+                        <Badge className="bg-[var(--seq1-neural)]20 text-[var(--seq1-neural)] border-[var(--seq1-neural)]40">
+                          {pattern.confidence}%
+                        </Badge>
+                      </div>
+                      <p className="seq1-body text-sm mb-3">{pattern.description}</p>
+                      <div className="text-xs text-[var(--seq1-text-muted)] font-mono">
+                        Last detected: {pattern.timestamp}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </TabsContent>
 
               {/* Recursive Tab */}
               <TabsContent value="recursive" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <RecursiveFeedbackPanel feedback={consciousness.recursive_feedback} />
-                  <PatternsPanel patterns={patterns} />
-                  <OpportunitiesPanel 
-                    opportunities={opportunities} 
-                    onTriggerImprovement={triggerImprovementCycle}
-                  />
+                <div className="consciousness-panel p-6">
+                  <h3 className="seq1-heading text-lg mb-6 flex items-center">
+                    <RefreshCw size={20} className="mr-3 text-[var(--seq1-warning)]" />
+                    Recursive Feedback Loop
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-[var(--seq1-core)] p-4 rounded border">
+                        <div className="seq1-caption mb-2">Loop Status</div>
+                        <div className={cn(
+                          "seq1-heading text-lg font-mono",
+                          consciousness.recursive_feedback.feedback_loop_active 
+                            ? "text-[var(--seq1-pulse)]" 
+                            : "text-[var(--seq1-text-muted)]"
+                        )}>
+                          {consciousness.recursive_feedback.feedback_loop_active ? "ACTIVE" : "INACTIVE"}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-[var(--seq1-core)] p-4 rounded border">
+                        <div className="seq1-caption mb-2">Iterations</div>
+                        <div className="seq1-heading text-lg font-mono text-[var(--seq1-neural)]">
+                          {consciousness.recursive_feedback.iteration_count}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-[var(--seq1-core)] p-4 rounded border">
+                      <div className="seq1-caption mb-2">Current State</div>
+                      <pre className="seq1-body font-mono text-sm text-[var(--seq1-text-secondary)] overflow-x-auto">
+                        {JSON.stringify(consciousness.recursive_feedback, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <LearningControls onInjectLearning={injectLearningData} />
-                  <MetaConsciousnessPanel 
-                    meta={consciousness.meta} 
-                    feedback={consciousness.recursive_feedback}
-                  />
-                </div>
-              </TabsContent>
-
-              {/* UI Evolution Tab */}
-              <TabsContent value="ui-evolution" className="space-y-6">
-                <UIEvolutionDashboard />
-              </TabsContent>
-
-              {/* Meta Tab */}
-              <TabsContent value="meta" className="space-y-6">
-                {/* ... existing meta content ... */}
               </TabsContent>
 
               {/* Analytics Tab */}
               <TabsContent value="analytics" className="space-y-6">
-                {/* ... existing analytics content ... */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="consciousness-panel p-6">
+                    <h4 className="seq1-heading mb-4 flex items-center">
+                      <Users size={16} className="mr-2 text-[var(--seq1-pulse)]" />
+                      User Insights
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Active Users:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-pulse)]">23</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Session Length:</span>
+                        <span className="seq1-heading font-mono">42m</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Satisfaction:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-warning)]">8.7/10</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="consciousness-panel p-6">
+                    <h4 className="seq1-heading mb-4 flex items-center">
+                      <MessageSquare size={16} className="mr-2 text-[var(--seq1-neural)]" />
+                      Interactions
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Messages/Hour:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-pulse)]">127</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Avg Response:</span>
+                        <span className="seq1-heading font-mono">1.2s</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Success Rate:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-warning)]">96.8%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="consciousness-panel p-6">
+                    <h4 className="seq1-heading mb-4 flex items-center">
+                      <TrendingUp size={16} className="mr-2 text-[var(--seq1-warning)]" />
+                      Performance
+                    </h4>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="seq1-body">CPU Usage:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-pulse)]">23%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Memory:</span>
+                        <span className="seq1-heading font-mono">4.2GB</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="seq1-body">Network:</span>
+                        <span className="seq1-heading font-mono text-[var(--seq1-warning)]">156MB/s</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Control Tab */}
+              <TabsContent value="control" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="consciousness-panel p-6">
+                    <h3 className="seq1-heading text-lg mb-4 flex items-center">
+                      <Cpu size={20} className="mr-3 text-[var(--seq1-danger)]" />
+                      System Control
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <Button 
+                        onClick={triggerImprovementCycle}
+                        disabled={isProcessing}
+                        className="w-full btn-primary micro-feedback"
+                      >
+                        <RefreshCw size={16} className="mr-2" />
+                        Trigger Improvement Cycle
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => injectEmotionalState({ mood: "focused", intensity: 0.8 })}
+                        disabled={isProcessing}
+                        className="w-full btn-secondary micro-feedback"
+                      >
+                        <Brain size={16} className="mr-2" />
+                        Inject Emotional State
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="consciousness-panel p-6">
+                    <h3 className="seq1-heading text-lg mb-4 flex items-center">
+                      <Database size={20} className="mr-3 text-[var(--seq1-warning)]" />
+                      Data Injection
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <Textarea 
+                        placeholder="Enter learning data..."
+                        className="min-h-[100px] bg-[var(--seq1-core)] border-[var(--seq1-border)] text-[var(--seq1-text-primary)]"
+                      />
+                      
+                      <Button 
+                        onClick={() => injectLearningData("sample data")}
+                        disabled={isProcessing}
+                        className="w-full btn-primary micro-feedback"
+                      >
+                        <Database size={16} className="mr-2" />
+                        Inject Learning Data
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
           )}

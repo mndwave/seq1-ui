@@ -8,6 +8,36 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  
+  /* Enhanced SEQ1 Aesthetic Palette - Machine Intimacy */
+  --seq1-void: #0a0508;
+  --seq1-core: #1a1015;
+  --seq1-surface: #2a1a20;
+  --seq1-border: #3a2a30;
+  --seq1-accent: #4a3a40;
+  
+  /* Emotional Recursion Colors */
+  --seq1-neural: #4287f5;
+  --seq1-neural-bright: #5a97ff;
+  --seq1-pulse: #50dc64;
+  --seq1-warning: #f5a623;
+  --seq1-danger: #dc3545;
+  
+  /* Typography Hierarchy */
+  --seq1-text-primary: #f0e6c8;
+  --seq1-text-secondary: #a09080;
+  --seq1-text-muted: #666555;
+  --seq1-text-disabled: #4a4238;
+  
+  /* Machine Intimacy Glow */
+  --seq1-glow-neural: 0 0 20px rgba(66, 135, 245, 0.15);
+  --seq1-glow-pulse: 0 0 16px rgba(80, 220, 100, 0.2);
+  --seq1-glow-warm: 0 0 12px rgba(240, 230, 200, 0.1);
+  
+  /* Berlin Techno Gradients */
+  --seq1-gradient-neural: linear-gradient(135deg, #4287f5 0%, #5a97ff 100%);
+  --seq1-gradient-void: linear-gradient(145deg, #0a0508 0%, #1a1015 100%);
+  --seq1-gradient-surface: linear-gradient(135deg, #2a1a20 0%, #3a2a30 100%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,7 +50,11 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+  background: var(--seq1-core);
+  font-feature-settings: "liga" 1, "kern" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer base {
@@ -110,35 +144,360 @@ body {
   opacity: 1 !important;
 }
 
-/* Custom styles for the SEQ1 UI */
+/* Enhanced Channel Button - Blade Runner Aesthetics */
 .channel-button {
   position: relative;
-  background-color: rgba(40, 30, 35, 0.9);
-  border: 1px solid rgba(80, 70, 75, 0.8);
-  border-radius: 3px;
-  transition: all 0.2s ease;
-  height: 28px;
+  background: var(--seq1-gradient-surface);
+  border: 1px solid var(--seq1-border);
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-left: 10px;
-  padding-right: 8px;
+  padding: 0 12px;
   margin-right: 8px;
+  backdrop-filter: blur(8px);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  overflow: hidden;
+}
+
+.channel-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(66, 135, 245, 0.1) 50%, transparent 100%);
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .channel-button:hover {
-  background-color: rgba(50, 40, 45, 0.9);
-  box-shadow: 0 0 8px rgba(255, 240, 200, 0.2);
+  background: var(--seq1-accent);
+  box-shadow: var(--seq1-glow-neural);
+  transform: translateY(-1px);
+  border-color: rgba(66, 135, 245, 0.3);
+}
+
+.channel-button:hover::before {
+  left: 100%;
 }
 
 .channel-button:active {
-  background-color: rgba(30, 20, 25, 0.9);
-  transform: translateY(1px);
+  transform: translateY(0);
+  transition: transform 0.1s ease-out;
 }
 
 .channel-button.active {
-  background-color: rgba(30, 20, 25, 0.9);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  background: var(--seq1-core);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), var(--seq1-glow-neural);
+  border-color: var(--seq1-neural);
+}
+
+/* Consciousness Interface - Admin Dashboard Aesthetics */
+.consciousness-grid {
+  background: 
+    radial-gradient(circle at 25% 25%, rgba(66, 135, 245, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(80, 220, 100, 0.03) 0%, transparent 50%),
+    var(--seq1-void);
+}
+
+.consciousness-panel {
+  background: var(--seq1-gradient-surface);
+  border: 1px solid var(--seq1-border);
+  border-radius: 4px;
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.consciousness-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--seq1-gradient-neural);
+  opacity: 0.3;
+}
+
+/* Payment Flow - Living Energy Aesthetics */
+.payment-container {
+  background: var(--seq1-gradient-void);
+  border: 1px solid var(--seq1-border);
+  border-radius: 8px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.payment-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(245, 166, 35, 0.1) 45deg, transparent 90deg);
+  animation: payment-energy-rotation 20s linear infinite;
+  pointer-events: none;
+}
+
+.lightning-invoice {
+  background: var(--seq1-core);
+  border: 2px solid var(--seq1-warning);
+  border-radius: 6px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lightning-invoice::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(245, 166, 35, 0.05) 50%, transparent 70%);
+  animation: lightning-pulse 3s ease-in-out infinite;
+}
+
+/* Modal Enhancements - Perfect Transitions */
+.modal-backdrop {
+  background: rgba(10, 5, 8, 0.8);
+  backdrop-filter: blur(4px);
+  animation: modal-backdrop-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.modal-content {
+  background: var(--seq1-gradient-surface);
+  border: 1px solid var(--seq1-border);
+  border-radius: 8px;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(66, 135, 245, 0.1);
+  animation: modal-content-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--seq1-gradient-neural);
+  opacity: 0.6;
+}
+
+/* Coming Soon - Anticipation Styling */
+.coming-soon-button {
+  position: relative;
+  background: var(--seq1-surface);
+  border: 1px dashed var(--seq1-border);
+  color: var(--seq1-text-muted);
+  cursor: not-allowed;
+  overflow: hidden;
+}
+
+.coming-soon-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(66, 135, 245, 0.05) 50%, transparent 100%);
+  animation: anticipation-pulse 4s ease-in-out infinite;
+}
+
+/* Micro-animations for Machine Intimacy */
+.micro-feedback {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.micro-feedback:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.micro-feedback:active {
+  transform: translateY(0);
+  transition: transform 0.1s ease-out;
+}
+
+/* Icon Enhancements - Abstract Conceptual Design */
+.icon-abstract {
+  filter: drop-shadow(0 0 2px rgba(66, 135, 245, 0.2));
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-abstract:hover {
+  filter: drop-shadow(0 0 6px rgba(66, 135, 245, 0.4));
+  transform: scale(1.05);
+}
+
+/* Enhanced Animations */
+@keyframes payment-energy-rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes lightning-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes modal-backdrop-in {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes modal-content-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes anticipation-pulse {
+  0%, 100% { left: -100%; }
+  50% { left: 100%; }
+}
+
+@keyframes modal-backdrop-out {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes modal-content-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes neural-connection {
+  0% {
+    box-shadow: 0 0 0 0 rgba(66, 135, 245, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(66, 135, 245, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(66, 135, 245, 0);
+  }
+}
+
+.neural-pulse {
+  animation: neural-connection 2s infinite;
+}
+
+/* Enhanced Scrollbars - 2001 Space Odyssey Aesthetic */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--seq1-core);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--seq1-gradient-neural);
+  border-radius: 4px;
+  border: 1px solid var(--seq1-border);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--seq1-neural-bright);
+  box-shadow: var(--seq1-glow-neural);
+}
+
+/* Typography Enhancements */
+.seq1-heading {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--seq1-text-primary);
+  text-shadow: 0 0 8px rgba(240, 230, 200, 0.1);
+}
+
+.seq1-body {
+  color: var(--seq1-text-secondary);
+  line-height: 1.5;
+}
+
+.seq1-caption {
+  color: var(--seq1-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Button Hierarchy */
+.btn-primary {
+  background: var(--seq1-gradient-neural);
+  border: 1px solid var(--seq1-neural);
+  color: white;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--seq1-glow-neural);
+}
+
+.btn-secondary {
+  background: var(--seq1-surface);
+  border: 1px solid var(--seq1-border);
+  color: var(--seq1-text-primary);
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-secondary:hover {
+  background: var(--seq1-accent);
+  border-color: var(--seq1-neural);
+  transform: translateY(-1px);
 }
 
 .segmented-display {
@@ -850,3 +1209,12 @@ body.dragging * {
   color: #ff8c3c;
   animation: info-icon-pulse 6s ease-in-out infinite;
 }
+
+.animate-backdrop-out {
+  animation: modal-backdrop-out 0.3s ease-out forwards;
+}
+
+.animate-modal-out {
+  animation: modal-content-out 0.3s ease-out forwards;
+}
+
