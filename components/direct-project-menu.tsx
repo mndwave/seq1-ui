@@ -66,7 +66,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
 
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const { toast } = useToast()
   const { hasAccess: hasConsciousnessAccess } = useConsciousnessAccess()
 
@@ -251,10 +251,17 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
-      // Position menu directly beneath button, right-aligned
+      // Calculate position to align menu's right edge with button's right edge
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+      
+      // Menu width is 280px, so position left edge accordingly
+      const menuWidth = 280
+      const leftPosition = rect.right + scrollLeft - menuWidth
+      
       setMenuPosition({ 
-        top: rect.bottom + window.scrollY + 4, // 4px gap for visual separation
-        right: window.innerWidth - rect.right + window.scrollX // Right edge alignment
+        top: rect.bottom + scrollTop + 4, // 4px gap for visual separation
+        left: leftPosition // Position so right edges align
       })
     }
   }, [isOpen])
@@ -419,16 +426,22 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     if (!isOpen || !mounted) return null
 
     return createPortal(
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 2147483646 }}>
+      <div 
+        className="fixed inset-0 pointer-events-none" 
+        style={{ zIndex: 2147483646 }}
+      >
         <div
           ref={menuRef}
           className="absolute pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
           style={{
+            position: "fixed",
             top: `${menuPosition.top}px`,
-            right: `${menuPosition.right}px`,
+            left: `${menuPosition.left}px`,
             width: "280px",
             zIndex: 2147483647,
-            transformOrigin: "top right", // Animation origin from button position
+            transformOrigin: "top right", // Animation scales from button position
+            maxHeight: "calc(100vh - 100px)", // Prevent overflow
+            overflowY: "auto",
           }}
         >
           {/* Enhanced Header */}

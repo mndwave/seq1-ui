@@ -1,0 +1,27 @@
+# Critical components that should never be modified by healing
+components/draggable-modal.tsx
+components/direct-project-menu.tsx
+components/auth-manager.tsx
+components/consciousness-interface.tsx
+lib/auth-manager.ts
+lib/api-client.ts
+lib/session-manager.ts
+app/layout.tsx
+app/page.tsx
+app/globals.css
+middleware.ts
+next.config.*
+package.json
+tailwind.config.*
+*.d.ts
+
+# Build and framework files
+.next/**
+node_modules/**
+out/**
+dist/**
+
+# Config files that should not be auto-modified
+tsconfig.json
+.env*
+.gitignore 
