@@ -251,7 +251,11 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
-      setMenuPosition({ top: rect.bottom + window.scrollY, right: window.innerWidth - rect.right + window.scrollX })
+      // Position menu directly beneath button, right-aligned
+      setMenuPosition({ 
+        top: rect.bottom + window.scrollY + 4, // 4px gap for visual separation
+        right: window.innerWidth - rect.right + window.scrollX // Right edge alignment
+      })
     }
   }, [isOpen])
 
@@ -418,12 +422,13 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 2147483646 }}>
         <div
           ref={menuRef}
-          className="absolute pointer-events-auto modal-content w-64 py-2 animate-[modal-content-in_0.3s_ease-out]"
+          className="absolute pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
           style={{
             top: `${menuPosition.top}px`,
             right: `${menuPosition.right}px`,
             width: "280px",
             zIndex: 2147483647,
+            transformOrigin: "top right", // Animation origin from button position
           }}
         >
           {/* Enhanced Header */}

@@ -118,7 +118,7 @@ export default function DraggableModal({
     setTimeout(() => {
       onClose()
       setIsClosing(false)
-    }, 300)
+    }, 250) // Reduced for snappier feel
   }
 
   // Handle escape key

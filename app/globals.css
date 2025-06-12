@@ -150,7 +150,7 @@ body {
   background: var(--seq1-gradient-surface);
   border: 1px solid var(--seq1-border);
   border-radius: 2px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   height: 32px;
   display: flex;
   align-items: center;
@@ -171,7 +171,7 @@ body {
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent 0%, rgba(66, 135, 245, 0.1) 50%, transparent 100%);
-  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .channel-button:hover {
@@ -266,55 +266,152 @@ body {
   animation: lightning-pulse 3s ease-in-out infinite;
 }
 
-/* Modal Enhancements - Perfect Transitions */
-.modal-backdrop {
-  background: rgba(10, 5, 8, 0.8);
-  backdrop-filter: blur(4px);
-  animation: modal-backdrop-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+/* Enhanced Modal Animations - Frame-Perfect Transitions */
+@keyframes modal-backdrop-in {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
 }
 
-.modal-content {
-  background: var(--seq1-gradient-surface);
-  border: 1px solid var(--seq1-border);
-  border-radius: 8px;
-  box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(66, 135, 245, 0.1);
-  animation: modal-content-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+@keyframes modal-content-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modal-backdrop-out {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes modal-content-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.98) translateY(4px);
+  }
+}
+
+/* Enhanced Menu Reveal Animation */
+@keyframes menuReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    filter: blur(1px);
+  }
+  60% {
+    opacity: 0.8;
+    transform: translateY(-2px) scale(0.99);
+    filter: blur(0.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.animate-menuReveal {
+  animation: menuReveal 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Enhanced Micro-feedback System */
+.micro-feedback {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden;
 }
 
-.modal-content::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
+.micro-feedback:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.micro-feedback:active {
+  transform: translateY(0);
+  transition: transform 0.08s ease-out;
+}
+
+.micro-feedback:focus-visible {
+  outline: 2px solid var(--seq1-neural);
+  outline-offset: 2px;
+}
+
+/* Enhanced Button Hierarchy */
+.btn-primary {
   background: var(--seq1-gradient-neural);
-  opacity: 0.6;
-}
-
-/* Coming Soon - Anticipation Styling */
-.coming-soon-button {
+  border: 1px solid var(--seq1-neural);
+  color: white;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  background: var(--seq1-surface);
-  border: 1px dashed var(--seq1-border);
-  color: var(--seq1-text-muted);
-  cursor: not-allowed;
   overflow: hidden;
 }
 
-.coming-soon-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent 0%, rgba(66, 135, 245, 0.05) 50%, transparent 100%);
-  animation: anticipation-pulse 4s ease-in-out infinite;
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--seq1-glow-neural), 0 4px 12px rgba(66, 135, 245, 0.2);
+}
+
+.btn-primary:active {
+  transform: translateY(-1px);
+  transition: transform 0.1s ease-out;
+}
+
+.btn-secondary {
+  background: var(--seq1-surface);
+  border: 1px solid var(--seq1-border);
+  color: var(--seq1-text-primary);
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-secondary:hover {
+  background: var(--seq1-accent);
+  border-color: var(--seq1-neural);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(66, 135, 245, 0.1);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  transition: transform 0.1s ease-out;
+}
+
+/* Remove duplicate textFadeOut keyframes - keeping only the first one */
+@keyframes textFadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-text-fadeout {
+  animation: textFadeOut 150ms ease-out forwards;
 }
 
 /* Micro-animations for Machine Intimacy */
@@ -354,53 +451,9 @@ body {
   50% { opacity: 0.7; }
 }
 
-@keyframes modal-backdrop-in {
-  0% {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-  100% {
-    opacity: 1;
-    backdrop-filter: blur(4px);
-  }
-}
-
-@keyframes modal-content-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.9) translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
 @keyframes anticipation-pulse {
   0%, 100% { left: -100%; }
   50% { left: 100%; }
-}
-
-@keyframes modal-backdrop-out {
-  0% {
-    opacity: 1;
-    backdrop-filter: blur(4px);
-  }
-  100% {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-}
-
-@keyframes modal-content-out {
-  0% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.95) translateY(10px);
-  }
 }
 
 @keyframes shimmer {
@@ -474,14 +527,14 @@ body {
   font-weight: 500;
   border-radius: 6px;
   padding: 8px 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: var(--seq1-glow-neural);
+  box-shadow: var(--seq1-glow-neural), 0 4px 12px rgba(66, 135, 245, 0.2);
 }
 
 .btn-secondary {
@@ -491,13 +544,19 @@ body {
   font-weight: 500;
   border-radius: 6px;
   padding: 8px 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-secondary:hover {
   background: var(--seq1-accent);
   border-color: var(--seq1-neural);
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(66, 135, 245, 0.1);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  transition: transform 0.1s ease-out;
 }
 
 .segmented-display {
@@ -530,21 +589,6 @@ body {
 
 .animate-fadeOut {
   animation: fadeOut 2s forwards;
-}
-
-@keyframes menuReveal {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-menuReveal {
-  animation: menuReveal 0.2s ease-out forwards;
 }
 
 @keyframes play-pulse {
@@ -933,29 +977,6 @@ body {
   }
 }
 
-/* Add a new animation for text fade out before section shrinks */
-@keyframes textFadeOut {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-.animate-text-fadeout {
-  animation: textFadeOut 150ms ease-out forwards;
-}
-
-.animate-button-grow {
-  animation: buttonGrow 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.animate-button-shrink {
-  animation: buttonShrink 300ms cubic-bezier(0.34, 0.01, 0.64, 1) forwards;
-  transform-origin: left; /* Keep left to maintain the left-to-right paradigm */
-}
-
 /* Add a new animation for sections sliding together */
 @keyframes sectionsSlide {
   0% {
@@ -1216,5 +1237,67 @@ body.dragging * {
 
 .animate-modal-out {
   animation: modal-content-out 0.3s ease-out forwards;
+}
+
+/* Enhanced Modal System - Perfect Transitions */
+.modal-backdrop {
+  background: rgba(10, 5, 8, 0.8);
+  backdrop-filter: blur(4px);
+  animation: modal-backdrop-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.modal-content {
+  background: var(--seq1-gradient-surface);
+  border: 1px solid var(--seq1-border);
+  border-radius: 8px;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(66, 135, 245, 0.1);
+  animation: modal-content-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--seq1-gradient-neural);
+  opacity: 0.6;
+}
+
+/* Coming Soon - Anticipation Styling */
+.coming-soon-button {
+  position: relative;
+  background: var(--seq1-surface);
+  border: 1px dashed var(--seq1-border);
+  color: var(--seq1-text-muted);
+  cursor: not-allowed;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.coming-soon-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(66, 135, 245, 0.05) 50%, transparent 100%);
+  animation: anticipation-pulse 4s ease-in-out infinite;
+}
+
+/* Animation Control Classes */
+.animate-button-grow {
+  animation: buttonGrow 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-button-shrink {
+  animation: buttonShrink 300ms cubic-bezier(0.34, 0.01, 0.64, 1) forwards;
+  transform-origin: left;
 }
 
