@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useRef, useState, useEffect, useCallback } from "react"
-import { createPortal } from "react-dom"
 import {
   Menu,
   FilePlus,
@@ -66,7 +65,6 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
 
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const { toast } = useToast()
   const { hasAccess: hasConsciousnessAccess } = useConsciousnessAccess()
 
@@ -249,24 +247,6 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   }, [pendingAction, onAction])
 
   useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      // Calculate position to align menu's right edge with button's right edge
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
-      
-      // Menu width is 280px, so position left edge accordingly
-      const menuWidth = 280
-      const leftPosition = rect.right + scrollLeft - menuWidth
-      
-      setMenuPosition({ 
-        top: rect.bottom + scrollTop + 4, // 4px gap for visual separation
-        left: leftPosition // Position so right edges align
-      })
-    }
-  }, [isOpen])
-
-  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
         menuRef.current &&
@@ -425,73 +405,64 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   const renderMenu = () => {
     if (!isOpen || !mounted) return null
 
-    return createPortal(
-      <div 
-        className="fixed inset-0 pointer-events-none" 
-        style={{ zIndex: 2147483646 }}
+    return (
+      <div
+        ref={menuRef}
+        className="absolute top-full right-0 mt-1 pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
+        style={{
+          width: "280px",
+          zIndex: 2147483647,
+          transformOrigin: "top right", // Animation scales from button position
+          maxHeight: "calc(100vh - 100px)", // Prevent overflow
+          overflowY: "auto",
+        }}
       >
-        <div
-          ref={menuRef}
-          className="absolute pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
-          style={{
-            position: "fixed",
-            top: `${menuPosition.top}px`,
-            left: `${menuPosition.left}px`,
-            width: "280px",
-            zIndex: 2147483647,
-            transformOrigin: "top right", // Animation scales from button position
-            maxHeight: "calc(100vh - 100px)", // Prevent overflow
-            overflowY: "auto",
-          }}
-        >
-          {/* Enhanced Header */}
-          <div className="bg-[var(--seq1-accent)] px-4 py-3 border-b border-[var(--seq1-border)]">
-            <h3 className="seq1-heading text-sm tracking-wide">PROJECT MENU</h3>
-          </div>
-
-          <div className="p-2">
-            {menuItems.map((item) => (
-              <React.Fragment key={item.id}>
-                {item.dividerBefore && <div className="border-t border-[var(--seq1-border)] my-2"></div>}
-                
-                <button
-                  className={cn(
-                    "w-full text-left px-4 py-3 text-xs flex items-center rounded-sm relative transition-all duration-200",
-                    item.disabled || item.comingSoon 
-                      ? "coming-soon-button cursor-not-allowed"
-                      : "text-[var(--seq1-text-primary)] hover:bg-[var(--seq1-accent)] micro-feedback"
-                  )}
-                  onClick={() => handleMenuActionClick(item.actionId)}
-                  disabled={item.disabled}
-                  role="menuitem"
-                >
-                  <span className="mr-3 text-[var(--seq1-text-secondary)]">{item.icon}</span>
-                  <span className={cn(
-                    "seq1-caption",
-                    item.disabled ? "text-[var(--seq1-text-disabled)]" : ""
-                  )}>
-                    {item.label}
-                  </span>
-                  
-                  {item.comingSoon && (
-                    <div className="ml-auto">
-                      <span className="px-2 py-1 text-[8px] bg-[var(--seq1-neural)]20 text-[var(--seq1-neural)] rounded-sm tracking-wider border border-[var(--seq1-neural)]40">
-                        COMING SOON
-                      </span>
-                    </div>
-                  )}
-                </button>
-                
-                {item.dividerAfter && <div className="border-t border-[var(--seq1-border)] my-2"></div>}
-              </React.Fragment>
-            ))}
-            
-            <div className="border-t border-[var(--seq1-border)] my-2"></div>
-            {renderAuthOption()}
-          </div>
+        {/* Enhanced Header */}
+        <div className="bg-[var(--seq1-accent)] px-4 py-3 border-b border-[var(--seq1-border)]">
+          <h3 className="seq1-heading text-sm tracking-wide">PROJECT MENU</h3>
         </div>
-      </div>,
-      document.body,
+
+        <div className="p-2">
+          {menuItems.map((item) => (
+            <React.Fragment key={item.id}>
+              {item.dividerBefore && <div className="border-t border-[var(--seq1-border)] my-2"></div>}
+              
+              <button
+                className={cn(
+                  "w-full text-left px-4 py-3 text-xs flex items-center rounded-sm relative transition-all duration-200",
+                  item.disabled || item.comingSoon 
+                    ? "coming-soon-button cursor-not-allowed"
+                    : "text-[var(--seq1-text-primary)] hover:bg-[var(--seq1-accent)] micro-feedback"
+                )}
+                onClick={() => handleMenuActionClick(item.actionId)}
+                disabled={item.disabled}
+                role="menuitem"
+              >
+                <span className="mr-3 text-[var(--seq1-text-secondary)]">{item.icon}</span>
+                <span className={cn(
+                  "seq1-caption",
+                  item.disabled ? "text-[var(--seq1-text-disabled)]" : ""
+                )}>
+                  {item.label}
+                </span>
+                
+                {item.comingSoon && (
+                  <div className="ml-auto">
+                    <span className="px-2 py-1 text-[8px] bg-[var(--seq1-neural)]20 text-[var(--seq1-neural)] rounded-sm tracking-wider border border-[var(--seq1-neural)]40">
+                      COMING SOON
+                    </span>
+                  </div>
+                )}
+              </button>
+              
+              {item.dividerAfter && <div className="border-t border-[var(--seq1-border)] my-2"></div>}
+            </React.Fragment>
+          ))}
+          
+          <div className="border-t border-[var(--seq1-border)] my-2"></div>
+          {renderAuthOption()}
+        </div>
+      </div>
     )
   }
 
@@ -516,6 +487,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     <div className="relative">
       <button
         ref={buttonRef}
+        id="project-menu-button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "channel-button flex items-center px-3 py-1.5 micro-feedback",
@@ -523,7 +495,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
         )}
         style={{
           position: "relative",
-          zIndex: 1,
+          zIndex: 2,
         }}
       >
         <Menu size={14} className="mr-1.5 icon-abstract" />

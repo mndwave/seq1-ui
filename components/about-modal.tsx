@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Info, Mail, Clock } from "lucide-react"
 import DraggableModal from "./draggable-modal"
-import { getCurrentVersion, fetchBitcoinBlockheight } from "@/lib/version"
 
 interface AboutModalProps {
   isOpen: boolean
@@ -11,31 +10,13 @@ interface AboutModalProps {
 }
 
 export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
-  const [version, setVersion] = useState<string>(getCurrentVersion())
-  const [isUpdatingVersion, setIsUpdatingVersion] = useState(false)
+  const [blockheight, setBlockheight] = useState<string>("901042")
 
-  // Update version when modal opens
   useEffect(() => {
-    const updateVersion = async () => {
-      if (!isOpen) return
-      
-      setIsUpdatingVersion(true)
-      try {
-        // Try to fetch latest blockheight
-        await fetchBitcoinBlockheight()
-        setVersion(getCurrentVersion())
-      } catch (error) {
-        console.warn("Failed to update version:", error)
-      } finally {
-        setIsUpdatingVersion(false)
-      }
-    }
-
-    updateVersion()
-  }, [isOpen])
-
-  const blockheight = version.replace(/[\[\]]/g, '')
-  const isUnknown = version === "[unknown]"
+    // Use static blockheight from environment (deployment seal)
+    const staticBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || "901042"
+    setBlockheight(staticBlockheight)
+  }, [])
 
   return (
     <DraggableModal
@@ -65,22 +46,17 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
             <span>Consensus Clock:</span>
           </div>
           <div className="flex items-center space-x-1">
-            {isUpdatingVersion && (
-              <div className="w-2 h-2 bg-[#8fbc8f] rounded-full animate-pulse"></div>
-            )}
             <span 
-              className={`font-mono ${isUnknown ? 'text-[#a09080]' : 'text-[#f0e6c8]'}`}
-              title={isUnknown ? "Version unknown - network unreachable" : `Bitcoin block ${blockheight}`}
+              className="font-mono text-[#f0e6c8]"
+              title={`Bitcoin block ${blockheight}`}
             >
-              {version}
+              [{blockheight}]
             </span>
           </div>
         </div>
-        {!isUnknown && (
-          <div className="text-xs text-[#666] mt-1">
-            Version = Bitcoin Block {blockheight}
-          </div>
-        )}
+        <div className="text-xs text-[#666] mt-1">
+          Version = Bitcoin Block {blockheight}
+        </div>
       </div>
 
       <div className="mt-6 pt-4 border-t border-[#3a3a3a]">
@@ -112,8 +88,6 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
             >
               <span>DM</span>
               <span className="ml-[0.35em]">MNDWAVE</span>
-              <span className="ml-[0.35em]">ON</span>
-              <span className="ml-[0.35em]">NOSTR</span>
               <Mail size={14} className="ml-1.5" />
             </div>
 

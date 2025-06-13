@@ -3,54 +3,12 @@
 import { useState, useEffect } from "react"
 
 export default function VersionIndicator() {
-  const [blockheight, setBlockheight] = useState<string>("999999")
+  const [blockheight, setBlockheight] = useState<string>("901042")
 
-  // Function to get current bitcoin blockheight
-  const getBlockheight = async (): Promise<string> => {
-    try {
-      // Try multiple APIs for reliability
-      const apis = [
-        "https://blockstream.info/api/blocks/tip/height",
-        "https://blockchain.info/q/getblockcount", 
-        "https://mempool.space/api/blocks/tip/height"
-      ]
-
-      for (const api of apis) {
-        try {
-          const response = await fetch(api, { 
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-          })
-          if (response.ok) {
-            const height = await response.text()
-            return height.trim()
-          }
-        } catch (err) {
-          console.warn(`Failed to fetch from ${api}:`, err)
-        }
-      }
-      
-      // Fallback to static high number if all APIs fail
-      return "999999"
-    } catch (error) {
-      console.warn("All blockheight APIs failed:", error)
-      return "999999"
-    }
-  }
-
-  // Update blockheight on mount and periodically
   useEffect(() => {
-    const updateBlockheight = async () => {
-      const height = await getBlockheight()
-      setBlockheight(height)
-    }
-
-    // Initial fetch
-    updateBlockheight()
-
-    // Update every 10 minutes (blocks are ~10 min on average)
-    const interval = setInterval(updateBlockheight, 10 * 60 * 1000)
-
-    return () => clearInterval(interval)
+    // Use static blockheight from environment (deployment seal)
+    const staticBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || "901042"
+    setBlockheight(staticBlockheight)
   }, [])
 
   return (
