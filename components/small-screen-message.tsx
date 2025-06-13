@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import AnimatedLogo from "./animated-logo"
-import { Info, MessageCircle } from "lucide-react"
+import { Info, MessageSquare } from "lucide-react"
 import { useLogoAnimation } from "@/lib/logo-animation-context"
 
 export default function SmallScreenMessage() {
@@ -81,9 +81,9 @@ export default function SmallScreenMessage() {
           {/* DM MNDWAVE Button */}
           <button
             onClick={handleDMClick}
-            className="inline-flex items-center px-4 py-2 bg-[var(--seq1-accent)] border border-[var(--seq1-border)] rounded-sm text-xs text-[var(--seq1-text-primary)] hover:bg-[var(--seq1-accent-hover)] transition-all duration-200 micro-feedback"
+            className="relative px-5 py-2.5 overflow-hidden group bg-[#f0e6c8] rounded-sm text-xs text-[#2a1a20] hover:bg-[#fff] transition-all duration-200 micro-feedback"
           >
-            <MessageCircle size={14} className="mr-2 icon-abstract" />
+            <MessageSquare size={14} className="mr-2 icon-abstract" />
             <span className="seq1-caption font-semibold">DM MNDWAVE</span>
           </button>
         </div>
