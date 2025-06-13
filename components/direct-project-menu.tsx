@@ -408,10 +408,10 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     return (
       <div
         ref={menuRef}
-        className="absolute top-full right-0 mt-1 pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
+        className="absolute top-full right-0 mt-1 z-50 pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
         style={{
           width: "280px",
-          zIndex: 2147483647,
+          zIndex: 9999,
           transformOrigin: "top right", // Animation scales from button position
           maxHeight: "calc(100vh - 100px)", // Prevent overflow
           overflowY: "auto",
