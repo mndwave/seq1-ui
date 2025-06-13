@@ -81,10 +81,10 @@ export default function SmallScreenMessage() {
           {/* DM MNDWAVE Button */}
           <button
             onClick={handleDMClick}
-            className="relative px-5 py-2.5 overflow-hidden group bg-[#f0e6c8] rounded-sm text-xs text-[#2a1a20] hover:bg-[#fff] transition-all duration-200 micro-feedback"
+            className="relative px-5 py-2.5 overflow-hidden group bg-[#f0e6c8] rounded-sm text-xs text-[#2a1a20] hover:bg-[#fff] transition-all duration-300" style={{boxShadow: "0 2px 0 #3a2a30, inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3)"}}"
           >
-            <MessageSquare size={14} className="mr-2 icon-abstract" />
-            <span className="seq1-caption font-semibold">DM MNDWAVE</span>
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent opacity-50"></span><span className="absolute inset-0 w-full h-full dot-pattern opacity-10"></span><div className="relative flex items-center justify-center text-xs tracking-wide font-bold" style={{textShadow: "0 1px 0 rgba(255, 255, 255, 0.4)"}}><span>DM</span><span className="ml-[0.35em]">MNDWAVE</span><MessageSquare size={14} className="ml-1.5" /></div><span className="absolute bottom-0 left-0 right-0 h-1 bg-[#3a2a30] opacity-20 group-active:h-0 transition-all duration-150"></span><span className="absolute inset-0 w-full h-full bg-[#2a1a20] opacity-0 group-active:opacity-5 group-active:translate-y-px transition-all duration-150"></span>
+            
           </button>
         </div>
 
