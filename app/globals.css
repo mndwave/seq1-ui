@@ -1301,3 +1301,11 @@ body.dragging * {
   transform-origin: left;
 }
 
+
+/* Subtle CRT/VHS effects for mobile screen */
+@keyframes subtle-flicker { 0% { opacity: 1; } 98% { opacity: 1; } 99% { opacity: 0.98; } 100% { opacity: 1; } }
+@keyframes vhs-noise { 0% { transform: translateY(0px) scaleY(1); } 50% { transform: translateY(-0.5px) scaleY(1.001); } 100% { transform: translateY(0px) scaleY(1); } }
+.mobile-crt-effects { animation: subtle-flicker 4s infinite ease-in-out, vhs-noise 7s infinite ease-in-out; filter: contrast(1.01) brightness(0.995) saturate(1.02); }
+/* Cache bust: 1749904982 */
+/* Fresh build: 1749905788 */
+/* URGENT CACHE BUST: 1749906780 */

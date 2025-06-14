@@ -292,7 +292,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
       return
     }
     
-    if (actionId === "consciousness") {
+    if (actionId === "cognition") {
       setShowConsciousnessInterface(true)
       return
     }
@@ -344,11 +344,11 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
           {hasConsciousnessAccess && (
             <button
               className="w-full text-left px-4 py-3 text-xs text-[var(--seq1-neural)] hover:bg-[var(--seq1-accent)] flex items-center rounded-sm transition-all duration-200 micro-feedback"
-              onClick={() => handleMenuActionClick("consciousness")}
+              onClick={() => handleMenuActionClick("cognition")}
               role="menuitem"
             >
               <Brain size={14} className="mr-3 text-[var(--seq1-neural)] icon-abstract" />
-              <span className="seq1-caption font-semibold">CONSCIOUSNESS</span>
+              <span className="seq1-caption font-semibold">COGNITION</span>
               <div className="ml-auto w-2 h-2 bg-[var(--seq1-pulse)] rounded-full animate-pulse" />
             </button>
           )}
@@ -360,7 +360,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
             role="menuitem"
           >
             <User size={14} className="mr-3 text-[var(--seq1-pulse)] icon-abstract" />
-            <span className="seq1-caption font-semibold">YOUR STUDIO</span>
+            <span className="seq1-caption font-semibold">ACCOUNT</span>
           </button>
           
           {/* Enhanced Logout */}
@@ -408,11 +408,11 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
     return (
       <div
         ref={menuRef}
-        className="absolute top-full right-0 mt-1 z-50 pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
+        className="absolute top-full left-0 mt-2 pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
         style={{
-          width: "280px",
-          zIndex: 9999,
-          transformOrigin: "top right", // Animation scales from button position
+          width: "280px", left: 0, top: "100%",
+          zIndex: 2147483647,
+          transformOrigin: "top left", // Animation scales from button position
           maxHeight: "calc(100vh - 100px)", // Prevent overflow
           overflowY: "auto",
         }}
@@ -484,7 +484,7 @@ export default function DirectProjectMenu({ onAction }: DirectProjectMenuProps) 
   }, [])
 
   return (
-    <div className="relative">
+    <div className="relative isolate">
       <button
         ref={buttonRef}
         id="project-menu-button"

@@ -1,60 +1,67 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import AnimatedLogo from "./animated-logo"
-import { Info, MessageSquare } from "lucide-react"
-import { useLogoAnimation } from "@/lib/logo-animation-context"
+import React, { useEffect, useRef, useState } from 'react'
+import { MessageSquare, Mail } from 'lucide-react'
+import AnimatedLogo from './animated-logo'
 
 export default function SmallScreenMessage() {
-  const { hasLogoAnimationPlayed, setLogoAnimationPlayed } = useLogoAnimation()
-  const [logoAnimationComplete, setLogoAnimationComplete] = useState(hasLogoAnimationPlayed)
-  const [blockheight, setBlockheight] = useState<string>("901042")
+  const [hasLogoAnimationPlayed, setHasLogoAnimationPlayed] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Use static blockheight from environment (deployment seal)
-    const staticBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || "901042"
-    setBlockheight(staticBlockheight)
+    // Check if the logo animation has already played
+    const hasPlayed = localStorage.getItem('seq1-logo-animation-played') === 'true'
+    setHasLogoAnimationPlayed(hasPlayed)
   }, [])
 
-  // Set up the animation loop similar to the homepage
-  useEffect(() => {
-    // Only set up the interval if the initial animation has completed
-    if (logoAnimationComplete) {
-      const interval = setInterval(() => {
-        // Just trigger a subtle glow pulse by adding and removing a class
-        if (modalRef.current) {
-          const logo = modalRef.current.querySelector(".seq1-logo-glow")
-          if (logo) {
-            logo.classList.add("logo-pulse-highlight")
-            setTimeout(() => {
-              logo.classList.remove("logo-pulse-highlight")
-            }, 2000)
-          }
-        }
-      }, 35000) // 35 seconds interval
-
-      return () => clearInterval(interval)
-    }
-  }, [logoAnimationComplete])
-
   const handleLogoAnimationComplete = () => {
-    setLogoAnimationPlayed()
-    setLogoAnimationComplete(true)
+    setHasLogoAnimationPlayed(true)
+    localStorage.setItem('seq1-logo-animation-played', 'true')
   }
 
   const handleDMClick = () => {
-    // Open Nostr client or copy npub
-    const npub = "npub1mndwave..." // Replace with actual npub
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(npub)
-    }
-    window.open("https://njump.me/npub1mndwave", "_blank")
+    // Direct link to Primal profile
+    window.open('https://primal.net/mndwave', '_blank', 'noopener,noreferrer')
   }
+
+  // Apply background styles to body when component mounts
+  useEffect(() => {
+    const originalBg = document.body.style.background
+    const originalOverflow = document.body.style.overflow
+    
+    // Set dark background
+    document.body.style.background = '#1a1015'
+    document.body.style.overflow = 'hidden'
+    
+    return () => {
+      // Restore original styles
+      document.body.style.background = originalBg
+      document.body.style.overflow = originalOverflow
+    }
+  }, [])
+
+  // Handle ESC key to close modal (for consistency with other modals)
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Could trigger a close action if needed
+      }
+    }
+    
+    document.addEventListener('keydown', handleEsc)
+    return () => document.removeEventListener('keydown', handleEsc)
+  }, [])
+
+  // Focus management for accessibility
+  useEffect(() => {
+    if (modalRef.current) {
+      modalRef.current.focus()
+    }
+  }, [])
 
   return (
     <div
-      className="h-screen w-screen flex flex-col bg-[#1a1015] text-[#f0e6c8] p-6 fixed inset-0 overflow-hidden z-50"
+      className="h-screen w-screen flex flex-col bg-[#1a1015] text-[#f0e6c8] p-6 fixed inset-0 overflow-hidden z-50 mobile-crt-effects"
       ref={modalRef}
     >
       {/* Logo section - reduced top padding */}
@@ -78,44 +85,55 @@ export default function SmallScreenMessage() {
             Please use a device with a screen width of at least 1024px.
           </p>
 
-          {/* DM MNDWAVE Button */}
-          <button
-            onClick={handleDMClick}
-            className="relative px-5 py-2.5 overflow-hidden group bg-[#f0e6c8] rounded-sm text-xs text-[#2a1a20] hover:bg-[#fff] transition-all duration-300" style={{boxShadow: "0 2px 0 #3a2a30, inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3)"}}"
+          {/* DM MNDWAVE Button - Exact Match to About Modal */}
+          <a
+            href="https://primal.net/mndwave"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative px-5 py-2.5 overflow-hidden group bg-[#f0e6c8] rounded-sm text-[#2a1a20] hover:bg-[#fff] transition-all duration-300"
+            style={{
+              boxShadow: "0 2px 0 #3a2a30, inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3)",
+            }}
+            data-immutable="mndwave-contact"
+            data-business-critical="true"
           >
-            <span className="absolute inset-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent opacity-50"></span><span className="absolute inset-0 w-full h-full dot-pattern opacity-10"></span><div className="relative flex items-center justify-center text-xs tracking-wide font-bold" style={{textShadow: "0 1px 0 rgba(255, 255, 255, 0.4)"}}><span>DM</span><span className="ml-[0.35em]">MNDWAVE</span><MessageSquare size={14} className="ml-1.5" /></div><span className="absolute bottom-0 left-0 right-0 h-1 bg-[#3a2a30] opacity-20 group-active:h-0 transition-all duration-150"></span><span className="absolute inset-0 w-full h-full bg-[#2a1a20] opacity-0 group-active:opacity-5 group-active:translate-y-px transition-all duration-150"></span>
-            
-          </button>
+            {/* Button texture overlay */}
+            <span className="absolute inset-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent opacity-50"></span>
+
+            {/* Subtle noise texture */}
+            <span className="absolute inset-0 w-full h-full dot-pattern opacity-10"></span>
+
+            {/* Button text with shadow for depth */}
+            <div
+              className="relative flex items-center justify-center text-xs tracking-wide font-bold"
+              style={{ textShadow: "0 1px 0 rgba(255, 255, 255, 0.4)" }}
+            >
+              <span>DM</span>
+              <span className="ml-[0.35em]">MNDWAVE</span>
+              <Mail size={14} className="ml-1.5" />
+            </div>
+
+            {/* Button press effect */}
+            <span className="absolute bottom-0 left-0 right-0 h-1 bg-[#3a2a30] opacity-20 group-active:h-0 transition-all duration-150"></span>
+            <span className="absolute inset-0 w-full h-full bg-[#2a1a20] opacity-0 group-active:opacity-5 group-active:translate-y-px transition-all duration-150"></span>
+          </a>
         </div>
 
         {/* What is SEQ1 section */}
-        <div className="w-full max-w-sm mx-auto mt-12">
-          <div className="space-y-3">
-            <div className="flex items-center justify-center">
-              <Info size={16} className="text-[#f5a623] mr-2" />
-              <h3 className="text-xs font-medium text-[#f5a623] uppercase tracking-wider">What is SEQ1?</h3>
-            </div>
-
-            <p className="text-xs text-[#f0e6c8] text-center">
-              SEQ1 is a new type of DAW that connects to your hardware synths and drum machines, harnessing the power of
-              AI with human emotion.
-            </p>
-
-            <p className="text-xs text-[#a09080] text-center">
-              Adaptive and responsive to your creative direction, SEQ1 helps you create sequences, design patches, and
-              explore new musical territories.
-            </p>
-          </div>
+        <div className="mt-12 max-w-md mx-auto text-center">
+          <h3 className="text-sm font-semibold text-[#f0e6c8] mb-3">What is SEQ1?</h3>
+          <p className="text-xs text-[#a09080] leading-relaxed">
+            SEQ1 is a new type of DAW that connects to your hardware synths and drum machines, harnessing the power of AI
+            with human emotion. Adaptive and responsive to your creative direction.
+          </p>
         </div>
       </div>
 
-      {/* Consensus Clock at bottom */}
-      <div className="w-full text-center pb-4">
-        <div className="w-16 h-px bg-[#3a2a30] mx-auto mb-3"></div>
-        <div className="space-y-1">
-          <p className="text-[10px] text-[#a09080] uppercase tracking-wider">Consensus Clock</p>
-          <p className="text-xs text-[#f0e6c8] font-medium">[{blockheight}]</p>
-        </div>
+      {/* Footer section */}
+      <div className="flex justify-center pt-4">
+        <p className="text-xs text-[#666] opacity-70">
+          For optimal experience, please use a desktop or laptop computer.
+        </p>
       </div>
     </div>
   )
