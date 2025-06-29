@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { Space_Mono, Poppins } from 'next/font/google'
 import './globals.css'
-import VersionIndicator from "@/components/version-indicator"
 import { AuthProvider } from '../lib/auth-context'
 
 // Space Mono for body text (regular weight)
@@ -36,7 +35,6 @@ export default function RootLayout({
     <html lang="en" className={`${spaceMono.variable} ${poppins.variable}`}>
       <body className={spaceMono.className}>
         <AuthProvider>
-          <VersionIndicator />
           {children}
         </AuthProvider>
       </body>

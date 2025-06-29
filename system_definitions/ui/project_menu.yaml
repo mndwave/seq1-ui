@@ -15,7 +15,9 @@ forbidden_states: []
 canonical_description: 'World-class UX specification for PROJECT menu with creative
   flow preservation, healing enforcement, and professional software parity (Ableton/Final
   Cut standards). Cognitive interface contract ensuring deterministic UI self-healing
-  and  error-tolerant interaction flows with emotional intent preservation. '
+  and  error-tolerant interaction flows with emotional intent preservation.
+
+  '
 auth_states:
   anonymous:
     description: No valid authentication token
@@ -295,7 +297,7 @@ menu_items:
     ui_deltas:
       always:
       - Open account modal with user avatar
-      - Load user profile data with
+      - Load user profile data with placeholders
       - Close project menu smoothly
       - Show billing balance prominently
     error_handling:
@@ -357,10 +359,19 @@ flows:
     trigger: NEW PROJECT clicked while authenticated
     intent: enable_immediate_creative_expression_without_friction
     emotional_purpose: channel_creative_impulse_into_structured_workspace
-    execution: '1. Validate session token with healing fallback 2. Call API: POST
-      /api/projects/new with retry logic 3. Create empty project structure with professional
-      defaults 4. Set as current project with focus restoration 5. Clear modified
-      flags and initialize undo history 6. Show success feedback with creative encouragement '
+    execution: '1. Validate session token with healing fallback
+
+      2. Call API: POST /api/projects/new with retry logic
+
+      3. Create empty project structure with professional defaults
+
+      4. Set as current project with focus restoration
+
+      5. Clear modified flags and initialize undo history
+
+      6. Show success feedback with creative encouragement
+
+      '
     postconditions:
     - New project created and active
     - Project menu closed with smooth transition
@@ -397,11 +408,19 @@ flows:
     trigger: SAVE clicked while authenticated with active project
     intent: enforce_monetization_checkpoint_with_creative_respect
     emotional_purpose: provide_ownership_security_without_creative_interruption
-    execution: '1. Validate session token with healing capability 2. Check billing
-      status and enforce limits 3. Serialize current project state with integrity
-      checks 4. Call API: PUT /api/projects/{id} with retry logic 5. Update last saved
-      timestamp with visual feedback 6. Clear modified flags while preserving undo
-      history '
+    execution: '1. Validate session token with healing capability
+
+      2. Check billing status and enforce limits
+
+      3. Serialize current project state with integrity checks
+
+      4. Call API: PUT /api/projects/{id} with retry logic
+
+      5. Update last saved timestamp with visual feedback
+
+      6. Clear modified flags while preserving undo history
+
+      '
     postconditions:
     - Project saved to backend with integrity verification
     - Modified flags cleared appropriately
@@ -439,11 +458,23 @@ flows:
     trigger: Authentication required for any menu action
     intent: provide_frictionless_authentication_with_nostr_identity
     emotional_purpose: build_trust_through_decentralized_identity_control
-    execution: '1. Open studio access modal with welcoming messaging 2. Support NSEC
-      key input and browser extension auth 3. Validate credentials with proper error
-      handling 4. Call API: POST /auth/login with retry mechanism 5. Store auth token
-      securely in localStorage 6. Update authentication state across application 7.
-      Execute pending action with preserved context 8. Close modal with success feedback '
+    execution: '1. Open studio access modal with welcoming messaging
+
+      2. Support NSEC key input and browser extension auth
+
+      3. Validate credentials with proper error handling
+
+      4. Call API: POST /auth/login with retry mechanism
+
+      5. Store auth token securely in localStorage
+
+      6. Update authentication state across application
+
+      7. Execute pending action with preserved context
+
+      8. Close modal with success feedback
+
+      '
     postconditions:
     - User authenticated with valid session
     - Auth token stored securely
@@ -462,7 +493,7 @@ flows:
       immediate:
       - Open studio access modal with blur background
       - Close project menu smoothly
-      - Focus credential input with proper
+      - Focus credential input with proper placeholder
       - Show pending action context clearly
       on_auth_attempt:
       - Show 'Authenticating...' with professional loading
@@ -489,11 +520,21 @@ flows:
     trigger: Invalid/expired session detected during any operation
     intent: provide_transparent_session_healing_without_creative_disruption
     emotional_purpose: maintain_creative_confidence_through_seamless_recovery
-    execution: '1. Detect invalid session transparently 2. Preserve all current work
-      state and UI context 3. Clear stored auth data safely 4. Reset to anonymous
-      state with visual indication 5. Show session expired modal with recovery options
-      6. Offer re-authentication with work preservation 7. Restore complete creative
-      context post-auth '
+    execution: '1. Detect invalid session transparently
+
+      2. Preserve all current work state and UI context
+
+      3. Clear stored auth data safely
+
+      4. Reset to anonymous state with visual indication
+
+      5. Show session expired modal with recovery options
+
+      6. Offer re-authentication with work preservation
+
+      7. Restore complete creative context post-auth
+
+      '
     postconditions:
     - Session cleared safely
     - User in anonymous state with clear indication

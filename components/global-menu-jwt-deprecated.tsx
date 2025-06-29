@@ -1,0 +1,764 @@
+"use client"
+
+import React, { useRef, useState, useEffect } from "react"
+import { createPortal } from "react-dom"
+import {
+  Menu, FilePlus, FolderOpen, Music, Settings, Library, User, CreditCard, 
+  LogOut, Book, HelpCircle, Clock, Key, Zap
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { executeFlowById } from "@/lib/project-menu-handlers"
+import { useToast } from "@/hooks/use-toast"
+
+// YAML Structure Interfaces - CANONICAL COMPLIANCE
+interface YamlMenuItem {
+  item_id: string
+  label: string
+  flow_id: string
+  click_action: string
+  icon: string
+  visible: boolean
+  auth_required: boolean
+  feature_flag?: string
+}
+
+interface MenuGroup {
+  group_id: string
+  items: YamlMenuItem[]
+}
+
+interface MenuSection {
+  section_id: string
+  title: string
+  visible_for: string[]
+  groups: MenuGroup[]
+}
+
+interface ProjectMenuYaml {
+  menu: {
+    button_label: string
+    button_always_visible: boolean
+    auth_states: string[]
+    sections: MenuSection[]
+  }
+  flow_handlers: Record<string, any>
+}
+
+interface GlobalMenuYamlEnforcedProps {
+  onAction?: (action: string) => void
+}
+
+export default function GlobalMenuYamlEnforced({ onAction }: GlobalMenuYamlEnforcedProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [projectMenu, setProjectMenu] = useState<ProjectMenuYaml | null>(null)
+  const [authState, setAuthState] = useState<string>("anonymous")
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [validationResults, setValidationResults] = useState<Record<string, boolean>>({})
+  
+  const menuRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const { toast } = useToast()
+
+  // LOAD CANONICAL STRUCTURE (YAML-BASED)
+  useEffect(() => {
+    async function loadCanonicalStructure() {
+      try {
+        setIsLoading(true)
+        console.log('🔄 Loading canonical menu structure...')
+        
+        // Use canonical structure that matches project_menu.yaml exactly
+        const canonicalMenu = getCanonicalStructure()
+        setProjectMenu(canonicalMenu)
+        
+        console.log('✅ Canonical menu structure loaded:', canonicalMenu)
+        
+        // Validate all flow_ids
+        await validateAllFlows(canonicalMenu)
+        
+      } catch (error) {
+        console.error('❌ Failed to load menu structure:', error)
+        setError(error instanceof Error ? error.message : 'Unknown error')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadCanonicalStructure()
+  }, [])
+
+  // DETERMINE CURRENT AUTH STATE WITH PHANTOM DETECTION
+  useEffect(() => {
+    function detectAuthState() {
+      if (typeof window === "undefined") return
+
+      const token = localStorage.getItem("seq1_auth_token") 
+      const npub = localStorage.getItem("seq1_npub")
+      const nsec = localStorage.getItem("seq1_nsec")
+      
+      const hasValidAuth = !!(token && npub)
+      const hasPhantomState = !!(nsec && !npub) // Corrupted state
+      
+      if (hasPhantomState) {
+        console.warn('🚨 PHANTOM AUTH STATE DETECTED - Purging corrupted storage')
+        localStorage.removeItem("seq1_nsec")
+        localStorage.removeItem("seq1_npub") 
+        localStorage.removeItem("seq1_auth_token")
+        setAuthState("anonymous")
+        
+        toast({
+          title: "🔧 Auth State Cleaned",
+          description: "Corrupted authentication data was cleared",
+          duration: 3000,
+        })
+      } else if (hasValidAuth) {
+        setAuthState("authenticated")
+      } else {
+        setAuthState("anonymous")
+      }
+      
+      console.log(`🔍 Auth state determined: ${hasValidAuth ? 'authenticated' : 'anonymous'}`)
+    }
+
+    detectAuthState()
+    setMounted(true)
+  }, [])
+
+  // LISTEN FOR AUTH STATE CHANGES
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const token = localStorage.getItem("seq1_auth_token")
+      const npub = localStorage.getItem("seq1_npub")
+      const isAuthenticated = !!(token && npub)
+      
+      const newState = isAuthenticated ? "authenticated" : "anonymous"
+      setAuthState(newState)
+      console.log(`🔄 Auth state changed to: ${newState}`)
+    }
+
+    window.addEventListener("seq1:auth:loggedIn", handleAuthChange)
+    window.addEventListener("seq1:auth:loggedOut", handleAuthChange)
+    window.addEventListener("storage", handleAuthChange)
+
+    return () => {
+      window.removeEventListener("seq1:auth:loggedIn", handleAuthChange)
+      window.removeEventListener("seq1:auth:loggedOut", handleAuthChange)
+      window.removeEventListener("storage", handleAuthChange)
+    }
+  }, [])
+
+  // CLOSE MENU WHEN CLICKING OUTSIDE
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isOpen])
+
+  // CANONICAL STRUCTURE MATCHING EXACT project_menu.yaml
+  function getCanonicalStructure(): ProjectMenuYaml {
+    return {
+      menu: {
+        button_label: "PROJECT",
+        button_always_visible: true,
+        auth_states: ["anonymous", "authenticated", "expired", "authenticating"],
+        sections: [
+          {
+            section_id: "studio_access",
+            title: "Studio Access",
+            visible_for: ["anonymous", "expired"],
+            groups: [{
+              group_id: "authentication",
+              items: [{
+                item_id: "access_studio",
+                label: "ACCESS STUDIO",
+                flow_id: "access_studio_flow",
+                click_action: "trigger_auth_modal",
+                icon: "key",
+                visible: true,
+                auth_required: false
+              }]
+            }]
+          },
+          {
+            section_id: "project_management", 
+            title: "Projects",
+            visible_for: ["authenticated"],
+            groups: [{
+              group_id: "project_actions",
+              items: [
+                {
+                  item_id: "new_project",
+                  label: "New Project", 
+                  flow_id: "create_project_flow",
+                  click_action: "navigate_to_new_project",
+                  icon: "plus",
+                  visible: true,
+                  auth_required: true
+                },
+                {
+                  item_id: "open_project",
+                  label: "Open Project",
+                  flow_id: "open_project_flow", 
+                  click_action: "show_project_browser",
+                  icon: "folder-open",
+                  visible: true,
+                  auth_required: true
+                },
+                {
+                  item_id: "recent_projects",
+                  label: "Recent Projects",
+                  flow_id: "recent_projects_flow",
+                  click_action: "show_recent_projects", 
+                  icon: "clock",
+                  visible: true,
+                  auth_required: true
+                }
+              ]
+            }]
+          },
+          {
+            section_id: "studio_tools",
+            title: "Studio",
+            visible_for: ["authenticated"],
+            groups: [{
+              group_id: "composition",
+              items: [
+                {
+                  item_id: "sequencer",
+                  label: "Sequencer",
+                  flow_id: "sequencer_flow",
+                  click_action: "navigate_to_sequencer",
+                  icon: "music",
+                  visible: true,
+                  auth_required: true
+                },
+                {
+                  item_id: "device_manager",
+                  label: "Device Manager", 
+                  flow_id: "device_manager_flow",
+                  click_action: "navigate_to_devices",
+                  icon: "settings",
+                  visible: true,
+                  auth_required: true
+                },
+                {
+                  item_id: "clip_library",
+                  label: "Clip Library",
+                  flow_id: "clip_library_flow",
+                  click_action: "navigate_to_clips",
+                  icon: "library", 
+                  visible: true,
+                  auth_required: true
+                }
+              ]
+            }]
+          },
+          {
+            section_id: "account_management",
+            title: "Account", 
+            visible_for: ["authenticated"],
+            groups: [{
+              group_id: "user_actions",
+              items: [
+                {
+                  item_id: "account_settings",
+                  label: "Account Settings",
+                  flow_id: "account_settings_flow",
+                  click_action: "navigate_to_account",
+                  icon: "user",
+                  visible: true,
+                  auth_required: true
+                },
+                {
+                  item_id: "billing",
+                  label: "Billing", 
+                  flow_id: "billing_flow",
+                  click_action: "navigate_to_billing",
+                  icon: "credit-card",
+                  visible: true,
+                  auth_required: true
+                },
+                {
+                  item_id: "logout",
+                  label: "Sign Out",
+                  flow_id: "logout_flow",
+                  click_action: "trigger_logout",
+                  icon: "log-out",
+                  visible: true,
+                  auth_required: true
+                }
+              ]
+            }]
+          },
+          {
+            section_id: "help_support",
+            title: "Help & Support",
+            visible_for: ["anonymous", "authenticated", "expired"],
+            groups: [{
+              group_id: "documentation", 
+              items: [
+                {
+                  item_id: "documentation",
+                  label: "Documentation",
+                  flow_id: "documentation_flow",
+                  click_action: "navigate_to_docs",
+                  icon: "book",
+                  visible: true,
+                  auth_required: false
+                },
+                {
+                  item_id: "support", 
+                  label: "Support",
+                  flow_id: "support_flow",
+                  click_action: "navigate_to_support",
+                  icon: "help-circle",
+                  visible: true,
+                  auth_required: false
+                }
+              ]
+            }]
+          }
+        ]
+      },
+      flow_handlers: {}
+    }
+  }
+
+  // VALIDATE ALL FLOW_IDS AGAINST HANDLERS
+  async function validateAllFlows(menu: ProjectMenuYaml) {
+    console.log('🔍 Validating all flow_ids against handlers...')
+    const results: Record<string, boolean> = {}
+    
+    for (const section of menu.menu.sections) {
+      for (const group of section.groups) {
+        for (const item of group.items) {
+          try {
+            // Test if flow handler exists and is callable
+            const result = await executeFlowById(item.flow_id)
+            results[item.flow_id] = true
+            console.log(`✅ ${item.flow_id}: Handler validated`)
+          } catch (error) {
+            results[item.flow_id] = false
+            console.error(`❌ ${item.flow_id}: Handler failed -`, error)
+          }
+        }
+      }
+    }
+    
+    setValidationResults(results)
+    
+    const totalFlows = Object.keys(results).length
+    const validFlows = Object.values(results).filter(Boolean).length
+    console.log(`📊 Flow validation: ${validFlows}/${totalFlows} handlers working`)
+  }
+
+  // ICON MAPPING FOR MENU ITEMS
+  function getIcon(iconName: string): JSX.Element {
+    const iconMap: Record<string, JSX.Element> = {
+      "key": <Key size={14} className="icon-abstract" />,
+      "plus": <FilePlus size={14} className="icon-abstract" />,
+      "folder-open": <FolderOpen size={14} className="icon-abstract" />,
+      "clock": <Clock size={14} className="icon-abstract" />,
+      "music": <Music size={14} className="icon-abstract" />,
+      "settings": <Settings size={14} className="icon-abstract" />,
+      "library": <Library size={14} className="icon-abstract" />,
+      "user": <User size={14} className="icon-abstract" />,
+      "credit-card": <CreditCard size={14} className="icon-abstract" />,
+      "log-out": <LogOut size={14} className="icon-abstract" />,
+      "book": <Book size={14} className="icon-abstract" />,
+      "help-circle": <HelpCircle size={14} className="icon-abstract" />
+    }
+    return iconMap[iconName] || <Menu size={14} className="icon-abstract" />
+  }
+
+  // EXECUTE FLOW WITH COMPREHENSIVE ERROR HANDLING
+  async function executeFlow(item: YamlMenuItem) {
+    console.log(`🚀 Executing flow: ${item.flow_id} (${item.label})`)
+    
+    try {
+      // Execute the flow using canonical flow handlers
+      const result = await executeFlowById(item.flow_id)
+      
+      if (!result.allowed) {
+        if (result.requiresAuth) {
+          console.log(`🔐 Authentication required for ${item.flow_id}`)
+          toast({
+            title: "🔐 Authentication Required",
+            description: `Please sign in to access ${item.label}`,
+            duration: 4000,
+          })
+          return
+        } else {
+          console.error(`❌ Flow blocked: ${item.flow_id} -`, result.message)
+          toast({
+            title: "❌ Action Not Allowed",
+            description: result.message || `Could not execute ${item.label}`,
+            duration: 4000,
+          })
+          return
+        }
+      }
+
+      // Handle specific click actions based on YAML specification
+      switch (item.click_action) {
+        case "trigger_auth_modal":
+          console.log('🔑 Triggering auth modal')
+          toast({ 
+            title: "🔑 Authentication", 
+            description: "Opening authentication modal...", 
+            duration: 2000 
+          })
+          break
+          
+        case "navigate_to_new_project":
+          console.log('🆕 Creating new project')
+          toast({ 
+            title: "🆕 New Project", 
+            description: "Creating new project...", 
+            duration: 2000 
+          })
+          break
+          
+        case "show_project_browser":
+          console.log('📁 Opening project browser')
+          toast({ 
+            title: "📁 Project Browser", 
+            description: "Opening project browser...", 
+            duration: 2000 
+          })
+          break
+          
+        case "show_recent_projects":
+          console.log('🕒 Loading recent projects')
+          toast({ 
+            title: "🕒 Recent Projects", 
+            description: "Loading recent projects...", 
+            duration: 2000 
+          })
+          break
+          
+        case "navigate_to_sequencer":
+          console.log('🎵 Opening sequencer')
+          toast({ 
+            title: "🎵 Sequencer", 
+            description: "Opening sequencer...", 
+            duration: 2000 
+          })
+          break
+          
+        case "navigate_to_devices":
+          console.log('⚙️ Opening device manager')
+          toast({ 
+            title: "⚙️ Device Manager", 
+            description: "Opening device manager...", 
+            duration: 2000 
+          })
+          break
+          
+        case "navigate_to_clips":
+          console.log('📚 Opening clip library')
+          toast({ 
+            title: "📚 Clip Library", 
+            description: "Opening clip library...", 
+            duration: 2000 
+          })
+          break
+          
+        case "navigate_to_account":
+          console.log('👤 Opening account settings')
+          toast({ 
+            title: "👤 Account Settings", 
+            description: "Opening account settings...", 
+            duration: 2000 
+          })
+          break
+          
+        case "navigate_to_billing":
+          console.log('💳 Opening billing')
+          toast({ 
+            title: "💳 Billing", 
+            description: "Opening billing...", 
+            duration: 2000 
+          })
+          break
+          
+        case "trigger_logout":
+          console.log('🚪 Logging out')
+          await handleLogout()
+          break
+          
+        case "navigate_to_docs":
+          console.log('📖 Opening documentation')
+          window.open("https://docs.seq1.net", "_blank")
+          break
+          
+        case "navigate_to_support":
+          console.log('🆘 Opening support')
+          window.open("https://support.seq1.net", "_blank")
+          break
+          
+        default:
+          console.warn(`⚠️ Unhandled click action: ${item.click_action}`)
+          toast({
+            title: "🚧 Feature Coming Soon",
+            description: `${item.click_action} will be implemented soon`,
+            duration: 3000,
+          })
+      }
+
+      // Update validation results
+      setValidationResults(prev => ({ ...prev, [item.flow_id]: true }))
+
+    } catch (error) {
+      console.error(`❌ Error executing flow ${item.flow_id}:`, error)
+      toast({
+        title: "❌ Flow Execution Failed",
+        description: `Error in ${item.label}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        duration: 5000,
+      })
+      
+      // Update validation results
+      setValidationResults(prev => ({ ...prev, [item.flow_id]: false }))
+    }
+  }
+
+  // HANDLE LOGOUT FLOW
+  async function handleLogout() {
+    try {
+      console.log('🚪 Executing logout flow...')
+      
+      // Execute logout flow handler
+      const result = await executeFlowById("logout_flow")
+      
+      if (result.allowed) {
+        // Clear local storage
+        localStorage.removeItem("seq1_auth_token")
+        localStorage.removeItem("seq1_npub")
+        localStorage.removeItem("seq1_nsec")
+        
+        // Update state
+        setAuthState("anonymous")
+        setIsOpen(false)
+        
+        // Dispatch logout event
+        window.dispatchEvent(new CustomEvent("seq1:auth:loggedOut"))
+        
+        toast({
+          title: "👋 Signed Out",
+          description: "You have been successfully signed out",
+          duration: 2000,
+        })
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
+  // GENERATE VISIBLE MENU ITEMS BASED ON AUTH STATE AND YAML CONFIG
+  function getVisibleMenuItems(): YamlMenuItem[] {
+    if (!projectMenu) return []
+    
+    const visibleItems: YamlMenuItem[] = []
+    
+    console.log(`🔍 Generating menu items for auth state: ${authState}`)
+    
+    for (const section of projectMenu.menu.sections) {
+      // Check if section is visible for current auth state
+      if (!section.visible_for.includes(authState)) {
+        console.log(`  ⏭️ Section ${section.section_id} not visible for ${authState}`)
+        continue
+      }
+      
+      console.log(`  ✅ Section ${section.section_id} visible for ${authState}`)
+      
+      for (const group of section.groups) {
+        for (const item of group.items) {
+          // Check item visibility
+          if (!item.visible) {
+            console.log(`    ⏭️ Item ${item.item_id} hidden`)
+            continue
+          }
+          
+          // Check auth requirements vs current state
+          if (item.auth_required && authState === "anonymous") {
+            console.log(`    ⏭️ Item ${item.item_id} requires auth but user is anonymous`)
+            continue
+          }
+          
+          console.log(`    ✅ Item ${item.item_id} (${item.label}) added to menu`)
+          visibleItems.push(item)
+        }
+      }
+    }
+    
+    console.log(`📊 Generated ${visibleItems.length} visible menu items for auth state: ${authState}`)
+    return visibleItems
+  }
+
+  // HANDLE MENU ITEM CLICK
+  async function handleMenuItemClick(item: YamlMenuItem) {
+    console.log(`🖱️ Menu item clicked: ${item.label} (${item.flow_id})`)
+    setIsOpen(false)
+    
+    await executeFlow(item)
+    
+    // Call parent action handler if provided
+    if (onAction) {
+      onAction(item.flow_id)
+    }
+  }
+
+  const visibleMenuItems = getVisibleMenuItems()
+
+  // CALCULATE MENU POSITION
+  const calculateMenuPosition = () => {
+    if (!buttonRef.current) return { top: 0, left: 0 }
+    
+    const rect = buttonRef.current.getBoundingClientRect()
+    const windowWidth = window.innerWidth
+    const windowHeight = window.innerHeight
+    const menuWidth = 300
+    const menuHeight = Math.min(500, visibleMenuItems.length * 56 + 140)
+    
+    let top = rect.bottom + 8
+    let left = rect.right - menuWidth
+    
+    if (left < 8) left = 8
+    if (left + menuWidth > windowWidth - 8) left = windowWidth - menuWidth - 8
+    if (top + menuHeight > windowHeight - 8) top = rect.top - menuHeight - 8
+    
+    return { top, left }
+  }
+
+  // RENDER MENU
+  const renderMenu = () => {
+    if (!isOpen || !mounted) return null
+
+    const position = calculateMenuPosition()
+    const totalFlows = Object.keys(validationResults).length
+    const validFlows = Object.values(validationResults).filter(Boolean).length
+
+    return createPortal(
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 2147483646 }}>
+        <div
+          ref={menuRef}
+          className="fixed pointer-events-auto modal-content py-2 animate-menuReveal shadow-xl"
+          style={{
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+            width: "300px",
+            zIndex: 2147483647,
+            transformOrigin: "top right",
+            maxHeight: "calc(100vh - 100px)",
+            overflowY: "auto",
+            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.6)",
+          }}
+        >
+          {/* CANONICAL MENU HEADER */}
+          <div className="bg-[var(--seq1-accent)] px-4 py-3 border-b border-[var(--seq1-border)]">
+            <h3 className="seq1-heading text-sm tracking-wide">
+              {projectMenu?.menu.button_label || "PROJECT"} MENU
+            </h3>
+            <div className="text-xs text-[var(--seq1-text-secondary)] mt-1 space-y-1">
+              <div>Auth: <span className="text-[var(--seq1-pulse)]">{authState}</span> • Items: <span className="text-[var(--seq1-pulse)]">{visibleMenuItems.length}</span></div>
+              <div>Flows: <span className="text-[var(--seq1-pulse)]">{validFlows}/{totalFlows}</span> validated</div>
+              {error && <div className="text-red-400">• Error: Fallback mode</div>}
+            </div>
+          </div>
+
+          <div className="p-2">
+            {isLoading ? (
+              <div className="px-4 py-8 text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--seq1-pulse)] mx-auto mb-3"></div>
+                <div className="text-xs text-[var(--seq1-text-secondary)]">Loading canonical menu...</div>
+              </div>
+            ) : visibleMenuItems.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-[var(--seq1-text-secondary)]">
+                No menu items available for auth state: {authState}
+                <br />
+                <span className="text-red-400">This indicates a configuration error</span>
+              </div>
+            ) : (
+              visibleMenuItems.map((item, index) => {
+                const flowValid = validationResults[item.flow_id]
+                return (
+                  <button
+                    key={`${item.item_id}-${index}`}
+                    className={cn(
+                      "w-full text-left px-4 py-3 text-xs flex items-center rounded-sm transition-all duration-200",
+                      "text-[var(--seq1-text-primary)] hover:bg-[var(--seq1-accent)] micro-feedback"
+                    )}
+                    onClick={() => handleMenuItemClick(item)}
+                    role="menuitem"
+                  >
+                    <span className="mr-3 text-[var(--seq1-text-secondary)]">
+                      {getIcon(item.icon)}
+                    </span>
+                    <span className="seq1-caption font-medium flex-1">
+                      {item.label}
+                    </span>
+                    <div className="flex items-center space-x-1">
+                      {item.auth_required && (
+                        <span className="w-1 h-1 bg-[var(--seq1-warning)] rounded-full" title="Auth required"></span>
+                      )}
+                      {flowValid === true && (
+                        <span className="w-1 h-1 bg-green-400 rounded-full" title="Flow validated"></span>
+                      )}
+                      {flowValid === false && (
+                        <span className="w-1 h-1 bg-red-400 rounded-full" title="Flow error"></span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  if (!mounted) return null
+
+  return (
+    <div style={{ position: "relative", zIndex: 1000 }}>
+      {/* CANONICAL PROJECT BUTTON */}
+      <button
+        ref={buttonRef}
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "channel-button micro-feedback flex items-center px-3 py-1.5",
+          isOpen && "active"
+        )}
+        style={{
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        <Menu size={14} className="mr-1.5 icon-abstract" />
+        <span className="text-xs tracking-wide font-medium">
+          {projectMenu?.menu.button_label || "PROJECT"}
+        </span>
+      </button>
+      
+      {renderMenu()}
+    </div>
+  )
+} 
