@@ -19,8 +19,8 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: 'SEQ1',
-  description: 'SEQ1 Digital Audio Workstation',
+  title: "SEQ1 | Intent-Driven Hardware Sequencer",
+  description: "A new type of DAW that harnesses AI with human emotion. Connect your hardware synths and create music that adapts to your creative direction.",
   icons: {
     icon: '/favicon.ico',
   },
