@@ -1,0 +1,16 @@
+{
+  "ui_killed": true,
+  "death_reason": "UI_FUNCTIONAL_VALIDATION_FAILED",
+  "failure_reason": "FUNCTIONAL_VALIDATION_FAILURES",
+  "failure_count": 4,
+  "timestamp": "2025-06-28T16:00:10.125171",
+  "validator": "ui_functional_validator_loop",
+  "cycle_failures": [
+    "DM_MNDWAVE_BUTTON_MISSING_unauthenticated",
+    "ADD_TRACK_BUTTON_MISSING_authenticated_user",
+    "ADD_CLIP_BUTTON_MISSING_authenticated_user",
+    "PLAY_STOP_BUTTON_MISSING_authenticated_user"
+  ],
+  "backend_failures": [],
+  "message": "UI failed autonomous functional validation - breaking system"
+}

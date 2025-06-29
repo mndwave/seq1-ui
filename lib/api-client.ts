@@ -227,7 +227,7 @@ export class SEQ1APIClient {
   // Default request method for general API calls (e.g., /api/clips, /api/devices)
   // These should typically go through the proxy.
   async request<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    return this.proxiedRequest<T>(endpoint, options)
+    const url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`; return fetch(url, {...options, headers: new Headers(options.headers), signal: new AbortController().signal}).then(r => r.ok ? r.json() : Promise.reject(r))
   }
 
   // --- Anonymous Session API Methods ---

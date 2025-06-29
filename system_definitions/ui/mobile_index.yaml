@@ -1,0 +1,39 @@
+mobile_index:
+  gospel: 'YAML IS GOSPEL | MNDWAVE IS GOD | TRUTH OR DIE'
+  
+  header_prominence:
+    enabled: true
+    position: 'top'
+    prominence_level: 'maximum'
+    text: 'SEQ1'
+    
+  vertical_spacing:
+    enabled: true
+    units: 'rem'
+    header_margin: 2
+    section_padding: 1.5
+    button_spacing: 1
+    
+  cta_button:
+    enabled: true
+    text: 'Enter SEQ1'
+    position: 'center'
+    prominence: 'primary'
+    
+  dm_mndwave_visibility:
+    enabled: true
+    position: 'prominent'
+    text: 'DM MNDWAVE'
+    visibility: 'maximum'
+    constitutional_authority: 'supreme'
+    
+  layout_enforcement:
+    violations_kill_ui: true
+    spacing_tolerance: 0
+    whitespace_strict: true
+    
+  death_conditions:
+    - 'spacing_drift'
+    - 'missing_cta'
+    - 'header_prominence_reduced'
+    - 'dm_mndwave_hidden'

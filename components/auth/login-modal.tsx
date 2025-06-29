@@ -109,7 +109,7 @@ export default function LoginModal({
         {isAuthenticated ? (
           <div className="text-center py-4">
             <p className="text-green-400">You are already signed in to your Studio.</p>
-            <button onClick={onClose} className="mt-4 channel-button active px-4 py-2">
+            <button onClick={onClose} className="mt-4 boldthings-vintage-button active px-4 py-2">
               Close
             </button>
           </div>
@@ -165,7 +165,7 @@ export default function LoginModal({
 
               <div className="flex justify-between items-center pt-2">
                 <button 
-                  className="channel-button flex items-center px-3 py-1.5" 
+                  className="boldthings-vintage-button flex items-center px-3 py-1.5" 
                   onClick={onSignupClick}
                   disabled={currentLoading}
                 >
@@ -173,7 +173,7 @@ export default function LoginModal({
                 </button>
 
                 <button
-                  className={`channel-button flex items-center px-3 py-1.5 ${
+                  className={`boldthings-vintage-button flex items-center px-3 py-1.5 ${
                     nsecKey.trim() && !isLoading ? "active" : "opacity-50"
                   }`}
                   onClick={handleNsecLogin}

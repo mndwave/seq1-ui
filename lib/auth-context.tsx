@@ -9,6 +9,7 @@ import {
   type StoredNostrKeypair,
   type NostrKeypair,
 } from "./nostr-utils"
+import { canonicalApi } from "./api/canonical-client"
 import { useToast } from "@/hooks/use-toast"
 import {
   nip19,
@@ -40,29 +41,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const apiClient = {
-  request: async (endpoint: string, options: RequestInit = {}) => {
-    const defaultHeaders = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    }
-    const targetUrl = `/api/proxy${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
-    console.log(
-      `API Client Request: ${options.method || "GET"} to ${targetUrl}`,
-      options.body ? { body: options.body } : {},
-    ) // Added log
-
-    const response = await fetch(targetUrl, {
-      ...options,
-      headers: defaultHeaders,
-    })
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: response.statusText }))
-      throw new Error(errorData.message || `API request failed: ${response.status}`)
-    }
-    return response.json()
-  },
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<NostrAuthUser | null>(null)
@@ -197,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(true)
     try {
-      await apiClient.request("/api/auth/nostr/register", {
+      await canonicalApi.request("/auth/nostr/register", {
         method: "POST",
         body: JSON.stringify({
           npub: publicData.npub,
@@ -244,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setIsLoading(true)
     try {
-      await apiClient.request("/api/auth/nostr/verify", {
+      await canonicalApi.request("/auth/nostr/verify", {
         method: "POST",
         body: JSON.stringify({
           npub: user?.npub || keys?.npub,

@@ -5,6 +5,7 @@ import { ChevronDown, AlertCircle, Check, Zap, Activity, Copy } from "lucide-rea
 import { topUpAccount, type TopUpRequest } from "@/lib/api/account-api"
 import type { AccountInfo } from "@/lib/api/account-api"
 import { cn } from "@/lib/utils"
+import { BoldthingsVintageButton } from "@/components/boldthings/vintage-button"
 
 interface BillingTabProps {
   accountInfo: AccountInfo

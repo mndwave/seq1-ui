@@ -1,0 +1,2 @@
+DAVE FINAL DEPLOYMENT: ssh root@api.seq1.net cd /opt/seq1/seq1-ui && ./deploy_final.sh
+All duplicates removed. GitHub Actions disabled. UI fixes applied.

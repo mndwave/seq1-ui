@@ -1,8 +1,10 @@
 "use client"
 
+import DmMndwaveButton from "./dm-mndwave-button"
+import VersionIndicator from "./version-indicator"
 import React, { useEffect, useRef, useState } from 'react'
-import { MessageSquare, Mail } from 'lucide-react'
 import AnimatedLogo from './animated-logo'
+import { CANONICAL_MOBILE_CONTENT, CANONICAL_SEQ1_DESCRIPTION } from '../lib/canonical_content_constants'
 
 export default function SmallScreenMessage() {
   const [hasLogoAnimationPlayed, setHasLogoAnimationPlayed] = useState(false)
@@ -17,11 +19,6 @@ export default function SmallScreenMessage() {
   const handleLogoAnimationComplete = () => {
     setHasLogoAnimationPlayed(true)
     localStorage.setItem('seq1-logo-animation-played', 'true')
-  }
-
-  const handleDMClick = () => {
-    // Direct link to Primal profile
-    window.open('https://primal.net/mndwave', '_blank', 'noopener,noreferrer')
   }
 
   // Apply background styles to body when component mounts
@@ -61,80 +58,132 @@ export default function SmallScreenMessage() {
 
   return (
     <div
-      className="h-screen w-screen flex flex-col bg-[#1a1015] text-[#f0e6c8] p-6 fixed inset-0 overflow-hidden z-50 mobile-crt-effects"
+      className="h-screen w-screen flex flex-col bg-[#1a1015] text-[#f0e6c8] p-6 fixed inset-0 overflow-hidden z-50"
       ref={modalRef}
+      style={{
+        fontFamily: 'Space Mono, monospace',
+        background: 'linear-gradient(135deg, #1a1015 0%, #0f0a0d 100%)',
+        height: '100vh',
+        position: 'fixed'
+      }}
     >
-      {/* Logo section - reduced top padding */}
-      <div className="flex flex-col items-center pt-8">
-        <div className="mb-6">
+      {/* Subtle CRT scanlines effect */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.015]"
+        style={{
+          background: 'linear-gradient(transparent 50%, rgba(255,255,255,0.1) 50%)',
+          backgroundSize: '100% 4px'
+        }}
+      />
+
+      {/* Logo section - larger and centered with emotional presence */}
+      <div className="flex flex-col items-center pt-16">
+        <div className="mb-8">
           <AnimatedLogo
-            className="text-2xl seq1-logo-glow"
+            className="text-6xl font-bold seq1-logo-glow"
             onAnimationComplete={handleLogoAnimationComplete}
             skipAnimation={hasLogoAnimationPlayed}
+            style={{
+              filter: 'drop-shadow(0 0 8px rgba(240, 230, 200, 0.3))',
+              textShadow: '0 0 12px rgba(240, 230, 200, 0.4)'
+            }}
           />
         </div>
       </div>
 
-      {/* Main content section */}
-      <div className="flex-1 flex flex-col items-center justify-center">
+      {/* Main content section - moved closer to logo */}
+      <div className="flex-1 flex flex-col items-center justify-start pt-2">
         <div className="max-w-sm mx-auto text-center">
-          <p className="text-base font-medium text-[#f0e6c8] mb-4">
-            SEQ1 requires a larger screen to provide the optimal experience.
-          </p>
-          <p className="text-sm text-[#a09080] mb-8">
-            Please use a device with a screen width of at least 1024px.
-          </p>
-
-          {/* DM MNDWAVE Button - Exact Match to About Modal */}
-          <a
-            href="https://primal.net/mndwave"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="relative px-5 py-2.5 overflow-hidden group bg-[#f0e6c8] rounded-sm text-[#2a1a20] hover:bg-[#fff] transition-all duration-300"
+          {/* Constitutional screen requirement messaging */}
+          <p 
+            className="text-base font-medium text-[#f0e6c8] mb-3"
             style={{
-              boxShadow: "0 2px 0 #3a2a30, inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3)",
+              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
+              filter: 'drop-shadow(0 0 4px rgba(240, 230, 200, 0.2))'
             }}
-            data-immutable="mndwave-contact"
-            data-business-critical="true"
           >
-            {/* Button texture overlay */}
-            <span className="absolute inset-0 w-full h-full bg-gradient-to-b from-white/20 to-transparent opacity-50"></span>
-
-            {/* Subtle noise texture */}
-            <span className="absolute inset-0 w-full h-full dot-pattern opacity-10"></span>
-
-            {/* Button text with shadow for depth */}
-            <div
-              className="relative flex items-center justify-center text-xs tracking-wide font-bold"
-              style={{ textShadow: "0 1px 0 rgba(255, 255, 255, 0.4)" }}
-            >
-              <span>DM</span>
-              <span className="ml-[0.35em]">MNDWAVE</span>
-              <Mail size={14} className="ml-1.5" />
-            </div>
-
-            {/* Button press effect */}
-            <span className="absolute bottom-0 left-0 right-0 h-1 bg-[#3a2a30] opacity-20 group-active:h-0 transition-all duration-150"></span>
-            <span className="absolute inset-0 w-full h-full bg-[#2a1a20] opacity-0 group-active:opacity-5 group-active:translate-y-px transition-all duration-150"></span>
-          </a>
-        </div>
-
-        {/* What is SEQ1 section */}
-        <div className="mt-12 max-w-md mx-auto text-center">
-          <h3 className="text-sm font-semibold text-[#f0e6c8] mb-3">What is SEQ1?</h3>
-          <p className="text-xs text-[#a09080] leading-relaxed">
-            SEQ1 is a new type of DAW that connects to your hardware synths and drum machines, harnessing the power of AI
-            with human emotion. Adaptive and responsive to your creative direction.
+            {CANONICAL_MOBILE_CONTENT.screenRequirement.heading}
           </p>
+          
+          <p 
+            className="text-sm text-[#b8a888] mb-6"
+            style={{
+              textShadow: '0 1px 1px rgba(0, 0, 0, 0.3)'
+            }}
+          >
+            {CANONICAL_MOBILE_CONTENT.screenRequirement.subtext}
+          </p>
+
+          {/* Constitutional DM MNDWAVE button - matches About Modal styling */}
+          <div className="flex justify-center mb-6">
+            <DmMndwaveButton 
+              className="mx-auto" 
+              style={{
+                display: 'block',
+                textAlign: 'center'
+              }}
+            />
+          </div>
+
+          {/* Canonical What is SEQ1? section - two-tone layout like ABOUT modal */}
+          <div className="border-t border-[#3a2a30] pt-4">
+            <h3 
+              className="text-sm font-medium text-[#d4c2a4] mb-3"
+              style={{
+                textShadow: '0 1px 1px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              {CANONICAL_MOBILE_CONTENT.whatIsSeq1.heading}
+            </h3>
+            
+            {/* Two-tone canonical content matching ABOUT modal */}
+            <div className="space-y-3">
+              <p 
+                className="text-xs text-[#f0e6c8] leading-relaxed"
+                style={{
+                  textShadow: '0 1px 1px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                {CANONICAL_SEQ1_DESCRIPTION.primary}
+              </p>
+              
+              <p 
+                className="text-xs text-[#a09080] leading-relaxed"
+                style={{
+                  textShadow: '0 1px 1px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                {CANONICAL_SEQ1_DESCRIPTION.secondary}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Footer section */}
-      <div className="flex justify-center pt-4">
-        <p className="text-xs text-[#666] opacity-70">
-          For optimal experience, please use a desktop or laptop computer.
-        </p>
+      {/* Footer section with constitutional VersionIndicator */}
+      <div className="flex flex-col items-center pt-4 pb-4">        
+        {/* Constitutional VersionIndicator - matches desktop bottom-right style */}
+        <div className="flex justify-center">
+          <VersionIndicator />
+        </div>
       </div>
+
+      {/* Subtle ambient flicker effect */}
+      <style jsx>{`
+        @keyframes subtle-flicker {
+          0%, 100% { opacity: 1; }
+          2% { opacity: 0.98; }
+          4% { opacity: 0.95; }
+          6% { opacity: 0.98; }
+          50% { opacity: 0.97; }
+          52% { opacity: 0.95; }
+          54% { opacity: 0.98; }
+        }
+        
+        .seq1-logo-glow {
+          animation: subtle-flicker 8s infinite;
+        }
+      `}</style>
     </div>
   )
-}
+} 

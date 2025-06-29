@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react"
 
 export default function VersionIndicator() {
-  const [blockheight, setBlockheight] = useState<string>("901042")
+  const [blockheight, setBlockheight] = useState<string>("902508")
 
   useEffect(() => {
     // Use static blockheight from environment (deployment seal)
-    const staticBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || "901042"
+    const staticBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || "902509"
     setBlockheight(staticBlockheight)
   }, [])
 

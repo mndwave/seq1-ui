@@ -1,5 +1,7 @@
 "use client"
 
+import { CANONICAL_SEQ1_DESCRIPTION } from "../lib/canonical_content_constants"
+import DmMndwaveButton from "./dm-mndwave-button"
 import { useState, useEffect } from "react"
 import { Info, Mail, Clock } from "lucide-react"
 import DraggableModal from "./draggable-modal"
@@ -10,11 +12,11 @@ interface AboutModalProps {
 }
 
 export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
-  const [blockheight, setBlockheight] = useState<string>("901042")
+  const [blockheight, setBlockheight] = useState<string>("902508")
 
   useEffect(() => {
     // Use static blockheight from environment (deployment seal)
-    const staticBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || "901042"
+    const staticBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT || "902509"
     setBlockheight(staticBlockheight)
   }, [])
 
@@ -28,13 +30,11 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
     >
       <div className="space-y-3">
         <p className="text-sm text-[#f0e6c8]">
-          SEQ1 is a new type of DAW that connects to your hardware synths and drum machines, harnessing the power of AI
-          with human emotion.
+          {CANONICAL_SEQ1_DESCRIPTION.primary}
         </p>
 
         <p className="text-sm text-[#a09080]">
-          Adaptive and responsive to your creative direction, SEQ1 helps you create sequences, design patches, and
-          explore new musical territories.
+          {CANONICAL_SEQ1_DESCRIPTION.secondary}
         </p>
       </div>
 
@@ -99,4 +99,4 @@ export default function AboutModal({ isOpen, onClose }: AboutModalProps) {
       </div>
     </DraggableModal>
   )
-}
+} 

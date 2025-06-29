@@ -1,0 +1,1 @@
+DAVE AGENT - CORRECT SEQ1 UI DEPLOYMENT: Use /opt/seq1/seq1-ui (NOT /opt/seq1-ui). DEPLOY: ssh root@api.seq1.net cd /opt/seq1/seq1-ui && ./deploy.sh

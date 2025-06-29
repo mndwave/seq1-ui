@@ -1,0 +1,226 @@
+# PROJECT MENU CANONICAL SPECIFICATION v4.0.0
+# Complete menu structure with auth-driven conditional rendering
+
+intent:
+  purpose: Define the complete PROJECT menu structure with flow-driven navigation
+  aspiration: Dynamic menu rendering based on auth state and feature flags
+  success_criteria:
+    - Every menu item renders correctly based on auth state
+    - All flow_id actions execute properly
+    - Labels match YAML specification exactly
+    - Conditional visibility works for all auth states
+
+system_type: project_menu_specification
+namespace: ui
+criticality: CANONICAL_COMPLIANCE_REQUIRED
+enforcement_level: ZERO_TOLERANCE_EXACT_MATCH
+
+menu:
+  button_label: "PROJECT"
+  button_always_visible: true
+  auth_states:
+    - anonymous
+    - authenticated  
+    - expired
+    - authenticating
+
+  sections:
+    - section_id: "studio_access"
+      title: "Studio Access"
+      visible_for: ["anonymous", "expired"]
+      groups:
+        - group_id: "authentication"
+          items:
+            - item_id: "access_studio"
+              label: "ACCESS STUDIO"
+              flow_id: "access_studio_flow"
+              click_action: "trigger_auth_modal"
+              icon: "studio"
+              visible: true
+              auth_required: false
+              
+    - section_id: "project_management"
+      title: "Projects"
+      visible_for: ["authenticated"]
+      groups:
+        - group_id: "project_actions"
+          items:
+            - item_id: "new_project"
+              label: "New Project"
+              flow_id: "create_project_flow"
+              click_action: "navigate_to_new_project"
+              icon: "plus"
+              visible: true
+              auth_required: true
+              
+            - item_id: "open_project"
+              label: "Open Project"
+              flow_id: "open_project_flow"
+              click_action: "show_project_browser"
+              icon: "folder-open"
+              visible: true
+              auth_required: true
+              
+            - item_id: "recent_projects"
+              label: "Recent Projects"
+              flow_id: "recent_projects_flow"
+              click_action: "show_recent_projects"
+              icon: "clock"
+              visible: true
+              auth_required: true
+
+    - section_id: "studio_tools"
+      title: "Studio"
+      visible_for: ["authenticated"]
+      groups:
+        - group_id: "composition"
+          items:
+            - item_id: "sequencer"
+              label: "Sequencer"
+              flow_id: "sequencer_flow"
+              click_action: "navigate_to_sequencer"
+              icon: "music"
+              visible: true
+              auth_required: true
+              
+            - item_id: "device_manager"
+              label: "Device Manager"
+              flow_id: "device_manager_flow"
+              click_action: "navigate_to_devices"
+              icon: "settings"
+              visible: true
+              auth_required: true
+              
+            - item_id: "clip_library"
+              label: "Clip Library"
+              flow_id: "clip_library_flow"
+              click_action: "navigate_to_clips"
+              icon: "library"
+              visible: true
+              auth_required: true
+
+    - section_id: "account_management"
+      title: "Account"
+      visible_for: ["authenticated"]
+      groups:
+        - group_id: "user_actions"
+          items:
+            - item_id: "account_settings"
+              label: "Account Settings"
+              flow_id: "account_settings_flow"
+              click_action: "navigate_to_account"
+              icon: "user"
+              visible: true
+              auth_required: true
+              
+            - item_id: "billing"
+              label: "Billing"
+              flow_id: "billing_flow"
+              click_action: "navigate_to_billing"
+              icon: "credit-card"
+              visible: true
+              auth_required: true
+              feature_flag: "billing_enabled"
+              
+            - item_id: "logout"
+              label: "Sign Out"
+              flow_id: "logout_flow"
+              click_action: "trigger_logout"
+              icon: "log-out"
+              visible: true
+              auth_required: true
+
+    - section_id: "help_support"
+      title: "Help & Support"
+      visible_for: ["anonymous", "authenticated", "expired"]
+      groups:
+        - group_id: "documentation"
+          items:
+            - item_id: "documentation"
+              label: "Documentation"
+              flow_id: "documentation_flow"
+              click_action: "navigate_to_docs"
+              icon: "book"
+              visible: true
+              auth_required: false
+              
+            - item_id: "support"
+              label: "Support"
+              flow_id: "support_flow"
+              click_action: "navigate_to_support"
+              icon: "help-circle"
+              visible: true
+              auth_required: false
+
+# Flow action handlers
+flow_handlers:
+  access_studio_flow:
+    action: "show_auth_modal"
+    modal_type: "authentication"
+    success_redirect: "/studio"
+    
+  create_project_flow:
+    action: "navigate"
+    path: "/studio/new"
+    
+  open_project_flow:
+    action: "show_modal"
+    modal_type: "project_browser"
+    
+  recent_projects_flow:
+    action: "show_dropdown"
+    dropdown_type: "recent_projects"
+    
+  sequencer_flow:
+    action: "navigate"
+    path: "/studio/sequencer"
+    
+  device_manager_flow:
+    action: "navigate"
+    path: "/studio/devices"
+    
+  clip_library_flow:
+    action: "navigate"
+    path: "/studio/clips"
+    
+  account_settings_flow:
+    action: "navigate"
+    path: "/account"
+    
+  billing_flow:
+    action: "navigate"
+    path: "/account/billing"
+    
+  logout_flow:
+    action: "trigger_logout"
+    redirect: "/"
+    
+  documentation_flow:
+    action: "external_link"
+    url: "https://docs.seq1.net"
+    
+  support_flow:
+    action: "external_link"
+    url: "https://support.seq1.net"
+
+# Validation rules
+validation:
+  required_flows: ["access_studio_flow", "create_project_flow", "logout_flow"]
+  auth_state_coverage: "complete"
+  label_exactness: "mandatory"
+  click_action_binding: "required"
+  
+constitutional_enforcement:
+  enabled: true
+  method: EXACT_YAML_COMPLIANCE_ANALYSIS
+  legitimacy_threshold: 100
+  
+llm_contract: llm/llm_cursor_emulator.yaml
+llm_routing: EXCLUSIVE_CONTRACT_ONLY
+fallback_policy: NONE
+
+description: Complete PROJECT menu specification with auth-driven conditional rendering, exact label matching, and flow-based navigation system.
+
+updated_timestamp: 2025-06-25T16:00:00.000000Z
+updated_by: canonical_convergence_project_menu_restoration
+type: project_menu_specification 

@@ -13,12 +13,12 @@ import NewProjectModal from "./new-project-modal"
 import CloseProjectModal from "./close-project-modal"
 import ShareTrackModal from "./share-track-modal"
 import AnimatedLogo from "./animated-logo"
-import DirectProjectMenu from "./direct-project-menu"
+import DirectProjectMenu from "./global-menu"
 import type { ProjectAction } from "@/lib/types"
 import { useLogoAnimation } from "@/lib/logo-animation-context"
 import { useTransport } from "@/hooks/use-transport"
 // Import the MndwaveButton component
-import MndwaveButton from "@/components/mndwave-button"
+import TransportMndwaveButton from "@/components/transport-mndwave-button"
 
 // Update the GlobalTransport component to accept the hardware connection state
 interface GlobalTransportProps {
@@ -472,7 +472,7 @@ export default function GlobalTransport({
 
           {/* Project menu container - clean spacing */}
           <div className="flex items-center gap-3 relative">
-            <MndwaveButton />
+            <TransportMndwaveButton />
             <DirectProjectMenu onAction={handleMenuAction} />
 
             {/* Save success indicator - positioned relative to container */}
