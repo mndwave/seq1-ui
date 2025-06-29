@@ -1,226 +1,598 @@
-# PROJECT MENU CANONICAL SPECIFICATION v4.0.0
-# Complete menu structure with auth-driven conditional rendering
-
-intent:
-  purpose: Define the complete PROJECT menu structure with flow-driven navigation
-  aspiration: Dynamic menu rendering based on auth state and feature flags
-  success_criteria:
-    - Every menu item renders correctly based on auth state
-    - All flow_id actions execute properly
-    - Labels match YAML specification exactly
-    - Conditional visibility works for all auth states
-
-system_type: project_menu_specification
-namespace: ui
-criticality: CANONICAL_COMPLIANCE_REQUIRED
-enforcement_level: ZERO_TOLERANCE_EXACT_MATCH
-
-menu:
-  button_label: "PROJECT"
-  button_always_visible: true
-  auth_states:
-    - anonymous
-    - authenticated  
-    - expired
-    - authenticating
-
-  sections:
-    - section_id: "studio_access"
-      title: "Studio Access"
-      visible_for: ["anonymous", "expired"]
-      groups:
-        - group_id: "authentication"
-          items:
-            - item_id: "access_studio"
-              label: "ACCESS STUDIO"
-              flow_id: "access_studio_flow"
-              click_action: "trigger_auth_modal"
-              icon: "studio"
-              visible: true
-              auth_required: false
-              
-    - section_id: "project_management"
-      title: "Projects"
-      visible_for: ["authenticated"]
-      groups:
-        - group_id: "project_actions"
-          items:
-            - item_id: "new_project"
-              label: "New Project"
-              flow_id: "create_project_flow"
-              click_action: "navigate_to_new_project"
-              icon: "plus"
-              visible: true
-              auth_required: true
-              
-            - item_id: "open_project"
-              label: "Open Project"
-              flow_id: "open_project_flow"
-              click_action: "show_project_browser"
-              icon: "folder-open"
-              visible: true
-              auth_required: true
-              
-            - item_id: "recent_projects"
-              label: "Recent Projects"
-              flow_id: "recent_projects_flow"
-              click_action: "show_recent_projects"
-              icon: "clock"
-              visible: true
-              auth_required: true
-
-    - section_id: "studio_tools"
-      title: "Studio"
-      visible_for: ["authenticated"]
-      groups:
-        - group_id: "composition"
-          items:
-            - item_id: "sequencer"
-              label: "Sequencer"
-              flow_id: "sequencer_flow"
-              click_action: "navigate_to_sequencer"
-              icon: "music"
-              visible: true
-              auth_required: true
-              
-            - item_id: "device_manager"
-              label: "Device Manager"
-              flow_id: "device_manager_flow"
-              click_action: "navigate_to_devices"
-              icon: "settings"
-              visible: true
-              auth_required: true
-              
-            - item_id: "clip_library"
-              label: "Clip Library"
-              flow_id: "clip_library_flow"
-              click_action: "navigate_to_clips"
-              icon: "library"
-              visible: true
-              auth_required: true
-
-    - section_id: "account_management"
-      title: "Account"
-      visible_for: ["authenticated"]
-      groups:
-        - group_id: "user_actions"
-          items:
-            - item_id: "account_settings"
-              label: "Account Settings"
-              flow_id: "account_settings_flow"
-              click_action: "navigate_to_account"
-              icon: "user"
-              visible: true
-              auth_required: true
-              
-            - item_id: "billing"
-              label: "Billing"
-              flow_id: "billing_flow"
-              click_action: "navigate_to_billing"
-              icon: "credit-card"
-              visible: true
-              auth_required: true
-              feature_flag: "billing_enabled"
-              
-            - item_id: "logout"
-              label: "Sign Out"
-              flow_id: "logout_flow"
-              click_action: "trigger_logout"
-              icon: "log-out"
-              visible: true
-              auth_required: true
-
-    - section_id: "help_support"
-      title: "Help & Support"
-      visible_for: ["anonymous", "authenticated", "expired"]
-      groups:
-        - group_id: "documentation"
-          items:
-            - item_id: "documentation"
-              label: "Documentation"
-              flow_id: "documentation_flow"
-              click_action: "navigate_to_docs"
-              icon: "book"
-              visible: true
-              auth_required: false
-              
-            - item_id: "support"
-              label: "Support"
-              flow_id: "support_flow"
-              click_action: "navigate_to_support"
-              icon: "help-circle"
-              visible: true
-              auth_required: false
-
-# Flow action handlers
-flow_handlers:
-  access_studio_flow:
-    action: "show_auth_modal"
-    modal_type: "authentication"
-    success_redirect: "/studio"
-    
+name: project_menu
+version: 4.0.0
+description: ''
+type: cognitive_interface_contract
+intent_assertions:
+- Project menu must provide cognitive interface contract ensuring deterministic UI
+  self-healing and error-tolerant interaction flows with emotional intent preservation
+- Menu items must preserve creative flow through professional software parity with
+  Ableton Live, Final Cut Pro, and Pro Tools standards
+- Authentication flows must maintain complete creative context preservation including
+  clipboard state, cursor position, timeline state, and undo history integrity
+technical_assertions: []
+invariants: []
+forbidden_states: []
+canonical_description: 'World-class UX specification for PROJECT menu with creative
+  flow preservation, healing enforcement, and professional software parity (Ableton/Final
+  Cut standards). Cognitive interface contract ensuring deterministic UI self-healing
+  and  error-tolerant interaction flows with emotional intent preservation. '
+auth_states:
+  anonymous:
+    description: No valid authentication token
+    validation: localStorage.getItem('seq1_auth_token') === null
+    emotional_context: curiosity_and_exploration
+    healing_guidance: maintain welcoming onboarding experience, never block exploration
+  authenticated:
+    description: Valid session token present
+    validation: localStorage.getItem('seq1_auth_token') !== null AND token_valid
+    emotional_context: confidence_and_creative_momentum
+    healing_guidance: preserve creative flow, minimize auth interruptions
+  expired:
+    description: Token exists but invalid/expired
+    validation: localStorage.getItem('seq1_auth_token') !== null AND token_invalid
+    emotional_context: frustration_recovery_mode
+    healing_guidance: seamless re-auth without losing creative context
+  authenticating:
+    description: Authentication process in progress
+    validation: auth_modal_open === true AND api_call_pending
+    emotional_context: anticipation_and_continuity
+    healing_guidance: maintain visual continuity, show progress clearly
+flow_preservation:
+  clipboard_context: must_preserve_across_all_modal_interactions
+  ui_focus_restoration: must_restore_exact_cursor_position_post_modal
+  creative_state_continuity: preserve_timeline_position_and_selection_state
+  undo_history_integrity: maintain_full_undo_stack_through_auth_flows
+  visual_continuity: no_jarring_transitions_during_healing_operations
+menu_items:
+  new_project:
+    label: NEW PROJECT
+    icon: FilePlus
+    intent: enable_immediate_creative_expression
+    emotional_purpose: remove_friction_from_creative_impulse
+    modal_rationale: auth_required_modal_preserves_creative_momentum_by_maintaining_context
+    visible_if: always
+    blocked_if: not is_authenticated
+    flow_id: create_project_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: auth_modal_missing_when_creation_attempted_while_unauthenticated
+    healing_guidance: if auth fails, maintain new project intent and retry post-auth
+    action: "if (is_authenticated) {\n  execute create_project_flow\n} else {\n  execute\
+      \ access_studio_flow with pending_action='create_project'\n}\n  \n"
+    ui_deltas:
+      if_authenticated:
+      - Call onAction('new')
+      - Close project menu with fade transition
+      - Show creating indicator with Ableton-style progress
+      - Preserve current timeline context
+      if_not_authenticated:
+      - Open studio access modal with blur background
+      - Set pending action to 'create_project'
+      - Close project menu smoothly
+      - Maintain visual hierarchy
+    error_handling:
+      project_creation_failed: Show retry with preserved creative intent
+      api_timeout: Graceful degradation with offline mode suggestion
+      session_healing_required: Execute session_recovery_flow transparently
+  open_project:
+    label: OPEN PROJECT
+    icon: FolderOpen
+    intent: provide_instant_access_to_creative_history
+    emotional_purpose: rebuild_creative_confidence_through_familiar_work
+    modal_rationale: project_browser_modal_enables_visual_project_recognition
+    visible_if: always
+    blocked_if: not is_authenticated
+    flow_id: open_project_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: empty_project_list_without_create_new_fallback
+    healing_guidance: if no projects exist, seamlessly transition to create_project_flow
+    action: "if (is_authenticated) {\n  execute open_project_flow\n} else {\n  execute\
+      \ access_studio_flow with pending_action='open_project'\n}\n  \n"
+    ui_deltas:
+      if_authenticated:
+      - Open project browser modal with thumbnail previews
+      - Load user's project list with visual metadata
+      - Close project menu with coordinated animation
+      - Focus search/filter input automatically
+      if_not_authenticated:
+      - Open studio access modal with project intent messaging
+      - Set pending action to 'open_project'
+      - Close project menu preserving selection state
+    error_handling:
+      no_projects_found: Show welcome flow with 'Create First Project' prominence
+      project_load_failed: Retry with exponential backoff, offer cached version
+      access_denied: Clear explanation with account upgrade path
+      session_healing_required: Transparent re-auth with project intent preserved
+  save:
+    label: SAVE
+    icon: Save
+    intent: enforce_monetization_checkpoint_at_save
+    emotional_purpose: provide_security_and_creative_ownership_confidence
+    modal_rationale: auth_modal_required_to_establish_ownership_and_billing_relationship
+    visible_if: always
+    blocked_if: not is_authenticated OR no_active_project
+    flow_id: save_project_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: save_triggered_while_unauthenticated_without_clear_auth_path
+    healing_guidance: if session invalid but save triggered, reauth modal must take
+      over without navigation
+    action: "if (is_authenticated AND has_active_project) {\n  execute save_project_flow\n\
+      } else if (not is_authenticated) {\n  execute access_studio_flow with pending_action='save_project'\n\
+      } else {\n  execute save_as_flow\n}\n  \n"
+    ui_deltas:
+      if_can_save:
+      - Show Ableton-style saving indicator with progress dot
+      - Update last saved timestamp with smooth transition
+      - Show 'Project saved' toast with undo option
+      - Close project menu maintaining focus
+      if_needs_auth:
+      - Open studio access modal with save intent messaging
+      - Preserve project state in memory with visual indication
+      - Close menu with promise of return to save
+      if_no_project:
+      - Redirect to save_as_flow with naming focus
+    error_handling:
+      save_failed: Retry mechanism with exponential backoff
+      session_expired: Execute session_recovery_flow with save intent preserved
+      project_access_denied: Clear path to account upgrade
+      billing_enforcement_triggered: Seamless billing modal integration
+  save_as:
+    label: SAVE AS
+    icon: FileText
+    intent: enable_creative_versioning_and_experimentation
+    emotional_purpose: reduce_creative_risk_through_safe_experimentation
+    modal_rationale: naming_modal_enables_intentional_creative_versioning
+    visible_if: always
+    blocked_if: not is_authenticated
+    flow_id: save_as_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: duplicate_name_error_without_smart_suggestions
+    healing_guidance: offer intelligent name suggestions based on project content
+    action: "if (is_authenticated) {\n  execute save_as_flow\n} else {\n  execute\
+      \ access_studio_flow with pending_action='save_as'\n}\n  \n"
+    ui_deltas:
+      if_authenticated:
+      - Open save-as modal with intelligent name suggestion
+      - Close project menu smoothly
+      - Focus name input with full selection
+      - Show project preview thumbnail
+      if_not_authenticated:
+      - Open studio access modal with versioning messaging
+      - Preserve project state with visual indication
+    error_handling:
+      duplicate_name: Smart suggestions with creative variations
+      save_as_failed: Retry with preserved naming intent
+      invalid_name: Real-time validation with helpful guidance
+      session_healing_required: Transparent re-auth with name preserved
+  import_project:
+    label: IMPORT
+    icon: Upload
+    intent: enable_creative_asset_integration
+    emotional_purpose: expand_creative_possibilities_through_external_content
+    modal_rationale: coming_soon_tooltip_maintains_feature_awareness
+    visible_if: always
+    blocked_if: always
+    flow_id: import_project_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: false
+    failure_mode: none_feature_intentionally_disabled
+    healing_guidance: maintain user interest through clear development roadmap
+    action: show_tooltip('Import feature coming soon - join our Discord for updates')
+    ui_deltas:
+      always:
+      - Show roadmap tooltip with Discord link
+      - No menu close to maintain browsing flow
+      - Brief hover feedback only
+    error_handling:
+      none: Feature disabled - no error states possible
+  export_project:
+    label: EXPORT
+    icon: Download
+    intent: enable_creative_work_portability
+    emotional_purpose: provide_ownership_confidence_through_data_control
+    modal_rationale: coming_soon_tooltip_indicates_upcoming_professional_feature
+    visible_if: always
+    blocked_if: always
+    flow_id: export_project_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: false
+    failure_mode: none_feature_intentionally_disabled
+    healing_guidance: demonstrate commitment to professional workflow integration
+    action: show_tooltip('Export to Ableton/Logic coming soon')
+    ui_deltas:
+      always:
+      - Show professional export tooltip
+      - No menu close to maintain exploration
+      - Brief visual feedback only
+    error_handling:
+      none: Feature disabled - no error states possible
+  share_track:
+    label: SHARE TRACK
+    icon: Share
+    intent: enable_social_creative_validation
+    emotional_purpose: build_creative_confidence_through_community_engagement
+    modal_rationale: coming_soon_tooltip_builds_anticipation_for_social_features
+    visible_if: always
+    blocked_if: always
+    flow_id: share_track_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: false
+    failure_mode: none_feature_intentionally_disabled
+    healing_guidance: maintain social engagement through alternative channels
+    action: show_tooltip('Social sharing coming soon - export manually for now')
+    ui_deltas:
+      always:
+      - Show social sharing roadmap tooltip
+      - No menu close for continued browsing
+      - Subtle interaction feedback
+    error_handling:
+      none: Feature disabled - no error states possible
+  about_seq1:
+    label: ABOUT SEQ1
+    icon: Info
+    intent: build_brand_connection_and_product_understanding
+    emotional_purpose: establish_trust_through_transparency_and_vision_sharing
+    modal_rationale: about_modal_provides_comprehensive_product_context
+    visible_if: always
+    blocked_if: 'false'
+    flow_id: about_seq1_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: modal_render_failure_without_fallback_information
+    healing_guidance: always provide version info even if modal fails
+    action: execute about_seq1_flow
+    ui_deltas:
+      always:
+      - Open about modal with SEQ1 branding
+      - Close project menu with fade
+      - Show version, credits, and vision
+      - Include Discord/community links
+    error_handling:
+      modal_load_failed: Fallback to alert with essential version info
+      connection_failed: Show cached version information
+  access_studio:
+    label: ACCESS STUDIO
+    icon: Key
+    intent: provide_clear_authentication_entry_point
+    emotional_purpose: reduce_anonymous_user_confusion_about_access_requirements
+    modal_rationale: auth_modal_clarifies_access_requirements_without_intimidation
+    visible_if: not is_authenticated
+    blocked_if: 'false'
+    flow_id: access_studio_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: studio_navigation_without_proper_authentication_flow
+    healing_guidance: seamless studio access post-authentication
+    action: "if (is_authenticated) {\n  redirect_to('/studio')\n} else {\n  execute\
+      \ access_studio_flow\n}\n  \n"
+    ui_deltas:
+      if_authenticated:
+      - Navigate to /studio with smooth transition
+      - Close project menu
+      if_not_authenticated:
+      - Open studio access modal with studio access messaging
+      - Close project menu with access promise
+    error_handling:
+      studio_access_failed: Retry with clear error messaging
+      auth_required: Continue to sign-in flow with studio intent
+  account:
+    label: ACCOUNT
+    icon: User
+    intent: maintain_identity_continuity_through_nostr
+    emotional_purpose: provide_ownership_and_control_over_creative_identity
+    modal_rationale: account_modal_centralizes_identity_and_billing_management
+    visible_if: is_authenticated
+    blocked_if: 'false'
+    flow_id: account_modal_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: account_data_unavailable_without_graceful_degradation
+    healing_guidance: show cached data with refresh options when API fails
+    action: execute account_modal_flow
+    ui_deltas:
+      always:
+      - Open account modal with user avatar
+      - Load user profile data with
+      - Close project menu smoothly
+      - Show billing balance prominently
+    error_handling:
+      account_data_load_failed: Graceful degradation with cached data
+      profile_update_failed: Retry mechanism with change preservation
+      billing_data_failed: Clear indication of billing system status
+  consciousness:
+    label: CONSCIOUSNESS
+    icon: Brain
+    intent: provide_system_administration_and_analytics_access
+    emotional_purpose: enable_deep_system_understanding_for_mndwave
+    modal_rationale: consciousness_interface_provides_comprehensive_system_oversight
+    visible_if: user.npub == MNDWAVE_PUBLIC_KEY
+    blocked_if: 'false'
+    flow_id: consciousness_admin_flow
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    failure_mode: unauthorized_access_attempt_without_security_logging
+    healing_guidance: log all access attempts, provide clear access requirements
+    action: execute consciousness_admin_flow
+    ui_deltas:
+      if_authorized:
+      - Open consciousness interface overlay
+      - Load analytics dashboard with real-time data
+      - Close project menu
+      - Initialize system monitoring displays
+      if_unauthorized:
+      - Show 'Access restricted to MNDWAVE' modal
+      - Log unauthorized access attempt
+    error_handling:
+      access_denied: Security-focused denial with logging
+      analytics_load_failed: Graceful degradation with core metrics
+      unauthorized_access_attempt: Security event logging with clear denial
+  logout:
+    label: LOGOUT
+    icon: LogOut
+    intent: provide_secure_session_termination
+    emotional_purpose: ensure_creative_work_security_and_identity_protection
+    modal_rationale: confirmation_modal_prevents_accidental_logout_during_creative_flow
+    visible_if: is_authenticated
+    blocked_if: 'false'
+    flow_id: sign_out_flow
+    must_preserve_clipboard_context: false
+    must_restore_ui_focus_after_modal: false
+    failure_mode: logout_without_unsaved_work_warning
+    healing_guidance: warn about unsaved work, offer save before logout
+    action: execute sign_out_flow
+    ui_deltas:
+      always:
+      - Open logout confirmation modal
+      - Close project menu
+      - Show current user info with avatar
+      - Warn about unsaved work if applicable
+    error_handling:
+      logout_failed: Continue with local logout, show warning
+      unsaved_work_detected: Offer save before logout confirmation
+flows:
   create_project_flow:
-    action: "navigate"
-    path: "/studio/new"
-    
-  open_project_flow:
-    action: "show_modal"
-    modal_type: "project_browser"
-    
-  recent_projects_flow:
-    action: "show_dropdown"
-    dropdown_type: "recent_projects"
-    
-  sequencer_flow:
-    action: "navigate"
-    path: "/studio/sequencer"
-    
-  device_manager_flow:
-    action: "navigate"
-    path: "/studio/devices"
-    
-  clip_library_flow:
-    action: "navigate"
-    path: "/studio/clips"
-    
-  account_settings_flow:
-    action: "navigate"
-    path: "/account"
-    
-  billing_flow:
-    action: "navigate"
-    path: "/account/billing"
-    
-  logout_flow:
-    action: "trigger_logout"
-    redirect: "/"
-    
-  documentation_flow:
-    action: "external_link"
-    url: "https://docs.seq1.net"
-    
-  support_flow:
-    action: "external_link"
-    url: "https://support.seq1.net"
-
-# Validation rules
+    trigger: NEW PROJECT clicked while authenticated
+    intent: enable_immediate_creative_expression_without_friction
+    emotional_purpose: channel_creative_impulse_into_structured_workspace
+    execution: '1. Validate session token with healing fallback 2. Call API: POST
+      /api/projects/new with retry logic 3. Create empty project structure with professional
+      defaults 4. Set as current project with focus restoration 5. Clear modified
+      flags and initialize undo history 6. Show success feedback with creative encouragement '
+    postconditions:
+    - New project created and active
+    - Project menu closed with smooth transition
+    - User in creative editing state with proper focus
+    - Undo history initialized
+    - Timeline positioned at beginning
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    creative_flow_continuity: maintain_cursor_position_and_selection_state
+    healing_directives:
+      session_expired_during_creation: Execute session_recovery_flow transparently
+      api_failure_during_creation: Retry with exponential backoff, show progress
+      billing_limit_reached: Seamlessly integrate billing modal
+    ui_deltas:
+      immediate:
+      - Close project menu with coordinated fade
+      - Show 'Creating project...' with Ableton-style progress indicator
+      - Preserve current UI context and focus
+      on_success:
+      - Clear loading state with satisfaction feedback
+      - Show 'New project created' toast with creative messaging
+      - Update project title in UI with edit capability
+      - Initialize timeline with proper zoom level
+      on_failure:
+      - Clear loading state gracefully
+      - Show retry options with preserved intent
+      - Maintain previous state integrity
+    error_handling:
+      api_failure: Intelligent retry with exponential backoff
+      session_expired: Transparent session recovery with intent preservation
+      network_timeout: Graceful degradation with offline mode suggestion
+      billing_enforcement: Seamless billing integration without flow disruption
+  save_project_flow:
+    trigger: SAVE clicked while authenticated with active project
+    intent: enforce_monetization_checkpoint_with_creative_respect
+    emotional_purpose: provide_ownership_security_without_creative_interruption
+    execution: '1. Validate session token with healing capability 2. Check billing
+      status and enforce limits 3. Serialize current project state with integrity
+      checks 4. Call API: PUT /api/projects/{id} with retry logic 5. Update last saved
+      timestamp with visual feedback 6. Clear modified flags while preserving undo
+      history '
+    postconditions:
+    - Project saved to backend with integrity verification
+    - Modified flags cleared appropriately
+    - Last saved timestamp updated with user feedback
+    - Billing checkpoint enforced if required
+    - Creative flow maintained throughout process
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    creative_flow_continuity: maintain_timeline_position_and_selection_state
+    healing_directives:
+      session_expired_during_save: Transparent re-auth with save state preserved
+      billing_limit_during_save: Seamless billing modal without losing work
+      api_failure_during_save: Local backup with cloud sync retry
+    ui_deltas:
+      immediate:
+      - Close project menu maintaining visual hierarchy
+      - Show saving indicator with professional progress feedback
+      - Preserve exact cursor and selection state
+      on_success:
+      - Clear saving indicator with satisfaction animation
+      - Show 'Project saved' toast with timestamp
+      - Update last saved display with fade transition
+      - Maintain creative momentum
+      on_failure:
+      - Clear saving indicator gracefully
+      - Show retry mechanism with preserved work state
+      - Maintain modified state integrity
+    error_handling:
+      save_failed: Local backup with cloud retry options
+      session_expired: Session recovery with save intent preserved
+      billing_enforcement: Billing modal integration without work loss
+      project_not_found: Graceful degradation to save_as_flow
+      access_denied: Clear upgrade path with work preservation
+  access_studio_flow:
+    trigger: Authentication required for any menu action
+    intent: provide_frictionless_authentication_with_nostr_identity
+    emotional_purpose: build_trust_through_decentralized_identity_control
+    execution: '1. Open studio access modal with welcoming messaging 2. Support NSEC
+      key input and browser extension auth 3. Validate credentials with proper error
+      handling 4. Call API: POST /auth/login with retry mechanism 5. Store auth token
+      securely in localStorage 6. Update authentication state across application 7.
+      Execute pending action with preserved context 8. Close modal with success feedback '
+    postconditions:
+    - User authenticated with valid session
+    - Auth token stored securely
+    - Pending action executed with preserved context
+    - Modal closed with smooth transition
+    - Creative context fully restored
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    creative_flow_continuity: preserve_all_work_state_and_ui_context
+    healing_directives:
+      auth_failure_with_pending_work: Preserve work state, offer retry with clear
+        feedback
+      network_failure_during_auth: Graceful retry with connection status indication
+      malformed_credentials: Helpful validation with format examples
+    ui_deltas:
+      immediate:
+      - Open studio access modal with blur background
+      - Close project menu smoothly
+      - Focus credential input with proper
+      - Show pending action context clearly
+      on_auth_attempt:
+      - Show 'Authenticating...' with professional loading
+      - Disable form inputs temporarily
+      - Maintain visual stability
+      on_success:
+      - Close modal with success animation
+      - Show 'Welcome back' toast with personalization
+      - Update UI to authenticated state smoothly
+      - Execute pending action immediately
+      - Restore exact creative context
+      on_failure:
+      - Clear loading state gracefully
+      - Show specific error with helpful guidance
+      - Re-enable form inputs with focus restoration
+      - Preserve pending action for retry
+    error_handling:
+      invalid_credentials: Clear error with format examples and retry
+      network_error: Connection status with retry mechanism
+      api_timeout: Timeout handling with retry options
+      auth_service_down: Service status with fallback options
+      malformed_nsec: Format validation with helpful examples
+  session_recovery_flow:
+    trigger: Invalid/expired session detected during any operation
+    intent: provide_transparent_session_healing_without_creative_disruption
+    emotional_purpose: maintain_creative_confidence_through_seamless_recovery
+    execution: '1. Detect invalid session transparently 2. Preserve all current work
+      state and UI context 3. Clear stored auth data safely 4. Reset to anonymous
+      state with visual indication 5. Show session expired modal with recovery options
+      6. Offer re-authentication with work preservation 7. Restore complete creative
+      context post-auth '
+    postconditions:
+    - Session cleared safely
+    - User in anonymous state with clear indication
+    - Work state preserved completely
+    - Recovery path clearly presented
+    - Creative context ready for restoration
+    must_preserve_clipboard_context: true
+    must_restore_ui_focus_after_modal: true
+    creative_flow_continuity: preserve_complete_creative_state_through_recovery
+    healing_directives:
+      work_state_preservation_failure: Emergency local backup with recovery options
+      re_auth_failure_during_recovery: Graceful degradation with manual recovery
+      context_restoration_failure: Partial restoration with clear status indication
+    ui_deltas:
+      immediate:
+      - Show 'Session expired' modal with clear messaging
+      - Update UI to anonymous state with visual consistency
+      - Preserve all work state visually
+      - Show recovery options prominently
+      on_reauth_success:
+      - Close modal with restoration animation
+      - Restore complete work state
+      - Show 'Session restored' toast with relief messaging
+      - Continue previous operation seamlessly
+      on_recovery_failure:
+      - Show partial recovery status
+      - Provide manual recovery options
+      - Maintain maximum possible state
+    error_handling:
+      state_preservation_failed: Emergency backup with recovery guidance
+      reauth_failed: Alternative auth methods with clear instructions
+      context_restoration_failed: Partial restoration with clear status
+      complete_recovery_failure: Manual recovery guidance with support contact
+healing_enforcement:
+  deterministic_ui_self_healing:
+    session_expiry_detection: Proactive token validation before critical operations
+    automatic_retry_logic: Exponential backoff with user feedback for all API calls
+    state_preservation: Complete creative context preservation through all modal flows
+    graceful_degradation: Offline mode and cached data when services unavailable
+  error_tolerant_interaction_flows:
+    input_validation: Real-time validation with helpful guidance, never blocking
+    network_resilience: Automatic retry with clear progress indication
+    data_consistency: Local backup with cloud sync reconciliation
+    ui_consistency: Stable visual hierarchy through all error states
+  creative_flow_protection:
+    undo_history_preservation: Maintain full undo stack through all operations
+    clipboard_context_protection: Never clear clipboard during modal interactions
+    cursor_position_restoration: Exact cursor and selection restoration post-modal
+    timeline_state_continuity: Preserve playhead position and zoom level
+  professional_software_parity:
+    ableton_live_standards: Loading indicators, progress feedback, visual consistency
+    final_cut_pro_standards: Modal behavior, keyboard shortcuts, error recovery
+    pro_tools_standards: Session management, auto-save, crash recovery
+integration:
+  ui_reference: ui.yaml must reference this specification as project_menu_definition
+  enforcement_level: zero_drift_tolerance_with_healing_capability
+  deployment_requirement: validation_must_pass_before_deploy
+  professional_compliance: ableton_final_cut_parity_validation_required
 validation:
-  required_flows: ["access_studio_flow", "create_project_flow", "logout_flow"]
-  auth_state_coverage: "complete"
-  label_exactness: "mandatory"
-  click_action_binding: "required"
-  
-constitutional_enforcement:
-  enabled: true
-  method: EXACT_YAML_COMPLIANCE_ANALYSIS
-  legitimacy_threshold: 100
-  
-llm_contract: llm/llm_cursor_emulator.yaml
-llm_routing: EXCLUSIVE_CONTRACT_ONLY
-fallback_policy: NONE
-
-description: Complete PROJECT menu specification with auth-driven conditional rendering, exact label matching, and flow-based navigation system.
-
-updated_timestamp: 2025-06-25T16:00:00.000000Z
-updated_by: canonical_convergence_project_menu_restoration
-type: project_menu_specification 
+  build_hook: validate_cognitive_interface_contract(system_definitions/ui/project_menu.yaml)
+  runtime_checks:
+  - All intent declarations present and testable
+  - All healing_directives specify recovery procedures
+  - All must_preserve_clipboard_context flags honored
+  - All must_restore_ui_focus_after_modal behaviors implemented
+  - All failure_mode scenarios have healing guidance
+  - All emotional_purpose elements align with creative flow
+  - All modal_rationale explanations support UX decisions
+  professional_standards_compliance:
+  - Ableton Live loading indicator standards
+  - Final Cut Pro modal behavior patterns
+  - Pro Tools session recovery capabilities
+  - Logic Pro X error tolerance patterns
+implementation_guidance:
+  css_animations: Use professional DAW-style transitions and loading states
+  modal_behaviors: Follow established professional software patterns
+  error_messaging: Clear, actionable, and encouraging language
+  progress_indicators: Precise progress feedback matching professional tools
+  keyboard_shortcuts: Standard professional software keyboard conventions
+  visual_hierarchy: Clear information architecture without designer dependency
+validation_contract:
+  project_menu_integrity_test:
+    test_script: /opt/seq1/tests/project_menu_integrity_test.py
+    frequency: daily
+    expected_outcome: all_cognitive_interface_contracts_validated_successfully
+    failure_action: immediate_alert_and_remediation
+  project_menu_professional_standards_test:
+    test_script: /opt/seq1/tests/project_menu_professional_standards_test.py
+    frequency: weekly
+    expected_outcome: professional_software_parity_maintained
+    failure_action: optimization_trigger_and_monitoring
+assertion_lifecycle:
+  intent_assertions:
+    valid_for_days: 30
+    revalidation_required: true
+    validator_agent: dave
+    revalidation_method: automated_testing_plus_manual_review
+  technical_assertions:
+    valid_for_days: 15
+    revalidation_required: true
+    validator_agent: system_enforcer
+    revalidation_method: automated_validation_contract_execution
