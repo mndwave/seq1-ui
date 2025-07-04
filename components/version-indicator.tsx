@@ -6,14 +6,41 @@ export default function VersionIndicator() {
   const [blockheight, setBlockheight] = useState<string>("loading...")
 
   useEffect(() => {
-    // Use ONLY the build-time environment variable (static deployment blockheight)
-    const deploymentBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT
+    // CANONICAL BLOCKHEIGHT DETECTION - read from DOM
+    const extractCanonicalBlockheight = (): string | null => {
+      // Method 1: Look for hidden div with canonical format
+      const elements = document.querySelectorAll('div')
+      for (const element of elements) {
+        const match = element.textContent?.match(/SEQ1_BLOCKHEIGHT:(\d+)/)
+        if (match) {
+          return match[1]
+        }
+      }
+      
+      // Method 2: Scan entire document for canonical pattern
+      const bodyText = document.body.textContent || document.body.innerText || ''
+      const match = bodyText.match(/SEQ1_BLOCKHEIGHT:(\d+)/)
+      if (match) {
+        return match[1]
+      }
+      
+      return null
+    }
     
-    if (deploymentBlockheight && deploymentBlockheight !== "undefined") {
-      setBlockheight(deploymentBlockheight)
+    // Try canonical detection first
+    const canonicalBlockheight = extractCanonicalBlockheight()
+    
+    if (canonicalBlockheight) {
+      setBlockheight(canonicalBlockheight)
     } else {
-      // Fallback only if env var is missing (shouldn't happen in production)
-      setBlockheight("903183")
+      // Fallback to environment variable if canonical method fails
+      const envBlockheight = process.env.NEXT_PUBLIC_BITCOIN_BLOCKHEIGHT
+      if (envBlockheight && envBlockheight !== "undefined") {
+        setBlockheight(envBlockheight)
+      } else {
+        // Last resort fallback
+        setBlockheight("903951")
+      }
     }
   }, [])
 
