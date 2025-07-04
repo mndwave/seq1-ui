@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     // Fix: Call correct backend endpoint with /api prefix
-    const response = await fetch('http://localhost:5000/api/clips', {
+    const response = await fetch('http://127.0.0.1:5000/api/clips', {
       headers: {
         'Content-Type': 'application/json',
       },
